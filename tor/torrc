@@ -1,0 +1,5 @@
+SocksPort 9250 
+ControlPort 9251
+DataDirectory ./
+HiddenServiceDir ./
+HiddenServicePort 80 127.0.0.1:8000
