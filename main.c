@@ -40,9 +40,10 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   	  	struct data_wrapper data = convert_string_to_datastruct (io->buf);
 
       	if (data.cmd == RECV) {
-      	  	printf ("ricevuto %s da %s\n", data.id, data.msg);
+      	  	printf ("ricevuto %s da %s\n", data.msg, data.id);
       	} else if (data.cmd == SEND) {
       		// first change command to RECV, not SEND
+      		printf ("Provo a mandare %s a %s\n", data.msg, data.id);
       		data.cmd = RECV;
       	  	relay_msg (data);
       	  	log_msg (data.id, data.msg);
