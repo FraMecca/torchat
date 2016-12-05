@@ -10,60 +10,33 @@
 #include <strings.h>
 #include <stdbool.h>
 #include <time.h>
+#include "datastructs.h"
+extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 
-enum command {
-	SEND,
-	RECV
-};
 
 bool
-send_msg (char *ip, int portno, char *msg);
+send_msg (char *id, int portno, char *msg);
 
 bool
-log_msg (char *ip, char *msg);
-
-struct data_wrapper {
-	// contains the content of the message passed
-	enum command cmd;
-	char ip[20];
-	int portno;
-	char *msg;
-	// message will be like:
-	// IP PORTNO CMD CONTENT...
-	// space is the delimiter
-};
-
-struct data_wrapper
-parse_data_msg (char *buf)
-{
-	// parse the data_wrapper struct,
-	struct data_wrapper data;
-	char cryptMsg[5000];
-	sscanf (buf, "%s %d %u %s\n", data.ip, &data.portno, &data.cmd, cryptMsg);
-	/*data.msg = strdup (decrypt_msg (cryptMsg));*/
-	data.msg = strdup (cryptMsg); // for now
-	return data;
-}
+log_msg (char *id, char *msg);
 
 
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
   struct mbuf *io = &nc->recv_mbuf;
-      char *ip;
+      char *id;
       struct data_wrapper data;
 
   switch (ev) {
     case MG_EV_RECV:
-      data = parse_data_msg (io->buf);
+      data = convert_string_to_datastruct (io->buf);
 
       if (data.cmd == RECV) {
-		  ip = inet_ntoa (nc->sa.sin.sin_addr); // get ip from mg_connection struct
-		  // data.ip is the ip of the person you want to send the msg to, so the real ip of the socket should be used
-      	  log_msg (ip, data.msg);
+      	  printf ("ricevuto %s da %s\n", data.id, data.msg);
       } else if (data.cmd == SEND) {
-      	  send_msg (data.ip, data.portno, data.msg);
-      	  log_msg (data.ip, data.msg);
+      	  send_msg (data.id, data.portno, data.msg);
+      	  log_msg (data.id, data.msg);
       }
 		
       mbuf_remove(io, io->len);      // Discard data from recv buffer
@@ -74,31 +47,31 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 }
 
 bool
-log_msg (char *ip, char *msg)
+log_msg (char *id, char *msg)
 {
 	FILE *fp;
 	time_t t = time (NULL);
 	struct tm *tm = localtime (&t);
 	char date[50];
 
-	fp = fopen (ip, "a");
+	fp = fopen (id, "a");
 	strcpy (date, asctime (tm));
 	date[strlen (date)-1] = '\0';
-	fprintf (fp, "{[%s] | [%s]}:\t%s\n", date, ip, msg);
+	fprintf (fp, "{[%s] | [%s]}:\t%s\n", date, id, msg);
 	fclose (fp);
 	return true;
 }
 
 
 bool
-send_msg (char *ip, int portno, char *msg)
+send_msg (char *id, int portno, char *msg)
 {
 	int sockfd,  n;
 	struct sockaddr_in address;
 	struct hostent *server;
 
 	sockfd = socket (AF_INET, SOCK_STREAM, 0);
-	server = gethostbyname (ip);
+	server = gethostbyname (id);
 	address.sin_family = AF_INET;
 	bcopy ((char *)server->h_addr_list[0], &address.sin_addr.s_addr, server->h_length);
 	address.sin_port = htons (portno);

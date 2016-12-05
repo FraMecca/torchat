@@ -1,0 +1,26 @@
+# Tor state file last generated on 2016-12-05 02:02:36 local time
+# Other times below are in UTC
+# You *do not* need to edit this file.
+
+EntryGuard sevenofnine 283549E0DC3C4761A1882AD155DFFBC09DE96DBF DirCache
+EntryGuardAddedBy 283549E0DC3C4761A1882AD155DFFBC09DE96DBF 0.2.9.5-alpha 2016-12-01 02:03:38
+EntryGuardPathBias 26.000000 26.000000 26.000000 0.000000 0.000000 0.000000
+EntryGuardPathUseBias 9.000000 9.000000
+EntryGuard wtfwtf CBC6EB0E7299FB2A84FCF61AED02D4458291AA90 DirCache
+EntryGuardAddedBy CBC6EB0E7299FB2A84FCF61AED02D4458291AA90 0.2.9.5-alpha 2016-11-26 19:31:44
+EntryGuard Doedel24 2CE96A8A1DA032664C90F574AFFBECE18A6E8DFC DirCache
+EntryGuardAddedBy 2CE96A8A1DA032664C90F574AFFBECE18A6E8DFC 0.2.9.5-alpha 2016-12-04 01:35:40
+TorVersion Tor 0.2.9.5-alpha
+LastWritten 2016-12-05 01:02:36
+TotalBuildTimes 22
+CircuitBuildTimeBin 625 3
+CircuitBuildTimeBin 675 2
+CircuitBuildTimeBin 725 2
+CircuitBuildTimeBin 775 2
+CircuitBuildTimeBin 825 1
+CircuitBuildTimeBin 875 1
+CircuitBuildTimeBin 1075 5
+CircuitBuildTimeBin 1375 2
+CircuitBuildTimeBin 1475 2
+CircuitBuildTimeBin 1775 1
+CircuitBuildTimeBin 2275 1
