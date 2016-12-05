@@ -43,6 +43,7 @@ convert_string_to_datastruct (const char *jsonCh)
 {
 	// receive a char sent by another peer and translate that into a datawrapper that contains all the informations
 	std::string st (jsonCh); // translate char* to std::string
+	std::cout << "Received: " << st << std::endl;
 	auto j = json::parse (st);
 	struct data_wrapper data;
 	std::string jmsg = j["msg"];
