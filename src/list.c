@@ -29,10 +29,14 @@ insert_peer (const char *id)
 	// then push it to the existing list
 	// returns the head
 	struct peer *new = new_peer (id);
+	if (head == NULL) {
+		head = new;
+		return true;
+	}
 	
 	new->next = head;
 	head->prev = new;
-	return new;
+	return true;
 }
 
 static struct peer *
