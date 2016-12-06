@@ -96,8 +96,11 @@ insert_new_message  (const char *peerId, const char *content)
 	struct message *new = new_message (content);
 	struct message *msgHead;
 	msgHead = p->msg;
-
-	msgHead->prev = new;
-	new->next = msgHead;
-	return new;
+	if(msgHead == NULL){
+		msgHead = new;
+	} else {
+		msgHead->prev = new;
+		new->next = msgHead;
+	}
+	return true;
 }
