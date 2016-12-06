@@ -34,9 +34,10 @@ def main (portno):
 if __name__ == '__main__':
     from sys import argv
     import time
-    portno = 8000
-    # while (1): 
-        # main (argv[1])
+    portno = 80
+    if len (argv) > 2:
+        while (1): 
+            main (argv[1])
     s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
     s.connect (("localhost", int (8000)))
     cmd = "SEND"

@@ -12,8 +12,9 @@
 #include <time.h>
 #include "../lib/datastructs.h"
 #include <errno.h>
-#include "socks_helper.h"
+#include "../lib/socks_helper.h"
 #include <pthread.h>
+#include "../lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper data);
 
@@ -21,13 +22,6 @@ bool
 relay_msg (const struct data_wrapper);
 bool
 log_msg (char *id, char *msg);
-
-static void
-exit_error (char *s)
-{
-	perror (s);
-	exit (-1);
-}
 
 void event_routine (struct mbuf *io) 
 {
@@ -44,11 +38,17 @@ void event_routine (struct mbuf *io)
 			exit (0);
 			break;
 		case RECV :
+			log_msg (data->id, data->msg); // first log then frog
+			if (!peer_exist (data->id)) {
+				// guess what, peer doesn't exist
+				insert_peer (data->id);
+			}
+			insert_new_message (data->id, data->msg);
       	  	break;
       	case SEND :
       		// mongoose is told that you want to send a message to a peer
-      	  	relay_msg (*data);
       	  	log_msg (data->id, data->msg);
+      	  	relay_msg (*data);
       	  	break;
       	default:
       		return;
@@ -81,17 +81,12 @@ bool
 log_msg (char *id, char *msg)
 {
 	FILE *fp;
-	time_t t = time (NULL);
-	struct tm *tm = localtime (&t);
-	char date[50];
 
 	fp = fopen (id, "a");
 	if (fp == NULL) {
 		exit_error ("fopen");
 	}
-	strcpy (date, asctime (tm));
-	date[strlen (date)-1] = '\0';
-	fprintf (fp, "{[%s] | [%s]}:\t%s\n", date, id, msg);
+	fprintf (fp, "{[%s] | [%s]}:\t%s\n", get_date (), id, msg);
 	fclose (fp);
 	return true;
 }
@@ -106,6 +101,7 @@ relay_msg (struct data_wrapper data)
 	strcpy (id, data.id); // save dest address
 	strcpy (data.id, HOSTNAME);
 	char *msg = convert_datastruct_to_char (data);
+	printf ("Sto mandando over TOR");
 	bool ret = send_over_tor (id, data.portno, msg, 9250);
 	free (msg);
 	return ret;
