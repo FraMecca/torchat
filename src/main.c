@@ -36,20 +36,23 @@ static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
 
   	struct mbuf *io = &nc->recv_mbuf;
-
+	
+	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
     	/*case MG_EV_RECV:*/
-  	  	struct data_wrapper data = convert_string_to_datastruct (io->buf);
+  	  	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
+  	  	*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 
-      	if (data.cmd == RECV) {
-      	  	printf ("ricevuto %s da %s\n", data.msg, data.id);
-      	} else if (data.cmd == SEND) {
-      		// first change command to RECV, not SEND
-      		data.cmd = RECV;
-      		printf ("%s\n", convert_datastruct_to_char (data));
-      	  	relay_msg (data);
-      	  	log_msg (data.id, data.msg);
+      	if (data->cmd == RECV) {
+      	  	printf ("ricevuto %s da %s\n", data->msg, data->id); // a peer just messaged you
+      	} else if (data->cmd == SEND) { 
+      		// mongoose is told that you want to send a message to a peer
+  
+      		printf ("%s\n", convert_datastruct_to_char (*data));
+      	  	relay_msg (*data);
+      	  	log_msg (data->id, data->msg);
       	}
+      	free (data);
 
   	}
   	mbuf_remove(io, io->len);      // Discard data from recv buffer
@@ -79,6 +82,8 @@ bool
 relay_msg (struct data_wrapper data)
 {
 	char id[30];
+      	// first change command to RECV, not SEND
+    data.cmd = RECV;
 	strcpy (id, data.id); // save dest address
 	strcpy (data.id, HOSTNAME);
 	return send_over_tor (id, data.portno, convert_datastruct_to_char (data), 9250);
@@ -95,7 +100,7 @@ main(int argc, char **argv) {
   // Connections can be created at any point, e.g. in event handler function
   mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
 
-  for (;;) {  // Start infinite event loop
+  while (true) {  // Start infinite event loop
       mg_mgr_poll(&mgr, 1000);
   }
 

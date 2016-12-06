@@ -75,10 +75,6 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     // Here you can normally use send and recv
     // Testing With a HTTP GET Request
     send(sock, buf, strlen (buf), 0);
-    char RecvBuffer[2048];
-    size_t Rcved = recv(sock, RecvBuffer, 2048, 0);
-    printf ("%s\n", RecvBuffer);
-
 
     return true;
 }
