@@ -14,9 +14,12 @@ def main (portno):
             print ("Dammi ip")
             ip = input ()
             print ("Dammi porta")
-            portno = input ()
+            portno = 80
         elif cmd == 'RECV':
             ip = "CLIENTPY"
+        elif cmd == 'EXIT':
+            ip = "CLIENTPY"
+
 
         print ("Dammi il messaggio: ")
         msg = input ()
