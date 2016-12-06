@@ -1,11 +1,10 @@
 #include "../lib/json.hpp"
 #include <iostream>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include "../lib/datastructs.h"
 using json = nlohmann::json;
-
-
 
 /*
  * json j ={
@@ -57,6 +56,7 @@ convert_string_to_datastruct (const char *jsonCh)
 	 * dumping the json
 	 */
 	std::string st (jsonCh); // translate char* to std::string
+	printf ("%s\n", jsonCh);
 	std::cout << "json.cpp:50: Received: " << st << std::endl;
 	auto j = json::parse (st);
 	struct data_wrapper data;
@@ -89,5 +89,5 @@ convert_datastruct_to_char (const struct data_wrapper data)
 	j["portno"] = data.portno;
 	std::cout << j.dump () << std::endl;
 	std::string st =  j.dump ();
-	return strdup (st.c_str ());
+	return strdup  (st.c_str ());
 };
