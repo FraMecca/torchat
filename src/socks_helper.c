@@ -67,9 +67,10 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     memcpy(req2 + 5 + domainLen, &port, 2); // Port
 
     send(sock, (char*)req2, 4 + 1 + domainLen + 2, 0);
+    free (req2);
 
-    char Resp2[10];
-    recv(sock, Resp2, 10, 0);
+    char resp2[10];
+    recv(sock, resp2, 10, 0);
 
     // Here you can normally use send and recv
     // Testing With a HTTP GET Request

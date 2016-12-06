@@ -57,6 +57,7 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       	  		relay_msg (*data);
       	  		log_msg (data->id, data->msg);
       	}
+      	free (data->msg);
       	free (data);
 
   	}
@@ -91,7 +92,10 @@ relay_msg (struct data_wrapper data)
     data.cmd = RECV;
 	strcpy (id, data.id); // save dest address
 	strcpy (data.id, HOSTNAME);
-	return send_over_tor (id, data.portno, convert_datastruct_to_char (data), 9250);
+	char *msg = convert_datastruct_to_char (data);
+	bool ret = send_over_tor (id, data.portno, msg, 9250);
+	free (msg);
+	return ret;
 }
 
 
