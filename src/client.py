@@ -6,9 +6,8 @@ import socket
 
 
 def main (portno):
-    s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
-    s.connect (("localhost", int (portno)))
-    while (1):
+        s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
+        s.connect (("localhost", int (portno)))
         print ("Cosa vuoi fare? (SEND, RECV)")
         cmd = input ()
         if cmd == "SEND":
@@ -31,4 +30,5 @@ def main (portno):
 
 if __name__ == '__main__':
     from sys import argv
-    main (argv[1])
+    while (1): 
+        main (argv[1])
