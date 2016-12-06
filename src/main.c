@@ -13,8 +13,14 @@
 #include "../lib/datastructs.h"
 #include <errno.h>
 #include "socks_helper.h"
+#include <pthread.h>
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper data);
+
+bool
+relay_msg (const struct data_wrapper);
+bool
+log_msg (char *id, char *msg);
 
 static void
 exit_error (char *s)
@@ -23,42 +29,43 @@ exit_error (char *s)
 	exit (-1);
 }
 
+void event_routine (const struct mbuf *io) 
+{
+  	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
+  	*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 
-bool
-relay_msg (const struct data_wrapper);
+	switch (data->cmd) {
+		case EXIT :
+			exit (0);
+			break;
+		case RECV :
+      	  	printf ("ricevuto %s da %s\n", data->msg, data->id); // a peer just messaged you
+      	  	break;
+      	case SEND :
+      		// mongoose is told that you want to send a message to a peer
+      	  	relay_msg (*data);
+      	  	log_msg (data->id, data->msg);
+    }
+    free (data->msg);
+    free (data);
+    return; // pthread_exit()
+}
 
-bool
-log_msg (char *id, char *msg);
+
 
 static char HOSTNAME[] = "7a73izkph3wutuh6.onion" ;
 
 static void
-ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
-
+ev_handler(struct mg_connection *nc, int ev, void *ev_data)
+{
   	struct mbuf *io = &nc->recv_mbuf;
+  	pthread_t th;
 	
 	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
     	/*case MG_EV_RECV:*/
-  	  	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
-  	  	*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
-
-		switch (data->cmd) {
-			case EXIT :
-				exit (0);
-				break;
-			case RECV :
-      	  		printf ("ricevuto %s da %s\n", data->msg, data->id); // a peer just messaged you
-      	  		break;
-      	  	case SEND :
-      			// mongoose is told that you want to send a message to a peer
-  	  
-      			printf ("%s\n", convert_datastruct_to_char (*data));
-      	  		relay_msg (*data);
-      	  		log_msg (data->id, data->msg);
-      	}
-      	free (data->msg);
-      	free (data);
+    	// switch to a new thread and do everything in that thread
+    	pthread_create (&th, NULL, event_routine, io);
 
   	}
   	mbuf_remove(io, io->len);      // Discard data from recv buffer
