@@ -49,4 +49,4 @@ bool
 insert_peer (const char *id);
 
 bool
-insert_message  (struct message *msgHead, const char *content);
+insert_new_message  (const char *peerId, const char *content);

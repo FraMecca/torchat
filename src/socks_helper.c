@@ -1,27 +1,23 @@
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <string.h>
-#include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <netdb.h>
-#include <string.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
-#include <strings.h>
-#include <stdbool.h>
-#include <time.h>
-#include <errno.h>
-#include <time.h>
+#include <sys/types.h> // types
+#include <sys/socket.h> // socket types
+#include <netinet/in.h> // inet
+#include <arpa/inet.h> // inet
+#include <unistd.h> // socket
+#include <string.h> // strdup
+#include <stdlib.h> // calloc
+#include <netdb.h> // sockets
+#include <netinet/in.h> // socket types
+#include <strings.h> // bcopy
+#include <stdbool.h> // bool
+#include <time.h> // timestructs
+#include <errno.h> // perror
+#include <stdio.h> // perror
 
 
 bool set_socket_timeout (const int sockfd)
 {
+	// this function sets the socket timeout
+	// 120s
 	    struct timeval timeout;      
 	    timeout.tv_sec = 120;
 	    timeout.tv_usec = 0;
@@ -42,7 +38,6 @@ bool
 send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)
 { 
 	// buf is the json parsed char to be sent over a socket
-
     int sock;
     struct sockaddr_in socketAddr;
 
