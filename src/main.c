@@ -43,14 +43,19 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   	  	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
   	  	*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 
-      	if (data->cmd == RECV) {
-      	  	printf ("ricevuto %s da %s\n", data->msg, data->id); // a peer just messaged you
-      	} else if (data->cmd == SEND) { 
-      		// mongoose is told that you want to send a message to a peer
-  
-      		printf ("%s\n", convert_datastruct_to_char (*data));
-      	  	relay_msg (*data);
-      	  	log_msg (data->id, data->msg);
+		switch (data->cmd) {
+			case EXIT :
+				exit (0);
+				break;
+			case RECV :
+      	  		printf ("ricevuto %s da %s\n", data->msg, data->id); // a peer just messaged you
+      	  		break;
+      	  	case SEND :
+      			// mongoose is told that you want to send a message to a peer
+  	  
+      			printf ("%s\n", convert_datastruct_to_char (*data));
+      	  		relay_msg (*data);
+      	  		log_msg (data->id, data->msg);
       	}
       	free (data);
 
@@ -93,6 +98,7 @@ relay_msg (struct data_wrapper data)
 int
 main(int argc, char **argv) {
   struct mg_mgr mgr;
+  signal (SIGUSR1, exit);
 
   mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 

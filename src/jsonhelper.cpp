@@ -24,6 +24,8 @@ convert_to_enum (const std::string cmd)
 		return RECV;
 	} else if (cmd == "SEND") {
 		return SEND;
+	} else if (cmd == "EXIT") {
+		return EXIT;
 	}
 }
 
@@ -38,6 +40,9 @@ convert_from_enum (const enum command c)
 		case SEND :
 			st = "SEND";
 			break;
+		case EXIT :
+			st = "EXIT";
+			break;
 	}
 	return st;
 }
@@ -46,6 +51,11 @@ extern "C" struct data_wrapper
 convert_string_to_datastruct (const char *jsonCh)
 {
 	// receive a char sent by another peer and translate that into a datawrapper that contains all the informations
+	/*
+	 * first translate the string to a json
+	 * then populate the datastruct 
+	 * dumping the json
+	 */
 	std::string st (jsonCh); // translate char* to std::string
 	std::cout << "json.cpp:50: Received: " << st << std::endl;
 	auto j = json::parse (st);
@@ -63,15 +73,15 @@ convert_string_to_datastruct (const char *jsonCh)
 	return data;
 }
 
-//extern "C" {
-	//char * convert_datastruct_to_char (const struct data_wrapper);
-//}
-
 extern "C" char *
 convert_datastruct_to_char (const struct data_wrapper data)
 {
-	// dose the opposite,
+	// does the opposite,
 	// takes a data_wrapper and return a char* to be sent over a socket
+	/*
+	 * first populate a json
+	 * then dump json to string
+	 */
 	json j;
 	j["cmd"] = convert_from_enum (data.cmd);
 	j["id"] = data.id;

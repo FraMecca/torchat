@@ -4,7 +4,8 @@
 
 enum command {
 	SEND,
-	RECV
+	RECV,
+	EXIT
 };
 struct data_wrapper {
 	// contains the content of the message passed

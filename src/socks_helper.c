@@ -67,7 +67,6 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     memcpy(req2 + 5 + domainLen, &port, 2); // Port
 
     send(sock, (char*)req2, 4 + 1 + domainLen + 2, 0);
-    printf ("sock_helper:70 %s\n", req2);
 
     char Resp2[10];
     recv(sock, Resp2, 10, 0);
