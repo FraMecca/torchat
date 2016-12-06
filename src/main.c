@@ -1,4 +1,4 @@
-#include "mongoose.h"  // Include Mongoose API definitions
+#include "../include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -10,8 +10,9 @@
 #include <strings.h>
 #include <stdbool.h>
 #include <time.h>
-#include "datastructs.h"
+#include "../lib/datastructs.h"
 #include <errno.h>
+#include "socks_helper.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper data);
 
@@ -45,6 +46,7 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       		// first change command to RECV, not SEND
       		printf ("Provo a mandare %s a %s\n", data.msg, data.id);
       		data.cmd = RECV;
+      		printf ("%s\n", convert_datastruct_to_char (data));
       	  	relay_msg (data);
       	  	log_msg (data.id, data.msg);
       	}
@@ -76,26 +78,7 @@ log_msg (char *id, char *msg)
 bool
 relay_msg (const struct data_wrapper data)
 {
-	int sockfd,  n;
-	struct sockaddr_in address;
-	struct hostent *server;
-
-	// first open a socket to destination ip
-	sockfd = socket (AF_INET, SOCK_STREAM, 0);
-	if (sockfd < 0) {
-		exit_error ("socket");
-	}
-	server = gethostbyname (data.id);
-	address.sin_family = AF_INET;
-	bcopy ((char *)server->h_addr_list[0], &address.sin_addr.s_addr, server->h_length);
-	address.sin_port = htons (data.portno);
-	if (connect (sockfd, (struct sockaddr *) &address, sizeof (address)) < 0) {
-		exit_error ("socket");
-	}
-	char *msg = convert_datastruct_to_char (data);
-	write (sockfd, msg, strlen (msg));
-	close (sockfd);
-	return true;
+	return send_over_tor (data.id, data.portno, convert_datastruct_to_char (data), 9250);
 }
 
 

@@ -1,8 +1,8 @@
-#include "json.hpp"
+#include "../lib/json.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <string.h>
-#include "datastructs.h"
+#include "../lib/datastructs.h"
 using json = nlohmann::json;
 
 
@@ -27,15 +27,19 @@ convert_to_enum (const std::string cmd)
 	}
 }
 
-static char *
+static  std::string
 convert_from_enum (const enum command c)
 {
+	std::string st;
 	switch (c) {
 		case RECV :
-			return "RECV";
+			st = "RECV";
+			break;
 		case SEND :
-			return "SEND";
+			st = "SEND";
+			break;
 	}
+	return st;
 }
 
 extern "C" struct data_wrapper
@@ -43,7 +47,7 @@ convert_string_to_datastruct (const char *jsonCh)
 {
 	// receive a char sent by another peer and translate that into a datawrapper that contains all the informations
 	std::string st (jsonCh); // translate char* to std::string
-	std::cout << "Received: " << st << std::endl;
+	std::cout << "json.cpp:50: Received: " << st << std::endl;
 	auto j = json::parse (st);
 	struct data_wrapper data;
 	std::string jmsg = j["msg"];
@@ -70,6 +74,7 @@ convert_datastruct_to_char (const struct data_wrapper data)
 	j["id"] = data.id;
 	j["msg"] = data.msg;
 	j["portno"] = data.portno;
+	std::cout << j.dump () << std::endl;
 	std::string st =  j.dump ();
 	return strdup (st.c_str ());
-}
+};
