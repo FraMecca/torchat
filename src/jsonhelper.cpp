@@ -56,6 +56,9 @@ convert_string_to_datastruct (const char *jsonCh)
 	 * dumping the json
 	 */
 	std::string st (jsonCh); // translate char* to std::string
+	if (std::count (st.begin (), st.end (), '}') > 1) {
+		st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
+	}
 	printf ("%s\n", jsonCh);
 	std::cout << "json.cpp:50: Received: " << st << std::endl;
 	auto j = json::parse (st);

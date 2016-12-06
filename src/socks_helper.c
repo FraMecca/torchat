@@ -24,6 +24,7 @@ bool set_socket_timeout (const int sockfd)
 {
 	    struct timeval timeout;      
 	    timeout.tv_sec = 120;
+	    timeout.tv_usec = 0;
 
 	    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
 	        perror("setsockopt failed\n");
@@ -46,7 +47,7 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     struct sockaddr_in socketAddr;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (set_socket_timeout (sock)) {
+    if (!set_socket_timeout (sock)) {
     	perror ("setsockopt");
     	exit (1);
     }
