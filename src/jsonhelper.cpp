@@ -59,7 +59,6 @@ convert_string_to_datastruct (const char *jsonCh)
 	if (std::count (st.begin (), st.end (), '}') > 1) {
 		st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
 	}
-	printf ("%s\n", jsonCh);
 	std::cout << "json.cpp:50: Received: " << st << std::endl;
 	auto j = json::parse (st);
 	struct data_wrapper data;
@@ -69,7 +68,6 @@ convert_string_to_datastruct (const char *jsonCh)
 	std::string jid = j["id"];
 	strncpy (data.id, jid.c_str (), strlen (jid.c_str()));
 	data.id[strlen (jid.c_str ()) + 1] = '\0';
-	std::cout << strlen (jid.c_str ()) << std::endl;
 	data.portno = j["portno"];
 	data.cmd = convert_to_enum (j["cmd"]);
 
@@ -90,7 +88,6 @@ convert_datastruct_to_char (const struct data_wrapper data)
 	j["id"] = data.id;
 	j["msg"] = data.msg;
 	j["portno"] = data.portno;
-	std::cout << j.dump () << std::endl;
 	std::string st =  j.dump ();
 	return strdup  (st.c_str ());
 };
