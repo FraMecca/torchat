@@ -30,6 +30,7 @@ relay_msg (const struct data_wrapper);
 bool
 log_msg (char *id, char *msg);
 
+static char HOSTNAME[] = "7a73izkph3wutuh6.onion" ;
 
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
@@ -44,7 +45,6 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       	  	printf ("ricevuto %s da %s\n", data.msg, data.id);
       	} else if (data.cmd == SEND) {
       		// first change command to RECV, not SEND
-      		printf ("Provo a mandare %s a %s\n", data.msg, data.id);
       		data.cmd = RECV;
       		printf ("%s\n", convert_datastruct_to_char (data));
       	  	relay_msg (data);
@@ -76,9 +76,12 @@ log_msg (char *id, char *msg)
 
 
 bool
-relay_msg (const struct data_wrapper data)
+relay_msg (struct data_wrapper data)
 {
-	return send_over_tor (data.id, data.portno, convert_datastruct_to_char (data), 9250);
+	char id[30];
+	strcpy (id, data.id); // save dest address
+	strcpy (data.id, HOSTNAME);
+	return send_over_tor (id, data.portno, convert_datastruct_to_char (data), 9250);
 }
 
 

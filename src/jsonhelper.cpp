@@ -50,10 +50,13 @@ convert_string_to_datastruct (const char *jsonCh)
 	std::cout << "json.cpp:50: Received: " << st << std::endl;
 	auto j = json::parse (st);
 	struct data_wrapper data;
+	memset (data.id, 0, 30);
 	std::string jmsg = j["msg"];
 	data.msg = strdup (jmsg.c_str());
 	std::string jid = j["id"];
 	strncpy (data.id, jid.c_str (), strlen (jid.c_str()));
+	data.id[strlen (jid.c_str ()) + 1] = '\0';
+	std::cout << strlen (jid.c_str ()) << std::endl;
 	data.portno = j["portno"];
 	data.cmd = convert_to_enum (j["cmd"]);
 
