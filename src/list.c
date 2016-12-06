@@ -33,9 +33,9 @@ insert_peer (const char *id)
 		head = new;
 		return true;
 	}
-	
 	new->next = head;
 	head->prev = new;
+	head = new;
 	return true;
 }
 
@@ -94,13 +94,12 @@ insert_new_message  (const char *peerId, const char *content)
 	// does not check that peer exist
 	struct peer *p = get_peer (head, peerId);
 	struct message *new = new_message (content);
-	struct message *msgHead;
-	msgHead = p->msg;
-	if(msgHead == NULL){
-		msgHead = new;
+	if(p->msg == NULL){
+		p->msg = new;
 	} else {
-		msgHead->prev = new;
-		new->next = msgHead;
+		p->msg->prev = new;
+		new->next = p->msg;
+		p->msg = new;
 	}
 	return true;
 }
