@@ -46,6 +46,13 @@ convert_from_enum (const enum command c)
 	return st;
 }
 
+void log_error (const char *st)
+{
+	fprintf (stderr, "ERROR: %s\n", st); 
+	// should write a better error log
+	// TODO
+}
+
 extern "C" struct data_wrapper
 convert_string_to_datastruct (const char *jsonCh)
 {
@@ -60,8 +67,24 @@ convert_string_to_datastruct (const char *jsonCh)
 		st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
 	}
 	std::cout << "json.cpp:50: Received: " << st << std::endl;
-	auto j = json::parse (st);
+
+	/*
+	 * now parse json
+	 * in case of an invalid json
+	 * it throws a std::invalid_argument exception
+	 * catch that 
+	 * and log that to error log
+	 */
+	json j;
 	struct data_wrapper data;
+	try {	
+		j = json::parse (st);
+	} catch (const std::invalid_argument&) {
+		log_error (jsonCh);
+		data.msg = NULL;
+		return data;
+	}
+
 	memset (data.id, 0, 30);
 	std::string jmsg = j["msg"];
 	data.msg = strdup (jmsg.c_str());
