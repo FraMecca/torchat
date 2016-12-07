@@ -21,7 +21,23 @@ extern char * convert_datastruct_to_char (const struct data_wrapper data);
 bool
 relay_msg (const struct data_wrapper);
 bool
-log_msg (char *id, char *msg);
+log_msg (char *id, char *msg, enum command c);
+
+static char *HOSTNAME = NULL;
+
+char *
+read_tor_hostname (void)
+{
+	// still hardcoded
+	// opens ../tor/hostname
+	FILE *fp = fopen ("tor/hostname", "r");
+	if (fp == NULL) {
+		exit_error ("fopen: torrc:");
+	}
+	char buf[50];
+	fscanf (fp, "%s", buf);
+	return strdup (buf);
+}
 
 void event_routine (struct mbuf *io) 
 {
@@ -38,7 +54,7 @@ void event_routine (struct mbuf *io)
 			exit (0);
 			break;
 		case RECV :
-			log_msg (data->id, data->msg); // first log then frog
+			log_msg (data->id, data->msg, data->cmd); // first log then frog
 			if (!peer_exist (data->id)) {
 				// guess what, peer doesn't exist
 				insert_peer (data->id);
@@ -47,7 +63,7 @@ void event_routine (struct mbuf *io)
       	  	break;
       	case SEND :
       		// mongoose is told that you want to send a message to a peer
-      	  	log_msg (data->id, data->msg);
+      	  	log_msg (data->id, data->msg, data->cmd);
       	  	relay_msg (*data);
       	  	break;
       	default:
@@ -58,9 +74,6 @@ void event_routine (struct mbuf *io)
     return; // pthread_exit()
 }
 
-
-
-static char HOSTNAME[] = "7a73izkph3wutuh6.onion" ;
 
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data)
@@ -78,16 +91,23 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 }
 
 bool
-log_msg (char *id, char *msg)
+log_msg (char *onion, char *msg, enum command MODE)
 {
 	FILE *fp;
+	char *id = strdup ("?");
 
-	fp = fopen (id, "a");
 	if (fp == NULL) {
 		exit_error ("fopen");
 	}
+	if (MODE == RECV) {
+		id = strdup (onion);
+	} else if (MODE == SEND) {
+		id = strdup ("YOU");
+	}
+	fp = fopen (onion, "a");
 	fprintf (fp, "{[%s] | [%s]}:\t%s\n", get_date (), id, msg);
 	fclose (fp);
+	free (id);
 	return true;
 }
 
@@ -99,9 +119,8 @@ relay_msg (struct data_wrapper data)
       	// first change command to RECV, not SEND
     data.cmd = RECV;
 	strcpy (id, data.id); // save dest address
-	strcpy (data.id, HOSTNAME);
+	strcpy (data.id, HOSTNAME); // copy your hostname to the field
 	char *msg = convert_datastruct_to_char (data);
-	printf ("Sto mandando over TOR");
 	bool ret = send_over_tor (id, data.portno, msg, 9250);
 	free (msg);
 	return ret;
@@ -112,6 +131,8 @@ int
 main(int argc, char **argv) {
   struct mg_mgr mgr;
   signal (SIGUSR1, exit);
+
+  HOSTNAME = read_tor_hostname ();
 
   mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -124,5 +145,6 @@ main(int argc, char **argv) {
   }
 
   mg_mgr_free(&mgr);
+  free (HOSTNAME);
   return 0;
 }
