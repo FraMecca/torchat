@@ -109,10 +109,10 @@ log_msg (char *onion, char *msg, enum command MODE)
 	if (fp == NULL) {
 		exit_error ("fopen");
 	}
-	pthread_mutex_lock (&mut);
+	pthread_mutex_lock (&sem);
 	fprintf (fp, "{[%s] | [%s]}:\t%s\n", get_date (), id, msg);
 	fclose (fp);
-	pthread_mutex_unlock (&mut);
+	pthread_mutex_unlock (&sem);
 	free (id);
 }
 
@@ -138,7 +138,7 @@ main(int argc, char **argv) {
   signal (SIGUSR1, exit);
 
   HOSTNAME = read_tor_hostname ();
-  pthread_mutex_init (&mut, NULL); // initialize semaphore for log files
+  pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
 
   mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -152,6 +152,6 @@ main(int argc, char **argv) {
 
   mg_mgr_free(&mgr);
   free (HOSTNAME);
-  pthread_mutex_destroy (&mut);
+  pthread_mutex_destroy (&sem);
   return 0;
 }
