@@ -1,8 +1,5 @@
 import socket
-
-
-
-
+import readline
 
 
 def main (portno):

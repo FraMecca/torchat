@@ -9,8 +9,9 @@
 void
 exit_error (char *s)
 {
+	// send perror and exit
 	perror (s);
-	exit (-1);
+	exit (1);
 }
 
 char *

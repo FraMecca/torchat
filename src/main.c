@@ -16,14 +16,17 @@
 #include <pthread.h>
 #include "../lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
-extern char * convert_datastruct_to_char (const struct data_wrapper data);
+extern char * convert_datastruct_to_char (const struct data_wrapper data); // from json.cpp
 
 bool
 relay_msg (const struct data_wrapper);
-bool
+void 
 log_msg (char *id, char *msg, enum command c);
 
-static char *HOSTNAME = NULL;
+static pthread_mutex_t sem; // semaphore that will be used for race conditions on logfiles
+// would be more correct if you have a semaphore for every different file that could be opened
+
+static char *HOSTNAME = NULL; // will be read from torrc
 
 char *
 read_tor_hostname (void)
@@ -36,6 +39,7 @@ read_tor_hostname (void)
 	}
 	char buf[50];
 	fscanf (fp, "%s", buf);
+	fclose (fp);
 	return strdup (buf);
 }
 
@@ -90,25 +94,26 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
   	}
 }
 
-bool
+void
 log_msg (char *onion, char *msg, enum command MODE)
 {
 	FILE *fp;
 	char *id = strdup ("?");
 
-	if (fp == NULL) {
-		exit_error ("fopen");
-	}
 	if (MODE == RECV) {
 		id = strdup (onion);
 	} else if (MODE == SEND) {
 		id = strdup ("YOU");
 	}
 	fp = fopen (onion, "a");
+	if (fp == NULL) {
+		exit_error ("fopen");
+	}
+	pthread_mutex_lock (&mut);
 	fprintf (fp, "{[%s] | [%s]}:\t%s\n", get_date (), id, msg);
 	fclose (fp);
+	pthread_mutex_unlock (&mut);
 	free (id);
-	return true;
 }
 
 
@@ -133,6 +138,7 @@ main(int argc, char **argv) {
   signal (SIGUSR1, exit);
 
   HOSTNAME = read_tor_hostname ();
+  pthread_mutex_init (&mut, NULL); // initialize semaphore for log files
 
   mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -146,5 +152,6 @@ main(int argc, char **argv) {
 
   mg_mgr_free(&mgr);
   free (HOSTNAME);
+  pthread_mutex_destroy (&mut);
   return 0;
 }
