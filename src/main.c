@@ -1,6 +1,7 @@
 #include "../include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h> // umask for daemonization
 #include <unistd.h>
 #include <netdb.h>
 #include <string.h>
@@ -27,6 +28,46 @@ static pthread_mutex_t sem; // semaphore that will be used for race conditions o
 // would be more correct if you have a semaphore for every different file that could be opened
 
 static char *HOSTNAME = NULL; // will be read from torrc
+
+static void skeleton_daemon(char *dir)
+{
+	/*dir is the current working directory*/
+    /*this function daemonizes the main core of the chat*/
+	pid_t pid;
+    int x;
+  
+    /* Fork off the parent process */
+    pid = fork();
+    /* An error occurred */
+    if (pid < 0){
+        exit(EXIT_FAILURE);
+        } else if(pid > 0) {
+        exit(EXIT_SUCCESS); // the parent exites
+        }
+    /* On success: The child process becomes session leader */
+    if (setsid() < 0){
+        exit(EXIT_FAILURE);
+     	}
+    /* Catch, ignore and handle signals */
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+    /* Fork off for the second time, it is good practice*/
+    pid = fork();
+
+    /* An error occurred */
+    if (pid < 0){
+        exit(EXIT_FAILURE);
+        } else if(pid > 0){
+        exit(EXIT_SUCCESS); // the parent exites again
+     }
+    /* Set new file permissions */
+    umask(0);
+
+    /* Change the working directory to the current directory
+	 * note that this might not be necessary, safety reason
+	 */
+    chdir(dir); 
+}
 
 char *
 read_tor_hostname (void)
@@ -91,7 +132,7 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
   	struct mbuf *io = &nc->recv_mbuf;
   	pthread_t th;
-	
+
 	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
     	/*case MG_EV_RECV:*/
@@ -143,6 +184,15 @@ int
 main(int argc, char **argv) {
   struct mg_mgr mgr;
   signal (SIGUSR1, exit);
+  char cwd[128];
+  if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0){
+	  fprintf(stdout, "Starting in daemon mode.\n");
+	  if(getcwd(cwd, sizeof cwd) != NULL){
+	  	skeleton_daemon(cwd);
+	  } else {
+	  	perror("getcwd");
+	  }
+  }
 
   HOSTNAME = read_tor_hostname ();
   pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
@@ -151,7 +201,11 @@ main(int argc, char **argv) {
 
   // Note that many connections can be added to a single event manager
   // Connections can be created at any point, e.g. in event handler function
-  mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
+  if(argc == 2){
+  	mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
+  } else if (argc == 3){	// daemon
+  	mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
+  }
 
   while (true) {  // Start infinite event loop
       mg_mgr_poll(&mgr, 1000);
