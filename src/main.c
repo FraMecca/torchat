@@ -43,14 +43,21 @@ read_tor_hostname (void)
 	return strdup (buf);
 }
 
-void event_routine (struct mbuf *io) 
+void 
+*event_routine (void *voidIo) 
 {
+	struct mbuf *io = voidIo; // io was casted to void as pthread prototype
   	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
   	if (io->buf != NULL) {
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		mbuf_remove(io, io->len);      // Discard data from recv buffer
 	} else { 
-		return;
+		return 0;
+	}
+	if (data->msg == NULL) {
+		// the json was invalid 
+		// and logged to errlog
+		return 0;
 	}
 
 	switch (data->cmd) {
@@ -71,11 +78,11 @@ void event_routine (struct mbuf *io)
       	  	relay_msg (*data);
       	  	break;
       	default:
-      		return;
+      		return 0;
     }
     free (data->msg);
     free (data);
-    return; // pthread_exit()
+    return 0; // pthread_exit()
 }
 
 
