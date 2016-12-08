@@ -59,7 +59,7 @@ get_peer (struct peer *current, const char *id)
 }
 
 bool
-peer_exist (char *id)
+peer_exist (const char *id)
 {
 	if (get_peer (head, id) == NULL) {
 		return false;
@@ -85,12 +85,22 @@ new_message (const char *content)
 	return new;
 }
 
+static struct message *
+get_tail (struct message *h)
+{
+	// get to most recent message, the tail
+	while (h->next != NULL) {
+		h = h->next;
+	}
+	return h;
+}
+
 bool
 insert_new_message  (const char *peerId, const char *content)
 {
 	// insert a new message to a message list
-	// most recent at top
-	// returns new message as head
+	// most recent at tail 
+	// returns oldest message as head
 	//
 	// does not check that peer exist
 	struct peer *p = get_peer (head, peerId);
@@ -98,23 +108,27 @@ insert_new_message  (const char *peerId, const char *content)
 	if(p->msg == NULL){
 		p->msg = new;
 	} else {
-		p->msg->prev = new;
-		new->next = p->msg;
-		p->msg = new;
+		struct message *tmp = get_tail (p->msg);
+		tmp->next = new;
+		new->prev = tmp;
 	}
 	return true;
 }
 
-struct message *
-delete_message(struct message *msg)
+static void
+delete_messages (struct message *msg)
 {
 	// frees the message and deletes its content
-	// returns the next message
-	struct message *m = msg->next;
-	free(msg->content);
-	free(msg->date);
-	free(msg);
-	return(m);
+	// delete all messages
+	
+	struct message *m = msg->next, *tmp;
+	while (msg != NULL) {
+		free(msg->content);
+		free(msg->date);
+		tmp = msg;
+		msg = msg->next;
+		free(tmp);
+	}
 }
 
 struct peer *
@@ -124,6 +138,12 @@ delete_peer(struct peer *currentPeer)
 	// note: here we suppose that the msg list
 	// of the peer has already been freed (see delete_message)
 	struct peer *p = currentPeer->next;
+	if (p != NULL) {
+		p->prev = currentPeer->prev;
+		currentPeer->prev->next = p;
+	} else {
+		currentPeer->prev = NULL;
+	}
 	free(currentPeer->id);
 	free(currentPeer);
 	return p;
@@ -134,7 +154,8 @@ get_unread_messages(struct peer *currentPeer)
 {
 	// for the given peer
 	// check if there are messages that need to be read
-	// if there are any, send them to a socket to the client
+	// if there are any, send them with mong_recv 
+	// Sends all messages in one time
 	struct message *curMsg;
 
 	curMsg = currentPeer->msg;
@@ -145,8 +166,9 @@ get_unread_messages(struct peer *currentPeer)
 		// and compromise realtime/message order
 		// DA RIVEDERE
 		while(!send_message_to_socket(curMsg, strdup(currentPeer->id)));
-		curMsg = delete_message(curMsg);
+		curMsg = curMsg->next;
 	}
+	delete_messages (currentPeer->msg);
 	return true;
 }
 
@@ -157,15 +179,15 @@ get_list_head()
 }
 
 bool
-check_peers_for_messages(struct peer *currentPeer)
+check_peer_for_messages(const char *id)
 {
 	// every non-null peer
 	// should have pending messages
-	// finds every peer, gets its messages, frees the peer
+	// find the peer, gets its messages, frees the peer
+	struct peer *currentPeer = get_peer (get_list_head (), id);
 	if(currentPeer == NULL){
-		return true;
+		return false;
 	}
 	get_unread_messages(currentPeer);
 	currentPeer = delete_peer(currentPeer);
-	return check_peers_for_messages(currentPeer);
 }

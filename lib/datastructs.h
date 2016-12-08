@@ -42,11 +42,12 @@ struct peer {
 	struct peer *prev;
 	struct message *msg;
 };
-bool
-check_peers_for_messages(struct peer *currentPeer);
 
 bool
-peer_exist (char *id);
+check_peers_for_messages(const char *id);
+
+bool
+peer_exist (const char *id);
 
 bool
 insert_peer (const char *id);

@@ -119,8 +119,8 @@ void
       	  	log_msg (data->id, data->msg, data->cmd);
       	  	relay_msg (*data);
       	  	break;
-    	case UPDATE:
-			check_peers_for_messages(get_list_head());
+        /*case UPDATE:*/
+			/*check_peers_for_messages(get_list_head());*/
 			break;
 		default:
       		return 0;
