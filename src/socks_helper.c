@@ -51,7 +51,7 @@ send_message_to_socket(struct message *msgStruct, char *peerId)
 	socketAddr.sin_port = 42000; // yeah that was random
 	socketAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
-	if(connect(sock, (struct sockaddr_in*)&socketAddr, sizeof(struct sockaddr_in)) < 0){
+	if(connect(sock, (struct sockaddr*)&socketAddr, sizeof(struct sockaddr_in)) < 0){
 		perror("socket connect");
 		return false;
 	}
@@ -59,8 +59,9 @@ send_message_to_socket(struct message *msgStruct, char *peerId)
 	// message of the form: [ID] time: message
 	// real programmers don't care about formatting
 	msgSize = strlen(peerId)+strlen(msgStruct->content)+strlen(msgStruct->date)+7;
+	// everything is better if the buffer is zeroed
 	msgBuf = calloc(msgSize, sizeof(char));
-	
+
 	// ops! C strings did it again
 	msgBuf[0] = '[';
 	strncat(msgBuf, peerId, sizeof(peerId));

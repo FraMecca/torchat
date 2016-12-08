@@ -3,6 +3,7 @@
 #include <stdlib.h> // malloc
 #include "../lib/util.h" // get_date
 #include <stdbool.h>
+#include "../lib/socks_helper.h" // send_message_to_socket
 
 static struct peer *head = NULL;
 // a pointer to the head of peer list
@@ -47,11 +48,11 @@ get_peer (struct peer *current, const char *id)
 	// returns null if the id is not found
 	//
 	// needs head because recursion
-	if (head == NULL) {
+	if (current == NULL) {
 		return NULL;
 		// id not found
 	} else if (strcmp (current->id, id) == 0) {
-		return head;
+		return current;
 	} else {
 		return get_peer (current->next, id);
 	}
@@ -147,6 +148,12 @@ get_unread_messages(struct peer *currentPeer)
 		curMsg = delete_message(curMsg);
 	}
 	return true;
+}
+
+struct peer *
+get_list_head()
+{
+	return head;
 }
 
 bool

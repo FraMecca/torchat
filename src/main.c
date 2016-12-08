@@ -97,6 +97,7 @@ void
 	}
 	if (data->msg == NULL) {
 		// the json was invalid 
+		//
 		// and logged to errlog
 		return 0;
 	}
@@ -118,7 +119,10 @@ void
       	  	log_msg (data->id, data->msg, data->cmd);
       	  	relay_msg (*data);
       	  	break;
-      	default:
+    	case UPDATE:
+			check_peers_for_messages(get_list_head());
+			break;
+		default:
       		return 0;
     }
     free (data->msg);
