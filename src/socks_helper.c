@@ -14,7 +14,7 @@
 #include <stdio.h> // perror
 
 
-bool set_socket_timeout (const int sockfd)
+static bool set_socket_timeout (const int sockfd)
 {
 	// this function sets the socket timeout
 	// 120s
@@ -88,10 +88,14 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
 
     char resp2[10];
     recv(sock, resp2, 10, 0);
+    // if resp2 is ok, tor opened a socket to domain (.onion)
 
     // Here you can normally use send and recv
-    // Testing With a HTTP GET Request
-    send(sock, buf, strlen (buf), 0);
+    // buf is the message I want to send to peer
+    if (send(sock, buf, strlen (buf), 0) < 0) {
+    	return false;
+    	// shouldn't
+    }
 
     return true;
 }
