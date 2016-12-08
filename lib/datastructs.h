@@ -14,6 +14,7 @@ enum command {
 	SEND,
 	RECV,
 	UPDATE,
+	GET_PEERS,
 	EXIT
 };
 struct data_wrapper {
@@ -57,3 +58,6 @@ get_list_head();
 
 bool
 insert_new_message  (const char *peerId, const char *content);
+
+char *
+get_peer_list ();

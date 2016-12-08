@@ -17,10 +17,10 @@
 #include <pthread.h>
 #include "../lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
-extern char * convert_datastruct_to_char (const struct data_wrapper data); // from json.cpp
+extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
 
 bool
-relay_msg (const struct data_wrapper);
+relay_msg (struct data_wrapper*);
 void 
 log_msg (char *id, char *msg, enum command c);
 
@@ -85,10 +85,11 @@ read_tor_hostname (void)
 }
 
 void 
-*event_routine (void *voidIo) 
+*event_routine (void *ncV) 
 {
-	struct mbuf *io = voidIo; // io was casted to void as pthread prototype
-  	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
+	struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype
+  	struct mbuf *io = &nc->recv_mbuf;
+	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
   	if (io->buf != NULL) {
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		mbuf_remove(io, io->len);      // Discard data from recv buffer
@@ -117,10 +118,25 @@ void
       	case SEND :
       		// mongoose is told that you want to send a message to a peer
       	  	log_msg (data->id, data->msg, data->cmd);
-      	  	relay_msg (*data);
+      	  	relay_msg (data);
       	  	break;
         /*case UPDATE:*/
 			/*check_peers_for_messages(get_list_head());*/
+			break;
+		case GET_PEERS :
+			// the client asked to receive the list of all the peers that send the server a message (not read yet)
+			// send the list as a parsed json, with peer field comma divided
+			// the char containing the list of peers commadivided is then put into a json 
+			// just store it in data.msg
+			free (data->msg);
+			data->msg = get_peer_list ();
+			if (data->msg == NULL) {
+				data->msg = strdup ("");
+				// needed if no peers messaged us
+			}
+			char *response = convert_datastruct_to_char (data);
+			mg_send (nc, response, strlen (response));
+
 			break;
 		default:
       		return 0;
@@ -134,14 +150,15 @@ void
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
-  	struct mbuf *io = &nc->recv_mbuf;
   	pthread_t th;
 
 	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
     	/*case MG_EV_RECV:*/
     	// switch to a new thread and do everything in that thread
-    	pthread_create (&th, NULL, event_routine, io);
+    	pthread_create (&th, NULL, event_routine, nc);
+        /*the thread handles the connection and works on that.*/
+            /*the thread may even reply to the peer that requested the connection*/
 
   	}
 }
@@ -170,15 +187,15 @@ log_msg (char *onion, char *msg, enum command MODE)
 
 
 bool
-relay_msg (struct data_wrapper data)
+relay_msg (struct data_wrapper *data)
 {
 	char id[30];
       	// first change command to RECV, not SEND
-    data.cmd = RECV;
-	strcpy (id, data.id); // save dest address
-	strcpy (data.id, HOSTNAME); // copy your hostname to the field
+    data->cmd = RECV;
+	strcpy (id, data->id); // save dest address
+	strcpy (data->id, HOSTNAME); // copy your hostname to the field
 	char *msg = convert_datastruct_to_char (data);
-	bool ret = send_over_tor (id, data.portno, msg, 9250);
+	bool ret = send_over_tor (id, data->portno, msg, 9250);
 	free (msg);
 	return ret;
 }

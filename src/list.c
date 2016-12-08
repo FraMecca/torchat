@@ -178,6 +178,34 @@ get_list_head()
 	return head;
 }
 
+char *
+get_peer_list ()
+{
+	// get a list of the peers that send the server a message the client still didn't read
+	// this should be parsed as a json after
+	struct peer *ptr = head;
+	size_t size = 0; // size = sum of strlen of all peer id
+	if (ptr == NULL) {
+		return NULL;
+	} else {
+		while (ptr != NULL) {
+			size += strlen (ptr->id) + 1; // +1 is for the comma
+			ptr = ptr->next;
+		}
+		ptr = head; // reset ptr
+		char *peerList = calloc (size, sizeof (char));
+		while (ptr != NULL) {
+			// iterate again and concatenate the char*
+			strncat (peerList, ptr->id, strlen (ptr->id));
+			strncat (peerList, ",", sizeof (char));
+			ptr = ptr->next;
+		}
+		return peerList; // already in heap
+	}
+}
+
+
+
 bool
 check_peer_for_messages(const char *id)
 {

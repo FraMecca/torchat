@@ -23,6 +23,8 @@ convert_to_enum (const std::string cmd)
 		return RECV;
 	} else if (cmd == "SEND") {
 		return SEND;
+	} else if (cmd == "GET_PEERS") {
+		return GET_PEERS;
 	} else if (cmd == "EXIT") {
 		return EXIT;
 	}
@@ -42,6 +44,8 @@ convert_from_enum (const enum command c)
 		case EXIT :
 			st = "EXIT";
 			break;
+		case GET_PEERS :
+			st = "GET_PEERS";
 	}
 	return st;
 }
@@ -98,7 +102,7 @@ convert_string_to_datastruct (const char *jsonCh)
 }
 
 extern "C" char *
-convert_datastruct_to_char (const struct data_wrapper data)
+convert_datastruct_to_char (const struct data_wrapper *data)
 {
 	// does the opposite,
 	// takes a data_wrapper and return a char* to be sent over a socket
@@ -107,10 +111,10 @@ convert_datastruct_to_char (const struct data_wrapper data)
 	 * then dump json to string
 	 */
 	json j;
-	j["cmd"] = convert_from_enum (data.cmd);
-	j["id"] = data.id;
-	j["msg"] = data.msg;
-	j["portno"] = data.portno;
+	j["cmd"] = convert_from_enum (data->cmd);
+	j["id"] = data->id;
+	j["msg"] = data->msg;
+	j["portno"] = data->portno;
 	std::string st =  j.dump ();
 	return strdup  (st.c_str ());
 };
