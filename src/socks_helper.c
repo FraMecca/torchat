@@ -12,9 +12,10 @@
 #include <time.h> // timestructs
 #include <errno.h> // perror
 #include <stdio.h> // perror
+#include "../lib/datastructs.h" // for message to socket
 
-
-bool set_socket_timeout (const int sockfd)
+bool 
+set_socket_timeout (const int sockfd)
 {
 	// this function sets the socket timeout
 	// 120s
@@ -32,6 +33,51 @@ bool set_socket_timeout (const int sockfd)
 	        return false;
 	    }
 	    return true;
+}
+
+bool
+send_message_to_socket(struct message *msgStruct, char *peerId)
+{
+	// the daemon uses a socket
+	// to send unread messages to the client
+	int sock;
+	struct sockaddr_in socketAddr;
+	char *msgBuf;
+	int msgSize;
+	
+	
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	socketAddr.sin_family = AF_INET;
+	socketAddr.sin_port = 42000; // yeah that was random
+	socketAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+	if(connect(sock, (struct sockaddr_in*)&socketAddr, sizeof(struct sockaddr_in)) < 0){
+		perror("socket connect");
+		return false;
+	}
+
+	// message of the form: [ID] time: message
+	// real programmers don't care about formatting
+	msgSize = strlen(peerId)+strlen(msgStruct->content)+strlen(msgStruct->date)+7;
+	msgBuf = calloc(msgSize, sizeof(char));
+	
+	// ops! C strings did it again
+	msgBuf[0] = '[';
+	strncat(msgBuf, peerId, sizeof(peerId));
+	strncat(msgBuf, "]", 1);
+	strncat(msgBuf, msgStruct->date, sizeof(msgStruct->date));
+	strncat(msgBuf, ":", 1);
+	strncat(msgBuf, msgStruct->content, sizeof(msgStruct->content));
+
+	// sending the message to the socket
+	if(send(sock, msgBuf, strlen(msgBuf), 0) < 0){
+		perror("send");
+		return false;
+	}
+	
+	free(msgBuf);
+	free(peerId);
+	return true;
 }
 
 bool
