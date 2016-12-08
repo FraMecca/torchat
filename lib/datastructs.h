@@ -13,6 +13,7 @@
 enum command {
 	SEND,
 	RECV,
+	UPDATE,
 	EXIT
 };
 struct data_wrapper {
@@ -41,12 +42,17 @@ struct peer {
 	struct peer *prev;
 	struct message *msg;
 };
+bool
+check_peers_for_messages(struct peer *currentPeer);
 
 bool
 peer_exist (char *id);
 
 bool
 insert_peer (const char *id);
+
+struct peer *
+get_list_head();
 
 bool
 insert_new_message  (const char *peerId, const char *content);

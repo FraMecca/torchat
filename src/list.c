@@ -3,6 +3,7 @@
 #include <stdlib.h> // malloc
 #include "../lib/util.h" // get_date
 #include <stdbool.h>
+#include "../lib/socks_helper.h" // send_message_to_socket
 
 static struct peer *head = NULL;
 // a pointer to the head of peer list
@@ -47,11 +48,11 @@ get_peer (struct peer *current, const char *id)
 	// returns null if the id is not found
 	//
 	// needs head because recursion
-	if (head == NULL) {
+	if (current == NULL) {
 		return NULL;
 		// id not found
 	} else if (strcmp (current->id, id) == 0) {
-		return head;
+		return current;
 	} else {
 		return get_peer (current->next, id);
 	}
@@ -102,4 +103,69 @@ insert_new_message  (const char *peerId, const char *content)
 		p->msg = new;
 	}
 	return true;
+}
+
+struct message *
+delete_message(struct message *msg)
+{
+	// frees the message and deletes its content
+	// returns the next message
+	struct message *m = msg->next;
+	free(msg->content);
+	free(msg->date);
+	free(msg);
+	return(m);
+}
+
+struct peer *
+delete_peer(struct peer *currentPeer)
+{
+	// frees the peer given and deletes its id
+	// note: here we suppose that the msg list
+	// of the peer has already been freed (see delete_message)
+	struct peer *p = currentPeer->next;
+	free(currentPeer->id);
+	free(currentPeer);
+	return p;
+}
+
+bool
+get_unread_messages(struct peer *currentPeer)
+{
+	// for the given peer
+	// check if there are messages that need to be read
+	// if there are any, send them to a socket to the client
+	struct message *curMsg;
+
+	curMsg = currentPeer->msg;
+
+	while(curMsg != NULL){
+		// keep on trying until the message is sent
+		// note: this MAY HANG the thread execution
+		// and compromise realtime/message order
+		// DA RIVEDERE
+		while(!send_message_to_socket(curMsg, strdup(currentPeer->id)));
+		curMsg = delete_message(curMsg);
+	}
+	return true;
+}
+
+struct peer *
+get_list_head()
+{
+	return head;
+}
+
+bool
+check_peers_for_messages(struct peer *currentPeer)
+{
+	// every non-null peer
+	// should have pending messages
+	// finds every peer, gets its messages, frees the peer
+	if(currentPeer == NULL){
+		return true;
+	}
+	get_unread_messages(currentPeer);
+	currentPeer = delete_peer(currentPeer);
+	return check_peers_for_messages(currentPeer);
 }
