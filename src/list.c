@@ -116,19 +116,16 @@ insert_new_message  (const char *peerId, const char *content)
 }
 
 static void
-delete_messages (struct message *msg)
+delete_message (struct message *msg)
 {
 	// frees the message and deletes its content
 	// delete all messages
-	
 	struct message *m = msg->next, *tmp;
-	while (msg != NULL) {
-		free(msg->content);
-		free(msg->date);
-		tmp = msg;
-		msg = msg->next;
-		free(tmp);
-	}
+	free(msg->content);
+	free(msg->date);
+	tmp = msg;
+	msg = msg->next;
+	free(tmp);
 }
 
 struct peer *
@@ -149,27 +146,30 @@ delete_peer(struct peer *currentPeer)
 	return p;
 }
 
-bool
-get_unread_messages(struct peer *currentPeer)
+char *
+get_unread_message(const char *peerId)
 {
 	// for the given peer
 	// check if there are messages that need to be read
-	// if there are any, send them with mong_recv 
-	// Sends all messages in one time
-	struct message *curMsg;
-
-	curMsg = currentPeer->msg;
-
-	while(curMsg != NULL){
-		// keep on trying until the message is sent
-		// note: this MAY HANG the thread execution
-		// and compromise realtime/message order
-		// DA RIVEDERE
-		while(!send_message_to_socket(curMsg, strdup(currentPeer->id)));
-		curMsg = curMsg->next;
+	// if there are any, return the oldest one
+	// otherwise, NULL is returned
+	struct peer currentPeer = get_peer(head, peerId);
+	if(currentPeer == NULL){
+		return NULL;
 	}
-	delete_messages (currentPeer->msg);
-	return true;
+	struct message *msg = currentPeer->msg;
+	if(msg == NULL){
+		return NULL;
+	}
+	int len = strlen(msg->content)+strlen(msg->date)+3;
+	char *m = calloc(len, sizeof(char));
+
+	strncpy(m, msg->date, strlen(msg->date));
+	strncat(m, ": ", 2);
+	strncat(m, msg->content, strlen(msg->content));
+
+	delete_message (currentPeer->msg);
+	return m;
 }
 
 struct peer *
@@ -206,16 +206,16 @@ get_peer_list ()
 
 
 
-bool
-check_peer_for_messages(const char *id)
-{
-	// every non-null peer
-	// should have pending messages
-	// find the peer, gets its messages, frees the peer
-	struct peer *currentPeer = get_peer (get_list_head (), id);
-	if(currentPeer == NULL){
-		return false;
-	}
-	get_unread_messages(currentPeer);
-	currentPeer = delete_peer(currentPeer);
-}
+/*bool*/
+/*check_peer_for_messages(const char *id)*/
+/*{*/
+	/*// every non-null peer*/
+	/*// should have pending messages*/
+	/*// find the peer, gets its messages, frees the peer*/
+	/*struct peer *currentPeer = get_peer (get_list_head (), id);*/
+	/*if(currentPeer == NULL){*/
+		/*return false;*/
+	/*}*/
+	/*get_unread_messages(currentPeer);*/
+	/*currentPeer = delete_peer(currentPeer);*/
+/*}*/

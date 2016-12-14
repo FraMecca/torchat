@@ -120,8 +120,19 @@ void
       	  	log_msg (data->id, data->msg, data->cmd);
       	  	relay_msg (data);
       	  	break;
-        /*case UPDATE:*/
-			/*check_peers_for_messages(get_list_head());*/
+		case UPDATE:
+			// the client asks for unread messages from data->id peer
+			// get the OLDEST, send as a json
+			// this is supposed to be executed periodically
+			// by the client
+			free(data->msg);
+
+			// if no msg, get_unread_message should return NULL
+			if((data->msg = get_unread_message(data->id)) != NULL){
+				// now we convert the message in a json and send it
+				char *unreadMsg = convert_datastruct_to_char(data);
+				mg_send (nc, unreadMsg, strlen(unreadMsg));
+			}
 			break;
 		case GET_PEERS :
 			// the client asked to receive the list of all the peers that send the server a message (not read yet)

@@ -44,8 +44,11 @@ struct peer {
 	struct message *msg;
 };
 
-bool
-check_peers_for_messages(const char *id);
+//bool
+//check_peers_for_messages(const char *id);
+
+char *
+get_unread_message(const char *peerId);
 
 bool
 peer_exist (const char *id);
