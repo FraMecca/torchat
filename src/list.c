@@ -153,7 +153,7 @@ get_unread_message(const char *peerId)
 	// check if there are messages that need to be read
 	// if there are any, return the oldest one
 	// otherwise, NULL is returned
-	struct peer currentPeer = get_peer(head, peerId);
+	struct peer *currentPeer = get_peer(head, peerId);
 	if(currentPeer == NULL){
 		return NULL;
 	}
