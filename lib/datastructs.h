@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h> // bool
+#include "../include/uthash.h"
 
 // This header contains the datastructs used by the daemon:
 // 1. enum command: the commands inserted into the json (a string) and used by the server to understand what it should do
@@ -39,9 +40,8 @@ struct peer {
 	// contains id of peers you are talking to
 	// and a list of messages of each id
 	char id[30];
-	struct peer *next;
-	struct peer *prev;
 	struct message *msg;
+	UT_hash_handle hh; // hash table handler
 };
 
 //bool
