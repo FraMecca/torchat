@@ -16,6 +16,7 @@ enum command {
 	RECV,
 	UPDATE,
 	GET_PEERS,
+	END,
 	EXIT
 };
 struct data_wrapper {

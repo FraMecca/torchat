@@ -137,6 +137,10 @@ void
 				data->msg = msg;
 				char *unreadMsg = convert_datastruct_to_char(data);
 				mg_send (nc, unreadMsg, strlen(unreadMsg));
+			} else {
+				data->cmd = END;
+				char *unreadMsg = convert_datastruct_to_char(data);
+				mg_send (nc, unreadMsg, strlen(unreadMsg));
 			}
 			break;
 		case GET_PEERS :

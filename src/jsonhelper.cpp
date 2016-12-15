@@ -30,6 +30,8 @@ convert_to_enum (const std::string cmd)
 		return EXIT;
 	} else if (cmd == "UPDATE") {
 		return UPDATE;
+	} else if (cmd == "END") {
+		return END;
 	}
 }
 
@@ -49,8 +51,13 @@ convert_from_enum (const enum command c)
 			break;
 		case GET_PEERS :
 			st = "GET_PEERS";
+			break;
 		case UPDATE : 
 			st = "UPDATE";
+			break;
+		case END :
+			st = "END";
+			break;
 	}
 	return st;
 }

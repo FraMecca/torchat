@@ -5,6 +5,9 @@
 #include <stdbool.h>
 #include "../lib/socks_helper.h" // send_message_to_socket
 #include "../include/uthash.h"
+#include <pthread.h> // mutexes
+
+static pthread_mutex_t *mut = NULL;
 
 static struct peer *head = NULL;
 // a pointer to the head of peer list
@@ -13,7 +16,7 @@ static struct peer *
 new_peer (const char *id)
 {
 	// allocate a new peer list
-	struct peer *new = malloc (sizeof (struct peer));
+	struct peer *new = calloc (1, sizeof (struct peer));
 	if (new == NULL) {
 		exit_error ("malloc");
 	}
@@ -29,7 +32,15 @@ insert_peer (const char *onion)
 	// then push it to the existing list
 	// returns the head
 	struct peer *new = new_peer (onion);
+	if (mut == NULL) {
+		mut = malloc (sizeof (pthread_mutex_t));
+		pthread_mutex_init (mut, NULL);
+	}
+	if (pthread_mutex_lock (mut) != 0) {
+		exit_error ("pthread mutex: ");
+	}
 	HASH_ADD_STR (head, id, new);
+	pthread_mutex_unlock (mut);
 // uthash modifies *p, so it can't be used again in other functions
 	return true;
 }
@@ -38,7 +49,15 @@ static struct peer *
 get_peer (const char *id)
 {
 	struct peer *p;
+	if (mut == NULL) {
+		mut = malloc (sizeof (pthread_mutex_t));
+		pthread_mutex_init (mut, NULL);
+	}
+	if (pthread_mutex_lock (mut) != 0) {
+		exit_error ("pthread mutex: ");
+	}
 	HASH_FIND_STR (head, id, p); // returs null if doesn't exist
+	pthread_mutex_unlock (mut);
 	return p;
 }
 
@@ -82,12 +101,22 @@ get_tail (struct message *h)
 bool
 insert_new_message  (const char *peerId, const char *content)
 {
+	/*if (mut == NULL) {*/
+		/*mut = malloc (sizeof (pthread_mutex_t));*/
+		/*pthread_mutex_init (mut, NULL);*/
+	/*}*/
+	/*if (pthread_mutex_lock (mut) != 0) {*/
+		/*exit_error ("pthread mutex: ");*/
+	/*}*/
 	// insert a new message to a message list
 	// most recent at tail 
 	// returns oldest message as head
 	//
 	// does not check that peer exist
 	struct peer *p = get_peer (peerId);
+	if (p == NULL) {
+		insert_peer (peerId);
+	}
 	struct message *new = new_message (content);
 	if(p->msg == NULL){
 		p->msg = new;
@@ -96,6 +125,7 @@ insert_new_message  (const char *peerId, const char *content)
 		tmp->next = new;
 		new->prev = tmp;
 	}
+	/*pthread_mutex_unlock (mut);*/
 	return true;
 }
 
@@ -119,7 +149,15 @@ delete_peer(struct peer *currentPeer)
 	// frees the peer given and deletes its id
 	// note: here we suppose that the msg list
 	// of the peer has already been freed (see delete_message)
+	if (mut == NULL) {
+		mut = malloc (sizeof (pthread_mutex_t));
+		pthread_mutex_init (mut, NULL);
+	}
+	if (pthread_mutex_lock (mut) != 0) {
+		exit_error ("pthread mutex: ");
+	}
 	HASH_DEL (head, currentPeer);
+	pthread_mutex_unlock (mut);
 }
 
 char *
@@ -169,16 +207,24 @@ get_peer_list ()
 	if (head == NULL) {
 		return NULL;
 	} else {
+		if (mut == NULL) {
+			mut = malloc (sizeof (pthread_mutex_t));
+			pthread_mutex_init (mut, NULL);
+		}
+		if (pthread_mutex_lock (mut) != 0) {
+			exit_error ("pthread mutex: ");
+		}
 		HASH_ITER (hh, head, ptr, tmp) {
 			size += strlen (ptr->id) + 1; // +1 is for the comma
 		}
-		char *peerList = calloc (size, sizeof (char));
+		char *peerList = calloc (size + 1, sizeof (char));
 		HASH_ITER (hh, head, ptr, tmp) {
 			// iterate again and concatenate the char*
 			strncat (peerList, ptr->id, strlen (ptr->id));
 			strncat (peerList, ",", sizeof (char));
 		}
 		peerList[strlen (peerList) - 1] = '\0';
+		pthread_mutex_unlock (mut);
 		return peerList; // already in heap
 	}
 }
