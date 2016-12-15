@@ -114,9 +114,6 @@ insert_new_message  (const char *peerId, const char *content)
 	//
 	// does not check that peer exist
 	struct peer *p = get_peer (peerId);
-	if (p == NULL) {
-		insert_peer (peerId);
-	}
 	struct message *new = new_message (content);
 	if(p->msg == NULL){
 		p->msg = new;
