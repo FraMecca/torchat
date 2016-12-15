@@ -24,6 +24,7 @@ struct data_wrapper {
 	char id[30];
 	int portno;
 	char *msg;
+	char *date;
 	// message will be like:
 	// IP PORTNO CMD CONTENT...
 	// space is the delimiter

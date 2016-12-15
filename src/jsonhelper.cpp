@@ -9,8 +9,9 @@ using json = nlohmann::json;
 /*
  * json j ={
  * {"cmd" = RECV or SEND},
- * {"id" = "id" },
  * {"portno" = n},
+ * {"id" = "id" },
+ * {"date" = "date"},
  * {"msg" = buf}
  * }
  */
@@ -27,6 +28,8 @@ convert_to_enum (const std::string cmd)
 		return GET_PEERS;
 	} else if (cmd == "EXIT") {
 		return EXIT;
+	} else if (cmd == "UPDATE") {
+		return UPDATE;
 	}
 }
 
@@ -46,6 +49,8 @@ convert_from_enum (const enum command c)
 			break;
 		case GET_PEERS :
 			st = "GET_PEERS";
+		case UPDATE : 
+			st = "UPDATE";
 	}
 	return st;
 }
@@ -97,6 +102,8 @@ convert_string_to_datastruct (const char *jsonCh)
 	data.id[strlen (jid.c_str ()) + 1] = '\0';
 	data.portno = j["portno"];
 	data.cmd = convert_to_enum (j["cmd"]);
+	std::string jdate = j["date"];
+	data.date = strdup (jdate.c_str ());
 
 	return data;
 }
@@ -115,6 +122,7 @@ convert_datastruct_to_char (const struct data_wrapper *data)
 	j["id"] = data->id;
 	j["msg"] = data->msg;
 	j["portno"] = data->portno;
+	j["date"] = data->date;
 	std::string st =  j.dump ();
 	return strdup  (st.c_str ());
 };

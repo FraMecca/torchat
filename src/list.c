@@ -99,7 +99,7 @@ insert_new_message  (const char *peerId, const char *content)
 	return true;
 }
 
-static void
+static struct message *
 delete_message (struct message *msg)
 {
 	// frees the message and deletes its content
@@ -110,9 +110,10 @@ delete_message (struct message *msg)
 	tmp = msg;
 	msg = msg->next;
 	free(tmp);
+	return msg;
 }
 
-void
+static void
 delete_peer(struct peer *currentPeer)
 {
 	// frees the peer given and deletes its id
@@ -143,7 +144,12 @@ get_unread_message(const char *peerId)
 	strncat(m, ": ", 2);
 	strncat(m, msg->content, strlen(msg->content));
 
-	delete_message (currentPeer->msg);
+	currentPeer->msg = delete_message (currentPeer->msg);
+	if (currentPeer->msg == NULL) {
+		// if we read every message of the peer, remove peer from hash table
+		delete_peer (currentPeer);
+	}
+	
 	return m;
 }
 
@@ -172,6 +178,7 @@ get_peer_list ()
 			strncat (peerList, ptr->id, strlen (ptr->id));
 			strncat (peerList, ",", sizeof (char));
 		}
+		peerList[strlen (peerList) - 1] = '\0';
 		return peerList; // already in heap
 	}
 }

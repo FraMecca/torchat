@@ -90,6 +90,8 @@ void
 	struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype
   	struct mbuf *io = &nc->recv_mbuf;
 	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
+	char *msg;
+
   	if (io->buf != NULL) {
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		mbuf_remove(io, io->len);      // Discard data from recv buffer
@@ -112,6 +114,7 @@ void
 			if (!peer_exist (data->id)) {
 				// guess what, peer doesn't exist
 				insert_peer (data->id);
+				// insert in hash tables only peer that sent RECV, not other cmd
 			}
 			insert_new_message (data->id, data->msg);
       	  	break;
@@ -125,11 +128,13 @@ void
 			// get the OLDEST, send as a json
 			// this is supposed to be executed periodically
 			// by the client
-			free(data->msg);
+			/*free(data->msg);*/
 
 			// if no msg, get_unread_message should return NULL
-			if((data->msg = get_unread_message(data->id)) != NULL){
+			if((msg = get_unread_message(data->msg)) != NULL){
 				// now we convert the message in a json and send it
+				free (data->msg);
+				data->msg = msg;
 				char *unreadMsg = convert_datastruct_to_char(data);
 				mg_send (nc, unreadMsg, strlen(unreadMsg));
 			}
@@ -146,7 +151,10 @@ void
 				// needed if no peers messaged us
 			}
 			char *response = convert_datastruct_to_char (data);
-			mg_send (nc, response, strlen (response));
+			if (nc->iface != NULL) {
+				// if iface is not null the client is waiting for response
+				mg_send (nc, response, strlen (response));
+			}
 
 			break;
 		default:
