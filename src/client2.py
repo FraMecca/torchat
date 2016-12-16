@@ -2,7 +2,7 @@ import json
 import socket
 import readline
 from time import sleep
-from threading import Thread 
+from multiprocessing import Process 
 
 class Completer(object):
     'The completer class for gnu readline'
@@ -93,8 +93,8 @@ def main (portno):
     # here we use one thread to update unread messages, another that sends
     print ("Choose one id: ", end = '')
     i = input ()
-    t1 = Thread(target=update_routine, args=(peerList, i, portno))
-    t2 = Thread(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
+    t1 = Process(target=update_routine, args=(peerList, i, portno))
+    t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
     t2.start()
 
