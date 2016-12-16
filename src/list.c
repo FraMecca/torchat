@@ -83,7 +83,7 @@ new_message (const char *content)
 	}
 	new->next = NULL;
 	new->prev = NULL;
-	new->date = get_date ();
+	new->date = get_short_date ();
 	new->content = strdup (content);
 	return new;
 }

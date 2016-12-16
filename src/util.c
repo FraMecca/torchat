@@ -25,3 +25,13 @@ get_date ()
 	date[strlen (date)-1] = '\0'; // insert linetermination
 	return strdup (date);
 }
+
+char *
+get_short_date ()
+{
+	time_t t = time (NULL);
+	struct tm *tm = localtime (&t);
+	char date[50];
+	strftime(date, 8, "%H:%M:%S-%d%m", tm);
+	return strdup(date);
+}

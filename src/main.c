@@ -129,7 +129,8 @@ void
 			// this is supposed to be executed periodically
 			// by the client
 			/*free(data->msg);*/
-
+			strncpy(data->id, data->msg,29*sizeof(char));
+			data->id[strlen(data->id)] = '\0';
 			// if no msg, get_unread_message should return NULL
 			if((msg = get_unread_message(data->msg)) != NULL){
 				// now we convert the message in a json and send it
@@ -217,6 +218,7 @@ relay_msg (struct data_wrapper *data)
     data->cmd = RECV;
 	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME); // copy your hostname to the field
+	data->date = get_short_date();
 	char *msg = convert_datastruct_to_char (data);
 	bool ret = send_over_tor (id, data->portno, msg, 9250);
 	free (msg);

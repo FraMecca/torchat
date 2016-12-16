@@ -7,3 +7,6 @@ exit_error (char *s);
 
 char *
 get_date ();
+
+char *
+get_short_date();
