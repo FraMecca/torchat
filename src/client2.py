@@ -3,8 +3,12 @@ import socket
 import readline
 import rlcompleter
 from time import sleep
+<<<<<<< HEAD
 import os
 from multiprocessing import Process 
+=======
+from multiprocessing import Process
+>>>>>>> 2d839718ca551347f4f45bf738d843c5cee451e6
 
 printBuf = list ()
 
@@ -54,11 +58,16 @@ def update_routine(peerList, i, portno):
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
+<<<<<<< HEAD
         else:
             print (resp) # we NEED a function that prints the json in a nicer way
         return
+=======
+        else: 
+            print (resp['date']+' '+resp['msg']) # we NEED a function that prints the json in a nicer way
+>>>>>>> 2d839718ca551347f4f45bf738d843c5cee451e6
 
-def input_routine(lst): # tutta tua mecca
+def input_routine(lst, i, portno):
     if lst:
         c = Completer (lst)
     else:
@@ -67,9 +76,19 @@ def input_routine(lst): # tutta tua mecca
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
     while True:
+<<<<<<< HEAD
         escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
         line = input (escapeSeq + '> ')
         print_line_cur (line)
+=======
+        line = input ('> ')
+        # print (line)
+        # here we send to mongoose
+        j = create_json(cmd='SEND', msg=line)
+        j['id'] = lst[i]
+        j['portno'] = 80
+        resp = send_to_mongoose(j, portno)
+>>>>>>> 2d839718ca551347f4f45bf738d843c5cee451e6
         c.update ([line])
 
 def create_json (cmd='', msg=''):
@@ -89,8 +108,10 @@ def send_to_mongoose (j, portno):
     s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
     s.connect (("localhost", int (portno)))
     s.send (bytes (json.dumps (j), 'utf-8'))
-    resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
-    return resp
+    # wait for response only when needed (not for SEND)
+    if j['cmd'] == 'GET_PEERS' or j['cmd'] == 'UPDATE':
+        resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
+        return resp
 
 def main (portno):
 
@@ -100,22 +121,24 @@ def main (portno):
     peerList = resp['msg'].split (',')
 
     if peerList[0] == '': # no peers have written you! 
-        print ("No peers")
-        exit (0)
+        print ("No peers, give me an onion address:")
+        # exit (0)
+        i = 0
+        peerList[0] = str(input())
     else:
         i = 0
         for id in peerList: # print them all with an integer id associated
             print (str (i) + '.', peerList[i])
             i+=1
+            print ("Choose one id: ", end = '')
+            i = input ()
 
     # here we use one thread to update unread messages, another that sends
-    print ("Choose one id: ", end = '')
-    i = input ()
     t1 = Process(target=update_routine, args=(peerList, i, portno))
     # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
     # t2.start()
-    input_routine (peerList)
+    input_routine (peerList, i, portno)
 
 if __name__ == '__main__':
     from sys import argv
