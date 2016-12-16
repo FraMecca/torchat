@@ -1,8 +1,21 @@
 import json
 import socket
 import readline
+import rlcompleter
 from time import sleep
+import os
 from multiprocessing import Process 
+
+printBuf = list ()
+
+def print_line_cur (line):
+    rows, columns = os.popen('stty size', 'r').read().split()
+    printBuf.append (line)
+    print ("\033[2J\033[;H")
+    print ('\n'.join (printBuf))
+    while len(printBuf) > rows:
+        printBuf.pop[0]
+
 
 class Completer(object):
     'The completer class for gnu readline'
@@ -43,6 +56,7 @@ def update_routine(peerList, i, portno):
             sleep(0.5)
         else:
             print (resp) # we NEED a function that prints the json in a nicer way
+        return
 
 def input_routine(lst): # tutta tua mecca
     if lst:
@@ -53,8 +67,9 @@ def input_routine(lst): # tutta tua mecca
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
     while True:
-        line = input ('> ')
-        print (line)
+        escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
+        line = input (escapeSeq + '> ')
+        print_line_cur (line)
         c.update ([line])
 
 def create_json (cmd='', msg=''):
