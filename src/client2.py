@@ -3,21 +3,20 @@ import socket
 import readline
 import rlcompleter
 from time import sleep
-<<<<<<< HEAD
 import os
-from multiprocessing import Process 
-=======
 from multiprocessing import Process
->>>>>>> 2d839718ca551347f4f45bf738d843c5cee451e6
 
 printBuf = list ()
 
 def print_line_cur (line):
     rows, columns = os.popen('stty size', 'r').read().split()
+    global printBuf
     printBuf.append (line)
-    print ("\033[2J\033[;H")
+    print ("\033[1J")
     print ('\n'.join (printBuf))
-    while len(printBuf) > rows:
+    # print ('\033[' + rows + ';' + '0' + 'f>\r')
+
+    while len(printBuf) > int (rows):
         printBuf.pop[0]
 
 
@@ -58,14 +57,8 @@ def update_routine(peerList, i, portno):
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
-<<<<<<< HEAD
-        else:
-            print (resp) # we NEED a function that prints the json in a nicer way
-        return
-=======
         else: 
-            print (resp['date']+' '+resp['msg']) # we NEED a function that prints the json in a nicer way
->>>>>>> 2d839718ca551347f4f45bf738d843c5cee451e6
+            print_line_cur (resp['date']+' '+resp['msg']) # we NEED a function that prints the json in a nicer way
 
 def input_routine(lst, i, portno):
     if lst:
@@ -76,19 +69,17 @@ def input_routine(lst, i, portno):
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
     while True:
-<<<<<<< HEAD
+        rows, columns = os.popen('stty size', 'r').read().split()
         escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
         line = input (escapeSeq + '> ')
-        print_line_cur (line)
-=======
-        line = input ('> ')
+
         # print (line)
         # here we send to mongoose
         j = create_json(cmd='SEND', msg=line)
-        j['id'] = lst[i]
+        j['id'] = lst[int (i)]
         j['portno'] = 80
         resp = send_to_mongoose(j, portno)
->>>>>>> 2d839718ca551347f4f45bf738d843c5cee451e6
+        print_line_cur (line)
         c.update ([line])
 
 def create_json (cmd='', msg=''):
