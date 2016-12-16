@@ -44,8 +44,11 @@ def update_routine(peerList, i, portno):
         else:
             print (resp) # we NEED a function that prints the json in a nicer way
 
-def input_routine(): # tutta tua mecca
-    c = Completer (['TORchat'])
+def input_routine(lst): # tutta tua mecca
+    if lst:
+        c = Completer (lst)
+    else:
+        c = Completer (['TORchat'])
     readline.set_completer (c.complete)
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
@@ -94,9 +97,10 @@ def main (portno):
     print ("Choose one id: ", end = '')
     i = input ()
     t1 = Process(target=update_routine, args=(peerList, i, portno))
-    t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
+    # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
-    t2.start()
+    # t2.start()
+    input_routine (peerList)
 
 if __name__ == '__main__':
     from sys import argv
