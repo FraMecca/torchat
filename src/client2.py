@@ -4,6 +4,33 @@ import readline
 from time import sleep
 from threading import Thread 
 
+class Completer(object):
+    'The completer class for gnu readline'
+
+    def __init__(self, options):
+        self.options = sorted(options)
+
+    def update (self, options):
+        # use this method to add options to the completer
+        self.options.extend (options)
+
+    def complete(self, text, state):
+        response = None
+        if state == 0:
+            # This is the first time for this text, so build a match list.
+            if text:
+                self.matches = [s for s in self.options if s and s.startswith(text)]
+            else:
+                self.matches = self.options[:]
+
+        # Return the state'th item from the match list,
+        # if we have that many.
+        try:
+            response = self.matches[state]
+        except IndexError:
+            response = None
+        return response
+
 def update_routine(peerList, i, portno):
     # this function queries the server for unread messages
     # it runs until no messages from the given peer are left
@@ -18,9 +45,14 @@ def update_routine(peerList, i, portno):
             print (resp) # we NEED a function that prints the json in a nicer way
 
 def input_routine(): # tutta tua mecca
+    c = Completer (['TORchat'])
+    readline.set_completer (c.complete)
+    readline.parse_and_bind ("tab: complete")
+    readline.parse_and_bind ("set editing-mode vi")
     while True:
-        print ("mecca ghei")
-        sleep(2)
+        line = input ('> ')
+        print (line)
+        c.update ([line])
 
 def create_json (cmd='', msg=''):
     if cmd == '':
