@@ -23,6 +23,7 @@ def print_line_cur (line, ui):
     # print (printBuf)
     for l in printBuf:
         ui.chatbuffer_add(l)
+        printBuf.pop()
 
 
 class Completer(object):
@@ -70,14 +71,14 @@ def update_routine(peerList, i, portno, ui):
 
 def elaborate_command (line, portno):
     if line == '/help':
-        print ('Command list: ')
+        # print ('Command list: ')
         # TODO
     elif line == '/exit':
         j = create_json(cmd='EXIT', msg='')
         send_to_mongoose(j, portno, wait=False)
         exit ()
     else:
-        print ('Command not understood, write /help')
+        # print ('Command not understood, write /help')
     return
 
 def input_routine (onion, portno, ui):
