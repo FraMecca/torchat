@@ -12,13 +12,52 @@ static pthread_mutex_t *mut = NULL;
 static struct peer *head = NULL;
 // a pointer to the head of peer list
 
+struct threadList {
+	pthread_t *tid;
+	struct threadList *next;
+};
+
+static struct threadList *threadListHead = NULL;
+static struct threadList *threadListTail = NULL;
+
+void
+keep_track_of_threads (pthread_t *newT)
+{
+	// this function is used to keep track of the threads opened
+	// it is a simple list of tids
+	// that later will be iterated in order to wait for each thread
+	struct threadList *ptr = malloc (sizeof (struct threadList));
+	if (ptr == NULL) {
+		exit_error ("malloc");
+	} else {
+		ptr->tid = newT;
+		ptr->next = NULL;
+	}
+
+	if (threadListHead == NULL) {
+		threadListHead = ptr;
+	}
+	threadListTail = ptr;
+}
+
+void 
+wait_all_threads ()
+{
+	while (threadListHead != NULL) {
+		pthread_join (*threadListHead->tid, NULL);
+		struct threadList *tmp = threadListHead;
+		threadListHead = threadListHead->next;
+		free (tmp);
+	}
+}
+
 static struct peer *
 new_peer (const char *id)
 {
 	// allocate a new peer list
 	struct peer *new = calloc (1, sizeof (struct peer));
 	if (new == NULL) {
-		exit_error ("malloc");
+		exit_error ("calloc");
 	}
 	strncpy (new->id, id, strlen (id));
 	new->msg = NULL;

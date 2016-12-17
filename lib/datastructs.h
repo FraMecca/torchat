@@ -19,6 +19,7 @@ enum command {
 	END,
 	EXIT
 };
+
 struct data_wrapper {
 	// contains the content of the message passed
 	enum command cmd;
@@ -66,3 +67,9 @@ insert_new_message  (const char *peerId, const char *content);
 
 char *
 get_peer_list ();
+
+void
+keep_track_of_threads (pthread_t *newT);
+
+void
+wait_all_threads ();

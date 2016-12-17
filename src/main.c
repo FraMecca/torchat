@@ -16,8 +16,11 @@
 #include "../lib/socks_helper.h"
 #include <pthread.h>
 #include "../lib/util.h"
+#include <syslog.h>
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
+
+static bool exitFlag = false; // this flag is set to true when the program should exit
 
 bool
 relay_msg (struct data_wrapper*);
@@ -107,7 +110,7 @@ void
 
 	switch (data->cmd) {
 		case EXIT :
-			exit (0);
+			exitFlag = true;
 			break;
 		case RECV :
 			log_msg (data->id, data->msg, data->cmd); // first log then frog
@@ -174,41 +177,30 @@ void
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
-  	pthread_t th;
+  	pthread_t *th = NULL;
+  	// allocate th
+  	if ((th = malloc (sizeof (pthread_t))) == NULL) {
+  		exit_error ("malloc: th: ");
+  	}
+    // switch to a new thread and do everything in that thread
+    /*the thread handles the connection and works on that.*/
 
 	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
     	/*case MG_EV_RECV:*/
-    	// switch to a new thread and do everything in that thread
-    	pthread_create (&th, NULL, event_routine, nc);
-        /*the thread handles the connection and works on that.*/
-            /*the thread may even reply to the peer that requested the connection*/
-
+    	pthread_create (th, NULL, event_routine, nc);
+    	keep_track_of_threads (th);
   	}
 }
 
 void
 log_msg (char *onion, char *msg, enum command MODE)
 {
-	FILE *fp;
-	char *id = strdup ("?");
-
-	if (MODE == RECV) {
-		id = strdup (onion);
-	} else if (MODE == SEND) {
-		id = strdup ("YOU");
-	}
-	fp = fopen (onion, "a");
-	if (fp == NULL) {
-		exit_error ("fopen");
-	}
-	pthread_mutex_lock (&sem);
-	fprintf (fp, "{[%s] | [%s]}:\t%s\n", get_date (), id, msg);
-	fclose (fp);
-	pthread_mutex_unlock (&sem);
-	free (id);
+	// use syslog to log
+	openlog (onion, LOG_PID|LOG_CONS, LOG_USER);
+	syslog (LOG_INFO, "%s", msg);
+	closelog ();
 }
-
 
 bool
 relay_msg (struct data_wrapper *data)
@@ -225,40 +217,41 @@ relay_msg (struct data_wrapper *data)
 	return ret;
 }
 
-
 int
 main(int argc, char **argv) {
-  struct mg_mgr mgr;
-  signal (SIGUSR1, exit);
-  char cwd[128];
-  if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0){
-	  fprintf(stdout, "Starting in daemon mode.\n");
-	  if(getcwd(cwd, sizeof cwd) != NULL){
-	  	skeleton_daemon(cwd);
-	  } else {
-	  	perror("getcwd");
-	  }
-  }
+  	struct mg_mgr mgr;
+  	char cwd[128];
+  	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0){
+	  	fprintf(stdout, "Starting in daemon mode.\n");
+	  	if(getcwd(cwd, sizeof cwd) != NULL){
+	  		skeleton_daemon(cwd);
+	  	} else {
+	  		perror("getcwd");
+	  	}
+  	}
 
-  HOSTNAME = read_tor_hostname ();
-  pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
+  	HOSTNAME = read_tor_hostname ();
+  	pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
 
-  mg_mgr_init(&mgr, NULL);  // Initialize event manager object
+  	mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
-  // Note that many connections can be added to a single event manager
-  // Connections can be created at any point, e.g. in event handler function
-  if(argc == 2){
-  	mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
-  } else if (argc == 3){	// daemon
-  	mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
-  }
+  	// Note that many connections can be added to a single event manager
+  	// Connections can be created at any point, e.g. in event handler function
+  	if(argc == 2){
+  		mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
+  	} else if (argc == 3){	// daemon
+  		mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
+  	}
 
-  while (true) {  // Start infinite event loop
-      mg_mgr_poll(&mgr, 1000);
-  }
+  	while (!exitFlag) {  // start poll loop
+  	  	// stop when the exitFlag is set to false,
+  	  	// so mongoose halts and we can collect the threads
+      	mg_mgr_poll(&mgr, 1000);
+  	}
 
-  mg_mgr_free(&mgr);
-  free (HOSTNAME);
-  pthread_mutex_destroy (&sem);
-  return 0;
+	wait_all_threads (); 
+  	mg_mgr_free(&mgr);
+  	free (HOSTNAME);
+  	pthread_mutex_destroy (&sem);
+  	return 0;
 }
