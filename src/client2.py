@@ -17,7 +17,8 @@ def print_line_cur (line):
     # print ('\033[' + rows + ';' + '0' + 'f>\r')
 
     while len(printBuf) > int (rows):
-        printBuf.pop[0]
+        printBuf.pop (0)
+    print (printBuf)
 
 
 class Completer(object):
@@ -74,7 +75,10 @@ def input_routine(lst, i, portno, lock):
         lock.acquire()
         rows, columns = os.popen('stty size', 'r').read().split()
         escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
+        # try:
         line = input (escapeSeq + '> ')
+        # except EOFError:
+            # exit (0)
         lock.release()
 
         # print (line)
@@ -140,4 +144,6 @@ def main (portno):
 
 if __name__ == '__main__':
     from sys import argv
+    rows, columns = os.popen('stty size', 'r').read().split()
+    print ("\033[1J\033[" + rows + ';' + '0f')
     main (argv[1])
