@@ -64,6 +64,7 @@ class ChatUI:
 
     def redraw_userlist(self):
         """Redraw the userlist"""
+        onion = open('src/onion.txt', 'r')
         self.win_userlist.clear()
         h, w = self.win_userlist.getmaxyx()
         for i, name in enumerate(self.userlist):
@@ -71,7 +72,14 @@ class ChatUI:
                 break
             #name = name.ljust(w - 1) + "|"
             self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1))
+        artList = onion.readlines()
+        i = h - 20
+        for line in artList:
+            self.win_userlist.addstr(i, 0, line , curses.color_pair(4))
+            i += 1
+        onion.close()
         self.win_userlist.refresh()
+
 
     def redraw_chatbuffer(self, color):
         """Redraw the chat message buffer"""
