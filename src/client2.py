@@ -57,7 +57,7 @@ def update_routine(peerList, i, portno):
     global lock
     while True:
         j = create_json (cmd='UPDATE', msg=peerList[int (i)])
-        resp = send_to_mongoose (j, portno)
+        resp = send_to_mongoose (j, portno, wait=True)
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
@@ -66,24 +66,21 @@ def update_routine(peerList, i, portno):
             print_line_cur (resp['date']+' '+resp['msg']) # we NEED a function that prints the json in a nicer way
             lock.release()
 
-def elaborate_command (line):
+def elaborate_command (line, portno):
     if line == '/help':
         print ('Command list: ')
         # TODO
-    else if line == 'exit':
-        j = create_json(cmd='EXIT', msg=line)
-        # to finish
-
+    elif line == '/exit':
+        j = create_json(cmd='EXIT', msg='')
+        send_to_mongoose(j, portno, wait=False)
+        exit ()
     else:
         print ('Command not understood, write /help')
     return
 
-def input_routine(lst, i, portno):
+def input_routine (onion, portno):
     global lock
-    if lst:
-        c = Completer (lst)
-    else:
-        c = Completer (['/help', '/exit'])
+    c = Completer (['/help', '/exit'])
     readline.set_completer (c.complete)
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
@@ -94,39 +91,37 @@ def input_routine(lst, i, portno):
         line = input (escapeSeq + '> ')
         print_line_cur (line)
         # lock.release()
-        if line[0] not '/':
+        if len (line) > 0 and line[0] != '/':
             # clearly the default action if the user does not input a command is
             # to send the message
-            j = create_json(cmd='SEND', msg=line)
-            j['id'] = lst[int (i)]
-            j['portno'] = 80
+            j = create_json(cmd='SEND', msg=line, id=onion, portno = 80)
             resp = send_to_mongoose(j, portno)
             c.update ([line])
         else:
             # the user input a command,
             # they start with /
-            elaborate_command (line)
+            elaborate_command (line, portno)
 
 
-def create_json (cmd='', msg=''):
+def create_json (cmd='', msg='', id='localhost', portno=8000):
     if cmd == '':
         print ("WUT?")
         exit (1)
     else:
         j = dict ()
-        j['id'] = 'localhost'
-        j['portno'] = 8000
+        j['id'] = id
+        j['portno'] = portno
         j['msg'] = msg
         j['cmd'] = cmd
-        j['date'] = "90"
+        j['date'] = "90" # TODO
         return j
 
-def send_to_mongoose (j, portno):
+def send_to_mongoose (j, portno, wait=False):
     s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
     s.connect (("localhost", int (portno)))
     s.send (bytes (json.dumps (j), 'utf-8'))
     # wait for response only when needed (not for SEND)
-    if j['cmd'] == 'GET_PEERS' or j['cmd'] == 'UPDATE':
+    if wait:
         resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
         return resp
 
@@ -136,7 +131,7 @@ def main (portno):
     
     # ask for a list of peers with pending messages
     j = create_json (cmd='GET_PEERS')
-    resp = send_to_mongoose (j, portno) 
+    resp = send_to_mongoose (j, portno, wait=True)
     peerList = resp['msg'].split (',')
 
     if peerList[0] == '': # no peers have written you! 
@@ -157,7 +152,7 @@ def main (portno):
     # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
     # t2.start()
-    input_routine (peerList, int(i), portno)
+    input_routine (peerList[int(i)], portno)
 
 if __name__ == '__main__':
     from sys import argv
