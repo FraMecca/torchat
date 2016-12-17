@@ -1,7 +1,7 @@
 import curses
 
 class ChatUI:
-    def __init__(self, stdscr, userlist_width=16):
+    def __init__(self, stdscr, userlist_width=30):
         curses.use_default_colors()
         for i in range(0, curses.COLORS):
             curses.init_pair(i, i, -1);
@@ -49,7 +49,7 @@ class ChatUI:
         self.stdscr.refresh()
 
         self.redraw_userlist()
-        self.redraw_chatbuffer()
+        self.redraw_chatbuffer(0)
         self.redraw_chatline()
 
     def redraw_chatline(self):
@@ -70,10 +70,10 @@ class ChatUI:
             if i >= h:
                 break
             #name = name.ljust(w - 1) + "|"
-            self.win_userlist.addstr(i, 0, str(i) + ' ' + name[:w - 1])
+            self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1))
         self.win_userlist.refresh()
 
-    def redraw_chatbuffer(self):
+    def redraw_chatbuffer(self, color):
         """Redraw the chat message buffer"""
         self.win_chatbuffer.clear()
         h, w = self.win_chatbuffer.getmaxyx()
@@ -81,11 +81,11 @@ class ChatUI:
         if j < 0:
             j = 0
         for i in range(min(h, len(self.linebuffer))):
-            self.win_chatbuffer.addstr(i, 0, self.linebuffer[j])
+            self.win_chatbuffer.addstr(i, 0, self.linebuffer[j], curses.color_pair(color))
             j += 1
         self.win_chatbuffer.refresh()
 
-    def chatbuffer_add(self, msg):
+    def chatbuffer_add(self, msg, color):
         """
 
         Add a message to the chat buffer, automatically slicing it to
@@ -94,7 +94,7 @@ class ChatUI:
         """
         self.chatbuffer.append(msg)
         self._linebuffer_add(msg)
-        self.redraw_chatbuffer()
+        self.redraw_chatbuffer(color)
         self.redraw_chatline()
         self.win_chatline.cursyncup()
 

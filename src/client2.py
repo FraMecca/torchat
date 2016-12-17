@@ -3,7 +3,8 @@ import socket
 import readline
 import rlcompleter
 from curses import wrapper
-from ui import ChatUI
+from ui import ChatUI # many thanks to https://github.com/calzoneman/python-chatui.git
+                      # for this curses implementation of a chat UI
 from time import sleep
 import os
 from threading import Thread, Lock
@@ -11,7 +12,7 @@ from threading import Thread, Lock
 printBuf = list ()
 lock = Lock()
 
-def print_line_cur (line, ui):
+def print_line_cur (line, ui, color):
     # rows, columns = os.popen('stty size', 'r').read().split()
     global printBuf
     printBuf.append (line)
@@ -22,7 +23,7 @@ def print_line_cur (line, ui):
         # printBuf.pop (0)
     # print (printBuf)
     for l in printBuf:
-        ui.chatbuffer_add(l)
+        ui.chatbuffer_add(l, color)
         printBuf.pop()
 
 
@@ -66,18 +67,17 @@ def update_routine(peerList, i, portno, ui):
             sleep(0.5)
         else: 
             lock.acquire()
-            print_line_cur (resp['msg'], ui) 
+            print_line_cur (resp['msg'], ui, 3) 
             lock.release()
 
 def elaborate_command (line, portno):
-    if line == '/help':
+    # if line == '/help':
         # print ('Command list: ')
         # TODO
-    elif line == '/exit':
+    if line == '/exit':
         j = create_json(cmd='EXIT', msg='')
         send_to_mongoose(j, portno, wait=False)
         exit ()
-    else:
         # print ('Command not understood, write /help')
     return
 
@@ -93,7 +93,7 @@ def input_routine (onion, portno, ui):
         # lock.acquire()
         # line = input (escapeSeq + '> ')
         line = ui.wait_input()
-        print_line_cur (line, ui)
+        print_line_cur (line, ui, 2)
         # lock.release()
         if len (line) > 0 and line[0] != '/':
             # clearly the default action if the user does not input a command is
@@ -136,7 +136,7 @@ def main (stdscr,portno):
     j = create_json (cmd='GET_PEERS')
     resp = send_to_mongoose (j, portno, wait=True)
     peerList = resp['msg'].split (',')
-    
+
     stdscr.clear() 
     ui = ChatUI(stdscr)
 
@@ -148,18 +148,17 @@ def main (stdscr,portno):
         ui.userlist.append(peerList[0])
         ui.redraw_userlist()
     else:
-        for id in peerList: # print them all with an integer id associated
-            ui.userlist.append(id)
+        for userid in peerList: # print them all with an integer id associated
+            ui.userlist.append(userid)
         ui.redraw_userlist()
-        i = ui.wait_input("Peer Id: ")
-         
+        i = int(ui.wait_input("Peer Id: ")) - 1
     
     # here we use one thread to update unread messages, another that sends
     t1 = Thread(target=update_routine, args=(peerList, i, portno, ui))
     # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
     # t2.start()
-    input_routine (peerList[int(i)], portno, ui)
+    input_routine (peerList[i], portno, ui)
 
 if __name__ == '__main__':
     from sys import argv
