@@ -4,13 +4,15 @@ import readline
 import rlcompleter
 from time import sleep
 import os
-from multiprocessing import Process, Lock
+from threading import Thread, Lock
 
 printBuf = list ()
+lock = Lock()
 
 def print_line_cur (line):
     rows, columns = os.popen('stty size', 'r').read().split()
     global printBuf
+    global lock
     printBuf.append (line)
     print ("\033[1J")
     print ('\n'.join (printBuf))
@@ -47,10 +49,11 @@ class Completer(object):
             response = None
         return response
 
-def update_routine(peerList, i, portno, lock):
+def update_routine(peerList, i, portno):
     # this function queries the server for unread messages
     # it runs until no messages from the given peer are left
     # then waits half a second and queries again
+    global lock
     while True:
         j = create_json (cmd='UPDATE', msg=peerList[int (i)])
         resp = send_to_mongoose (j, portno)
@@ -62,7 +65,8 @@ def update_routine(peerList, i, portno, lock):
             print_line_cur (resp['date']+' '+resp['msg']) # we NEED a function that prints the json in a nicer way
             lock.release()
 
-def input_routine(lst, i, portno, lock):
+def input_routine(lst, i, portno):
+    global lock
     if lst:
         c = Completer (lst)
     else:
@@ -71,10 +75,11 @@ def input_routine(lst, i, portno, lock):
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
     while True:
-        lock.acquire()
         rows, columns = os.popen('stty size', 'r').read().split()
         escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
+        lock.acquire()
         line = input (escapeSeq + '> ')
+        print_line_cur (line)
         lock.release()
 
         # print (line)
@@ -83,7 +88,6 @@ def input_routine(lst, i, portno, lock):
         j['id'] = lst[int (i)]
         j['portno'] = 80
         resp = send_to_mongoose(j, portno)
-        print_line_cur (line)
         c.update ([line])
 
 def create_json (cmd='', msg=''):
@@ -111,7 +115,6 @@ def send_to_mongoose (j, portno):
 def main (portno):
 
     # create a semaphore
-    lock = Lock()
     
     # ask for a list of peers with pending messages
     j = create_json (cmd='GET_PEERS')
@@ -132,11 +135,11 @@ def main (portno):
             i = input ()
 
     # here we use one thread to update unread messages, another that sends
-    t1 = Process(target=update_routine, args=(peerList, i, portno, lock))
+    t1 = Thread(target=update_routine, args=(peerList, i, portno))
     # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
     # t2.start()
-    input_routine (peerList, int(i), portno, lock)
+    input_routine (peerList, int(i), portno)
 
 if __name__ == '__main__':
     from sys import argv
