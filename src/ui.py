@@ -78,6 +78,7 @@ class ChatUI:
             self.win_userlist.addstr(i, 0, line , curses.color_pair(4))
             i += 1
         onion.close()
+        self.win_userlist.addstr(i+1, int(w/2) - 3, "TORchat" , curses.color_pair(5))
         self.win_userlist.refresh()
 
 
