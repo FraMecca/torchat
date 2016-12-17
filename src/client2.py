@@ -2,6 +2,8 @@ import json
 import socket
 import readline
 import rlcompleter
+from curses import wrapper
+from ui import ChatUI
 from time import sleep
 import os
 from threading import Thread, Lock
@@ -9,18 +11,18 @@ from threading import Thread, Lock
 printBuf = list ()
 lock = Lock()
 
-def print_line_cur (line):
-    rows, columns = os.popen('stty size', 'r').read().split()
+def print_line_cur (line, ui):
+    # rows, columns = os.popen('stty size', 'r').read().split()
     global printBuf
-    global lock
     printBuf.append (line)
-    print ("\033[1J")
-    print ('\n'.join (printBuf))
+    # print ("\033[1J")
+    # print ('\n'.join (printBuf))
     # print ('\033[' + rows + ';' + '0' + 'f>\r')
-
-    while len(printBuf) > int (rows):
-        printBuf.pop (0)
-    print (printBuf)
+    # while len(printBuf) > int (rows):
+        # printBuf.pop (0)
+    # print (printBuf)
+    for l in printBuf:
+        ui.chatbuffer_add(l)
 
 
 class Completer(object):
@@ -50,7 +52,7 @@ class Completer(object):
             response = None
         return response
 
-def update_routine(peerList, i, portno):
+def update_routine(peerList, i, portno, ui):
     # this function queries the server for unread messages
     # it runs until no messages from the given peer are left
     # then waits half a second and queries again
@@ -63,7 +65,7 @@ def update_routine(peerList, i, portno):
             sleep(0.5)
         else: 
             lock.acquire()
-            print_line_cur (resp['date']+' '+resp['msg']) # we NEED a function that prints the json in a nicer way
+            print_line_cur (resp['msg'], ui) 
             lock.release()
 
 def elaborate_command (line, portno):
@@ -78,7 +80,7 @@ def elaborate_command (line, portno):
         print ('Command not understood, write /help')
     return
 
-def input_routine (onion, portno):
+def input_routine (onion, portno, ui):
     global lock
     c = Completer (['/help', '/exit'])
     readline.set_completer (c.complete)
@@ -88,8 +90,9 @@ def input_routine (onion, portno):
         rows, columns = os.popen('stty size', 'r').read().split()
         escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
         # lock.acquire()
-        line = input (escapeSeq + '> ')
-        print_line_cur (line)
+        # line = input (escapeSeq + '> ')
+        line = ui.wait_input()
+        print_line_cur (line, ui)
         # lock.release()
         if len (line) > 0 and line[0] != '/':
             # clearly the default action if the user does not input a command is
@@ -105,7 +108,7 @@ def input_routine (onion, portno):
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
     if cmd == '':
-        print ("WUT?")
+        # print ("WUT?")
         exit (1)
     else:
         j = dict ()
@@ -125,37 +128,40 @@ def send_to_mongoose (j, portno, wait=False):
         resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
         return resp
 
-def main (portno):
+def main (stdscr,portno):
 
     # create a semaphore
-    
     # ask for a list of peers with pending messages
     j = create_json (cmd='GET_PEERS')
     resp = send_to_mongoose (j, portno, wait=True)
     peerList = resp['msg'].split (',')
+    
+    stdscr.clear() 
+    ui = ChatUI(stdscr)
 
     if peerList[0] == '': # no peers have written you! 
         print ("No peers, give me an onion address:")
         # exit (0)
-        i = 0
-        peerList[0] = str(input())
+        i = 0 
+        peerList[0] = ui.wait_input("Onion Address: ")
+        ui.userlist.append(peerList[0])
+        ui.redraw_userlist()
     else:
-        i = 0
         for id in peerList: # print them all with an integer id associated
-            print (str (i) + '.', peerList[i])
-            i+=1
-            print ("Choose one id: ", end = '')
-            i = input ()
-
+            ui.userlist.append(id)
+        ui.redraw_userlist()
+        i = ui.wait_input("Peer Id: ")
+         
+    
     # here we use one thread to update unread messages, another that sends
-    t1 = Thread(target=update_routine, args=(peerList, i, portno))
+    t1 = Thread(target=update_routine, args=(peerList, i, portno, ui))
     # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
     # t2.start()
-    input_routine (peerList[int(i)], portno)
+    input_routine (peerList[int(i)], portno, ui)
 
 if __name__ == '__main__':
     from sys import argv
     rows, columns = os.popen('stty size', 'r').read().split()
     print ("\033[1J\033[" + rows + ';' + '0f')
-    main (argv[1])
+    wrapper(main, argv[1])
