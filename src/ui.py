@@ -71,14 +71,14 @@ class ChatUI:
             if i >= h:
                 break
             #name = name.ljust(w - 1) + "|"
-            self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1))
+            self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1) | curses.A_BOLD)
         artList = onion.readlines()
         i = h - 20
         for line in artList:
-            self.win_userlist.addstr(i, 0, line , curses.color_pair(4))
+            self.win_userlist.addstr(i, 0, line , curses.color_pair(4) | curses.A_BOLD)
             i += 1
         onion.close()
-        self.win_userlist.addstr(i+1, int(w/2) - 3, "TORchat" , curses.color_pair(5))
+        self.win_userlist.addstr(i+1, int(w/2) - 3, "TORchat" , curses.color_pair(4) | curses.A_BOLD)
         self.win_userlist.refresh()
 
 
@@ -90,7 +90,7 @@ class ChatUI:
         if j < 0:
             j = 0
         for i in range(min(h, len(self.linebuffer))):
-            self.win_chatbuffer.addstr(i, 0, self.linebuffer[j], curses.color_pair(color))
+            self.win_chatbuffer.addstr(i, 1, self.linebuffer[j], curses.color_pair(color))
             j += 1
         self.win_chatbuffer.refresh()
 
