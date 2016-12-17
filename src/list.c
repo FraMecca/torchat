@@ -36,8 +36,11 @@ keep_track_of_threads (pthread_t *newT)
 
 	if (threadListHead == NULL) {
 		threadListHead = ptr;
+		threadListTail = ptr;
+	} else {
+		threadListTail->next = ptr;
+		threadListTail = ptr;
 	}
-	threadListTail = ptr;
 }
 
 void 
@@ -47,6 +50,7 @@ wait_all_threads ()
 		pthread_join (*threadListHead->tid, NULL);
 		struct threadList *tmp = threadListHead;
 		threadListHead = threadListHead->next;
+		free (tmp->tid);
 		free (tmp);
 	}
 }
@@ -140,13 +144,6 @@ get_tail (struct message *h)
 bool
 insert_new_message  (const char *peerId, const char *content)
 {
-	/*if (mut == NULL) {*/
-		/*mut = malloc (sizeof (pthread_mutex_t));*/
-		/*pthread_mutex_init (mut, NULL);*/
-	/*}*/
-	/*if (pthread_mutex_lock (mut) != 0) {*/
-		/*exit_error ("pthread mutex: ");*/
-	/*}*/
 	// insert a new message to a message list
 	// most recent at tail 
 	// returns oldest message as head
@@ -265,18 +262,11 @@ get_peer_list ()
 	}
 }
 
-
-
-/*bool*/
-/*check_peer_for_messages(const char *id)*/
-/*{*/
-	/*// every non-null peer*/
-	/*// should have pending messages*/
-	/*// find the peer, gets its messages, frees the peer*/
-	/*struct peer *currentPeer = get_peer (get_list_head (), id);*/
-	/*if(currentPeer == NULL){*/
-		/*return false;*/
-	/*}*/
-	/*get_unread_messages(currentPeer);*/
-	/*currentPeer = delete_peer(currentPeer);*/
-/*}*/
+void
+clear_datastructs ()
+{
+	struct peer *ptr, *tmp; // used to iterate
+	HASH_ITER (hh, head, ptr, tmp) {
+		delete_peer (ptr);
+	}
+}

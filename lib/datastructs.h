@@ -73,3 +73,6 @@ keep_track_of_threads (pthread_t *newT);
 
 void
 wait_all_threads ();
+
+void
+clear_datastructs ();
