@@ -92,19 +92,24 @@ void
 {
 	struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype
   	struct mbuf *io = &nc->recv_mbuf;
-	struct data_wrapper *data = calloc (1, sizeof (struct data_wrapper));
+	struct data_wrapper *data;
 	char *msg;
 
   	if (io->buf != NULL) {
+		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		mbuf_remove(io, io->len);      // Discard data from recv buffer
 	} else { 
-		return 0;
+		pthread_exit (NULL);
 	}
 	if (data->msg == NULL) {
 		// the json was invalid 
 		//
 		// and logged to errlog
+		if (data->date != NULL) {
+			free (data->date);
+		}
+		free (data);
 		return 0;
 	}
 
@@ -131,7 +136,6 @@ void
 			// get the OLDEST, send as a json
 			// this is supposed to be executed periodically
 			// by the client
-			/*free(data->msg);*/
 			strncpy(data->id, data->msg,29*sizeof(char));
 			data->id[strlen(data->id)] = '\0';
 			// if no msg, get_unread_message should return NULL
@@ -139,13 +143,12 @@ void
 				// now we convert the message in a json and send it
 				free (data->msg);
 				data->msg = msg;
-				char *unreadMsg = convert_datastruct_to_char(data);
-				mg_send (nc, unreadMsg, strlen(unreadMsg));
 			} else {
 				data->cmd = END;
-				char *unreadMsg = convert_datastruct_to_char(data);
-				mg_send (nc, unreadMsg, strlen(unreadMsg));
 			}
+			char *unreadMsg = convert_datastruct_to_char(data);
+			mg_send (nc, unreadMsg, strlen(unreadMsg));
+			free (unreadMsg);
 			break;
 		case GET_PEERS :
 			// the client asked to receive the list of all the peers that send the server a message (not read yet)
@@ -163,30 +166,31 @@ void
 				// if iface is not null the client is waiting for response
 				mg_send (nc, response, strlen (response));
 			}
-
+			free (response);
 			break;
-		default:
-      		return 0;
+		default: 
+			break;
     }
-    free (data->msg);
+    free (data->msg); // free the data_wrapper
+    free (data->date);
     free (data);
-    return 0; // pthread_exit()
+    pthread_exit(NULL);
 }
 
 
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
-  	pthread_t *th = NULL;
-  	// allocate th
-  	if ((th = malloc (sizeof (pthread_t))) == NULL) {
-  		exit_error ("malloc: th: ");
-  	}
     // switch to a new thread and do everything in that thread
     /*the thread handles the connection and works on that.*/
 
 	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
+  		pthread_t *th = NULL;
+  		// allocate th
+  		if ((th = malloc (sizeof (pthread_t))) == NULL) {
+  			exit_error ("malloc: th: ");
+  		}
     	/*case MG_EV_RECV:*/
     	pthread_create (th, NULL, event_routine, nc);
     	keep_track_of_threads (th);
@@ -194,7 +198,7 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 }
 
 void
-log_msg (char *onion, char *msg, enum command MODE)
+log_msg ( char *onion,  char *msg, enum command MODE)
 {
 	// use syslog to log
 	openlog (onion, LOG_PID|LOG_CONS, LOG_USER);
@@ -210,6 +214,7 @@ relay_msg (struct data_wrapper *data)
     data->cmd = RECV;
 	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME); // copy your hostname to the field
+	free (data->date);
 	data->date = get_short_date();
 	char *msg = convert_datastruct_to_char (data);
 	bool ret = send_over_tor (id, data->portno, msg, 9250);
@@ -250,6 +255,7 @@ main(int argc, char **argv) {
   	}
 
 	wait_all_threads (); 
+	clear_datastructs ();
   	mg_mgr_free(&mgr);
   	free (HOSTNAME);
   	pthread_mutex_destroy (&sem);
