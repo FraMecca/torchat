@@ -10,18 +10,13 @@ import os
 from threading import Thread, Lock
 
 printBuf = list ()
-lock = Lock()
+lock = Lock() # a binary semaphore
 
 def print_line_cur (line, ui, color):
-    # rows, columns = os.popen('stty size', 'r').read().split()
+    # append sent messages and received messages to the buffer
+    # then send them to the ui and pop them one by one
     global printBuf
     printBuf.append (line)
-    # print ("\033[1J")
-    # print ('\n'.join (printBuf))
-    # print ('\033[' + rows + ';' + '0' + 'f>\r')
-    # while len(printBuf) > int (rows):
-        # printBuf.pop (0)
-    # print (printBuf)
     for l in printBuf:
         ui.chatbuffer_add(l, color)
         printBuf.pop()
@@ -74,11 +69,11 @@ def elaborate_command (line, portno):
     # if line == '/help':
         # print ('Command list: ')
         # TODO
+    # this sends an exit to the client AND to the server
     if line == '/exit':
         j = create_json(cmd='EXIT', msg='')
         send_to_mongoose(j, portno, wait=False)
         exit ()
-        # print ('Command not understood, write /help')
     return
 
 def input_routine (onion, portno, ui):
@@ -88,13 +83,11 @@ def input_routine (onion, portno, ui):
     readline.parse_and_bind ("tab: complete")
     readline.parse_and_bind ("set editing-mode vi")
     while True:
-        rows, columns = os.popen('stty size', 'r').read().split()
-        escapeSeq = '\033[' + rows + ';' + '0' + 'f\r'
-        # lock.acquire()
-        # line = input (escapeSeq + '> ')
+        # the input is taken from the bottom window in the ui
+        # and printed directly (it is actually send below)
         line = ui.wait_input()
         print_line_cur (line, ui, 2)
-        # lock.release()
+        # here we send to mongoose / tor
         if len (line) > 0 and line[0] != '/':
             # clearly the default action if the user does not input a command is
             # to send the message
@@ -108,8 +101,8 @@ def input_routine (onion, portno, ui):
 
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
+    # create a dictionary and populate it, ready to be converted to a json string
     if cmd == '':
-        # print ("WUT?")
         exit (1)
     else:
         j = dict ()
@@ -137,12 +130,12 @@ def main (stdscr,portno):
     resp = send_to_mongoose (j, portno, wait=True)
     peerList = resp['msg'].split (',')
 
+    # initiate the ui
     stdscr.clear() 
     ui = ChatUI(stdscr)
 
     if peerList[0] == '': # no peers have written you! 
         print ("No peers, give me an onion address:")
-        # exit (0)
         i = 0 
         peerList[0] = ui.wait_input("Onion Address: ")
         ui.userlist.append(peerList[0])
@@ -150,18 +143,19 @@ def main (stdscr,portno):
     else:
         for userid in peerList: # print them all with an integer id associated
             ui.userlist.append(userid)
-        ui.redraw_userlist()
+        ui.redraw_userlist() # this redraws only the user panel
         i = int(ui.wait_input("Peer Id: ")) - 1
     
-    # here we use one thread to update unread messages, another that sends
+    # here we use one thread to update unread messages in background,
+    # the foreground one gets the input
+    # they both work on the same buffer (printBuf) and thus a 
+    # semaphore is needed to prevent race conditions
     t1 = Thread(target=update_routine, args=(peerList, i, portno, ui))
-    # t2 = Process(target=input_routine, args=()) #mecca metti qui tutti gli args che ti servono in input_routine separati da vigola
     t1.start()
-    # t2.start()
     input_routine (peerList[i], portno, ui)
 
+# the wrapper is a curses function which performs a standard init process
+# the ui init is then continued by the call to the ChatUi class (see main)
 if __name__ == '__main__':
     from sys import argv
-    rows, columns = os.popen('stty size', 'r').read().split()
-    print ("\033[1J\033[" + rows + ';' + '0f')
     wrapper(main, argv[1])
