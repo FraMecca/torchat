@@ -11,7 +11,7 @@ class ChatUI:
         for i in range(0, curses.COLORS):
             curses.init_pair(i, i, -1);
         self.stdscr = stdscr
-        self.stdscr.keypad (True)
+        # self.stdscr.keypad (True)
         self.userlist = []
         self.inputbuffer = ""
         self.linebuffer = []
@@ -25,7 +25,7 @@ class ChatUI:
         self.win_userlist = stdscr.derwin(*userlist_hwyx)
         self.win_chatline = stdscr.derwin(*chatline_yx)
         self.win_chatbuffer = stdscr.derwin(*chatbuffer_hwyx)
-        
+
         self.redraw_ui()
 
     def resize(self):
@@ -123,6 +123,10 @@ class ChatUI:
             msg = msg[w:]
         if msg:
             self.linebuffer.append(msg)
+
+    def close_ui(self):
+        # self.stdscr.keypad(False)
+        curses.endwin()
 
     def prompt(self, msg):
         """Prompts the user for input and returns it"""

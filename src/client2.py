@@ -15,6 +15,7 @@ import threading
 printBuf = list ()
 lock = Lock() # a binary semaphore
 exitFlag = False
+currId = ""
 
 def print_line_cur (line, ui, color):
     # append sent messages and received messages to the buffer
@@ -53,15 +54,16 @@ class Completer(object):
             response = ''
         return response
 
-def update_routine(peerList, i, portno, ui):
+def update_routine(portno, ui):
     # this function queries the server for unread messages
     # it runs until no messages from the given peer are left
     # then waits half a second and queries again
     global lock
     while True:
         if exitFlag:
+            ui.close_ui()
             exit()
-        j = create_json (cmd='UPDATE', msg=peerList[int (i)])
+        j = create_json (cmd='UPDATE', msg=currId)
         resp = send_to_mongoose (j, portno, wait=True)
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
@@ -73,6 +75,7 @@ def update_routine(peerList, i, portno, ui):
 
 def elaborate_command (line, portno, ui):
     global exitFlag
+    global currId
     # if line == '/help':
         # print ('Command list: ')
         # TODO
@@ -87,9 +90,9 @@ def elaborate_command (line, portno, ui):
         exit()
     elif line == '/peer':
         peerList, i = get_peers(portno, ui)
-        return peerList[i]
+        currId = peerList[i]
 
-def input_routine (onion, portno, ui):
+def input_routine (portno, ui):
     c = Completer (['/help', '/exit'])
     # readline.set_completer (c.complete)
     # readline.parse_and_bind ("tab: complete")
@@ -98,21 +101,22 @@ def input_routine (onion, portno, ui):
         # the input is taken from the bottom window in the ui
         # and printed directly (it is actually send below)
         line = ui.wait_input(completer = c)
-        print_line_cur (line, ui, 2)
         # here we send to mongoose / tor
         if len (line) > 0 and line[0] != '/':
             # clearly the default action if the user does not input a command is
             # to send the message
-            j = create_json(cmd='SEND', msg=line, id=onion, portno = 80)
+            print_line_cur (line, ui, 2)
+            j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
             resp = send_to_mongoose(j, portno)
             c.update ([line])
         else:
             # the user input a command,
             # they start with /
-            if line == '/peer':
-                onion = elaborate_command (line, portno, ui)
-            else:
-                elaborate_command(line, portno, ui)
+            elaborate_command (line, portno, ui)
+            # if it gets here, is because we changed peer
+            ui.chatbuffer = []
+            ui.linebuffer = []
+            ui.redraw_ui()
 
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
@@ -143,11 +147,10 @@ def get_peers(portno, ui):
     j = create_json (cmd='GET_PEERS')
     resp = send_to_mongoose (j, portno, wait=True)
     peerList = resp['msg'].split (',')
-
+    rightId = False
     ui.userlist = list()
 
     if peerList[0] == '': # no peers have written you! 
-        print ("No peers, give me an onion address:")
         i = 0
         peerList[0] = ui.wait_input("Onion Address: ")
         ui.userlist.append(peerList[0])
@@ -156,25 +159,38 @@ def get_peers(portno, ui):
         for userid in peerList: # print them all with an integer id associated
             ui.userlist.append(userid)
         ui.redraw_userlist() # this redraws only the user panel
-        i = int(ui.wait_input("Peer Id: ")) - 1
+
+        # this avoids error crashing while selecting an ID
+        while not rightId: 
+            choice = ui.wait_input("Peer Id (a number): ")
+            try:
+                i = int(choice) - 1
+                if i >= len(peerList) or i < 0:
+                    rightId = False
+                else:
+                    rightId = True
+            except:
+                rightId = False
     return peerList, i
 
 
 def main (stdscr,portno):
 
+    global currId
     # initiate the ui
     stdscr.clear() 
     ui = ChatUI(stdscr)
-   
+
     peerList, i = get_peers(portno, ui)
+    currId = peerList[i]
 
     # here we use one thread to update unread messages in background,
     # the foreground one gets the input
-    # they both work on the same buffer (printBuf) and thus a 
+    # they both work on the same buffer (printBuf) and thus a
     # semaphore is needed to prevent race conditions
-    t1 = Thread(target=update_routine, args=(peerList, i, portno, ui))
+    t1 = Thread(target=update_routine, args=(portno, ui))
     t1.start()
-    input_routine (peerList[i], portno, ui)
+    input_routine (portno, ui)
 
 # the wrapper is a curses function which performs a standard init process
 # the ui init is then continued by the call to the ChatUi class (see main)
