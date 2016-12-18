@@ -26,7 +26,7 @@ class ChatUI:
         self.win_chatline = stdscr.derwin(*chatline_yx)
         self.win_chatbuffer = stdscr.derwin(*chatbuffer_hwyx)
 
-        self.redraw_ui()
+        self.redraw_ui(None)
 
     def resize(self):
         """Handles a change in terminal size"""
@@ -43,9 +43,9 @@ class ChatUI:
         for msg in self.chatbuffer:
             self._linebuffer_add(msg)
 
-        self.redraw_ui()
+        self.redraw_ui(None)
 
-    def redraw_ui(self):
+    def redraw_ui(self, curr):
         """Redraws the entire UI"""
         h, w = self.stdscr.getmaxyx()
         u_h, u_w = self.win_userlist.getmaxyx()
@@ -54,7 +54,7 @@ class ChatUI:
         self.stdscr.hline(h - 2, 0, "-", w)
         self.stdscr.refresh()
 
-        self.redraw_userlist()
+        self.redraw_userlist(curr)
         self.redraw_chatbuffer(0)
         self.redraw_chatline()
 
@@ -68,7 +68,7 @@ class ChatUI:
         self.win_chatline.addstr(0, 0, self.inputbuffer[start:])
         self.win_chatline.refresh()
 
-    def redraw_userlist(self):
+    def redraw_userlist(self, curr):
         """Redraw the userlist"""
         # onion = open('src/onion.txt', 'r')
         self.win_userlist.clear()
@@ -77,7 +77,11 @@ class ChatUI:
             if i >= h:
                 break
             #name = name.ljust(w - 1) + "|"
-            self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1) | curses.A_BOLD)
+            if i == curr:
+                self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1) | curses.A_BOLD)
+            else:
+                self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(4) | curses.A_BOLD)
+                
         # artList = onion.readlines()
         artList = onionAscii
         i = h - 20

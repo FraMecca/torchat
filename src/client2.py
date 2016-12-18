@@ -91,6 +91,7 @@ def elaborate_command (line, portno, ui):
     elif line == '/peer':
         peerList, i = get_peers(portno, ui)
         currId = peerList[i]
+        return peerList, i
 
 def input_routine (portno, ui):
     c = Completer (['/help', '/exit'])
@@ -112,11 +113,11 @@ def input_routine (portno, ui):
         else:
             # the user input a command,
             # they start with /
-            elaborate_command (line, portno, ui)
+            peerList, i = elaborate_command (line, portno, ui)
             # if it gets here, is because we changed peer
             ui.chatbuffer = []
             ui.linebuffer = []
-            ui.redraw_ui()
+            ui.redraw_ui(i)
 
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
@@ -154,11 +155,16 @@ def get_peers(portno, ui):
         i = 0
         peerList[0] = ui.wait_input("Onion Address: ")
         ui.userlist.append(peerList[0])
-        ui.redraw_userlist()# this redraws only the user panel
+        ui.redraw_userlist(i)# this redraws only the user panel
+        if currId != "":
+            ui.userlist.append(currId)
     else:
         for userid in peerList: # print them all with an integer id associated
             ui.userlist.append(userid)
-        ui.redraw_userlist() # this redraws only the user panel
+        if not currId in peerList and currId != "":
+            ui.userlist.append(currId)
+            peerList.append(currId)
+        ui.redraw_userlist(None) # this redraws only the user panel
 
         # this avoids error crashing while selecting an ID
         while not rightId: 
@@ -171,6 +177,7 @@ def get_peers(portno, ui):
                     rightId = True
             except:
                 rightId = False
+        ui.redraw_userlist(i) # this redraws only the user panel
     return peerList, i
 
 
