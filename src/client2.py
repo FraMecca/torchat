@@ -1,6 +1,7 @@
 import json
 import socket
 import readline
+from time import localtime, strftime
 import rlcompleter
 from curses import wrapper
 import curses
@@ -67,10 +68,10 @@ def update_routine(peerList, i, portno, ui):
             sleep(0.5)
         else: 
             lock.acquire()
-            print_line_cur (resp['msg'], ui, 3) 
+            print_line_cur (resp['date'] + resp['msg'], ui, 3) 
             lock.release()
 
-def elaborate_command (line, portno):
+def elaborate_command (line, portno, ui):
     global exitFlag
     # if line == '/help':
         # print ('Command list: ')
@@ -84,10 +85,11 @@ def elaborate_command (line, portno):
     elif line == '/quit':
         exitFlag = True
         exit()
-    return
+    elif line == '/peer':
+        peerList, i = get_peers(portno, ui)
+        return peerList[i]
 
 def input_routine (onion, portno, ui):
-    global lock
     c = Completer (['/help', '/exit'])
     # readline.set_completer (c.complete)
     # readline.parse_and_bind ("tab: complete")
@@ -107,11 +109,15 @@ def input_routine (onion, portno, ui):
         else:
             # the user input a command,
             # they start with /
-            elaborate_command (line, portno)
+            if line == '/peer':
+                onion = elaborate_command (line, portno, ui)
+            else:
+                elaborate_command(line, portno, ui)
 
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
     # create a dictionary and populate it, ready to be converted to a json string
+    t = localtime()
     if cmd == '':
         exit (1)
     else:
@@ -120,7 +126,7 @@ def create_json (cmd='', msg='', id='localhost', portno=8000):
         j['portno'] = portno
         j['msg'] = msg
         j['cmd'] = cmd
-        j['date'] = "90" # TODO
+        j['date'] = strftime("[%H:%M] ", t)
         return j
 
 def send_to_mongoose (j, portno, wait=False):
@@ -132,30 +138,36 @@ def send_to_mongoose (j, portno, wait=False):
         resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
         return resp
 
-def main (stdscr,portno):
-
-    # create a semaphore
+def get_peers(portno, ui):
     # ask for a list of peers with pending messages
     j = create_json (cmd='GET_PEERS')
     resp = send_to_mongoose (j, portno, wait=True)
     peerList = resp['msg'].split (',')
 
-    # initiate the ui
-    stdscr.clear() 
-    ui = ChatUI(stdscr)
+    ui.userlist = list()
 
     if peerList[0] == '': # no peers have written you! 
         print ("No peers, give me an onion address:")
-        i = 0 
+        i = 0
         peerList[0] = ui.wait_input("Onion Address: ")
         ui.userlist.append(peerList[0])
-        ui.redraw_userlist()
+        ui.redraw_userlist()# this redraws only the user panel
     else:
         for userid in peerList: # print them all with an integer id associated
             ui.userlist.append(userid)
         ui.redraw_userlist() # this redraws only the user panel
         i = int(ui.wait_input("Peer Id: ")) - 1
-    
+    return peerList, i
+
+
+def main (stdscr,portno):
+
+    # initiate the ui
+    stdscr.clear() 
+    ui = ChatUI(stdscr)
+   
+    peerList, i = get_peers(portno, ui)
+
     # here we use one thread to update unread messages in background,
     # the foreground one gets the input
     # they both work on the same buffer (printBuf) and thus a 

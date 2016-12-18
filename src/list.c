@@ -209,12 +209,7 @@ get_unread_message(const char *peerId)
 		return NULL;
 	}
 	int len = strlen(msg->content)+strlen(msg->date)+3;
-	char *m = calloc(len, sizeof(char));
-
-	strncpy(m, msg->date, strlen(msg->date));
-	strncat(m, ": ", 2);
-	strncat(m, msg->content, strlen(msg->content));
-
+	char *m = strdup(msg->content);
 	currentPeer->msg = delete_message (currentPeer->msg);
 	if (currentPeer->msg == NULL) {
 		// if we read every message of the peer, remove peer from hash table
