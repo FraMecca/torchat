@@ -3,11 +3,13 @@ import socket
 import readline
 import rlcompleter
 from curses import wrapper
+import curses
 from ui import ChatUI # many thanks to https://github.com/calzoneman/python-chatui.git
                       # for this curses implementation of a chat UI
 from time import sleep
 import os
 from threading import Thread, Lock
+import threading
 
 printBuf = list ()
 lock = Lock() # a binary semaphore
@@ -32,7 +34,7 @@ class Completer(object):
         # use this method to add options to the completer
         self.options.extend (options)
 
-    def complete(self, text, state):
+    def complete(self, text, state=0):
         response = None
         if state == 0:
             # This is the first time for this text, so build a match list.
@@ -46,7 +48,7 @@ class Completer(object):
         try:
             response = self.matches[state]
         except IndexError:
-            response = None
+            response = ''
         return response
 
 def update_routine(peerList, i, portno, ui):
@@ -79,13 +81,13 @@ def elaborate_command (line, portno):
 def input_routine (onion, portno, ui):
     global lock
     c = Completer (['/help', '/exit'])
-    readline.set_completer (c.complete)
-    readline.parse_and_bind ("tab: complete")
-    readline.parse_and_bind ("set editing-mode vi")
+    # readline.set_completer (c.complete)
+    # readline.parse_and_bind ("tab: complete")
+    # readline.parse_and_bind ("set editing-mode vi")
     while True:
         # the input is taken from the bottom window in the ui
         # and printed directly (it is actually send below)
-        line = ui.wait_input()
+        line = ui.wait_input(completer = c)
         print_line_cur (line, ui, 2)
         # here we send to mongoose / tor
         if len (line) > 0 and line[0] != '/':

@@ -1,4 +1,5 @@
 import curses
+import readline
 
 onionAscii = ['                 .....     \n', "              .'::;.       \n", '             .loo,         \n', '          .. lko.          \n', '           ;.,lc,          \n', "           c'.;:d          \n", "        .;c' .',;l:.       \n", '      ;c:.   ...;;:doc.    \n', "    cl.   .. ..'.lccclko.  \n", "  .d'  ...   ...';xlloodO, \n", "  x' ...   . .'.,,kdddddx0.\n", " ,d ..  ...  ..,';xkxxkkkKl\n", " ,d '. ..   .',.;;kOkkOOOKo\n", "  x.., '   ...:,;c0OOO000K'\n", "  .d..''.  ' .:;lxX0000KX: \n", "   .cc,,;' '..llOXK00KXx.  \n", '      ,:lxdcllk0WXKOd:.    \n', "          ';:cllc;.        \n"]
 
@@ -10,6 +11,7 @@ class ChatUI:
         for i in range(0, curses.COLORS):
             curses.init_pair(i, i, -1);
         self.stdscr = stdscr
+        self.stdscr.keypad (True)
         self.userlist = []
         self.inputbuffer = ""
         self.linebuffer = []
@@ -130,7 +132,7 @@ class ChatUI:
         res = res[len(msg):]
         return res
 
-    def wait_input(self, prompt=""):
+    def wait_input(self, prompt="", completer=None):
         """
 
         Wait for the user to input a message and hit enter.
@@ -141,14 +143,36 @@ class ChatUI:
         self.redraw_chatline()
         self.win_chatline.cursyncup()
         last = -1
+        historyPos = 0
         while last != ord('\n'):
+            # commands to execute based on which key
+            # tab: complete
+            # arrows: iterate history
             last = self.stdscr.getch()
             if last == ord('\n'):
+                readline.add_history (self.inputbuffer)
                 tmp = self.inputbuffer
                 self.inputbuffer = ""
                 self.redraw_chatline()
                 self.win_chatline.cursyncup()
                 return tmp[len(prompt):]
+            elif last == ord ('\t'):
+                if completer != None:
+                    response = completer.complete (self.inputbuffer)
+                    if response:
+                        self.inputbuffer = response
+                else:
+                    pass
+            elif last == curses.KEY_UP:
+                historyPos += 1
+                resp = readline.get_history_item (readline.get_current_history_length () - historyPos)
+                if resp != None:
+                    self.inputbuffer = resp
+            elif last == curses.KEY_DOWN:
+                historyPos -= 1
+                resp = readline.get_history_item (readline.get_current_history_length () - historyPos)
+                if resp != None:
+                    self.inputbuffer = resp
             elif last == curses.KEY_BACKSPACE or last == 127:
                 if len(self.inputbuffer) > len(prompt):
                     self.inputbuffer = self.inputbuffer[:-1]
