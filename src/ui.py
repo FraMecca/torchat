@@ -1,5 +1,9 @@
 import curses
 
+onionAscii = ['                 .....     \n', "              .'::;.       \n", '             .loo,         \n', '          .. lko.          \n', '           ;.,lc,          \n', "           c'.;:d          \n", "        .;c' .',;l:.       \n", '      ;c:.   ...;;:doc.    \n', "    cl.   .. ..'.lccclko.  \n", "  .d'  ...   ...';xlloodO, \n", "  x' ...   . .'.,,kdddddx0.\n", " ,d ..  ...  ..,';xkxxkkkKl\n", " ,d '. ..   .',.;;kOkkOOOKo\n", "  x.., '   ...:,;c0OOO000K'\n", "  .d..''.  ' .:;lxX0000KX: \n", "   .cc,,;' '..llOXK00KXx.  \n", '      ,:lxdcllk0WXKOd:.    \n', "          ';:cllc;.        \n"]
+
+# list of strings that compose the onion ascii art
+
 class ChatUI:
     def __init__(self, stdscr, userlist_width=30):
         curses.use_default_colors()
@@ -64,7 +68,7 @@ class ChatUI:
 
     def redraw_userlist(self):
         """Redraw the userlist"""
-        onion = open('src/onion.txt', 'r')
+        # onion = open('src/onion.txt', 'r')
         self.win_userlist.clear()
         h, w = self.win_userlist.getmaxyx()
         for i, name in enumerate(self.userlist):
@@ -72,12 +76,13 @@ class ChatUI:
                 break
             #name = name.ljust(w - 1) + "|"
             self.win_userlist.addstr(i, 0, str(i+1) + '. ' + name[:w - 1], curses.color_pair(1) | curses.A_BOLD)
-        artList = onion.readlines()
+        # artList = onion.readlines()
+        artList = onionAscii
         i = h - 20
         for line in artList:
             self.win_userlist.addstr(i, 0, line , curses.color_pair(4) | curses.A_BOLD)
             i += 1
-        onion.close()
+        # onion.close()
         self.win_userlist.addstr(i+1, int(w/2) - 3, "TORchat" , curses.color_pair(4) | curses.A_BOLD)
         self.win_userlist.refresh()
 
