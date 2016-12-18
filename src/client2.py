@@ -13,6 +13,7 @@ import threading
 
 printBuf = list ()
 lock = Lock() # a binary semaphore
+exitFlag = False
 
 def print_line_cur (line, ui, color):
     # append sent messages and received messages to the buffer
@@ -57,6 +58,8 @@ def update_routine(peerList, i, portno, ui):
     # then waits half a second and queries again
     global lock
     while True:
+        if exitFlag:
+            exit()
         j = create_json (cmd='UPDATE', msg=peerList[int (i)])
         resp = send_to_mongoose (j, portno, wait=True)
         # the json is not printed if no messages are received
@@ -68,6 +71,7 @@ def update_routine(peerList, i, portno, ui):
             lock.release()
 
 def elaborate_command (line, portno):
+    global exitFlag
     # if line == '/help':
         # print ('Command list: ')
         # TODO
@@ -75,7 +79,11 @@ def elaborate_command (line, portno):
     if line == '/exit':
         j = create_json(cmd='EXIT', msg='')
         send_to_mongoose(j, portno, wait=False)
+        exitFlag = True
         exit ()
+    elif line == '/quit':
+        exitFlag = True
+        exit()
     return
 
 def input_routine (onion, portno, ui):
