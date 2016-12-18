@@ -145,5 +145,6 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     	// shouldn't
     }
 
+	close (sock);
     return true;
 }
