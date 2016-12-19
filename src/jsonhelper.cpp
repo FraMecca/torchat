@@ -1,4 +1,4 @@
-#include "../lib/json.hpp"
+#include "../include/json.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
@@ -62,7 +62,7 @@ convert_from_enum (const enum command c)
 	return st;
 }
 
-void log_error (const char *st)
+static void log_error (const char *st)
 {
 	fprintf (stderr, "ERROR: %s\n", st); 
 	// should write a better error log

@@ -16,17 +16,17 @@
 #include "../lib/socks_helper.h"
 #include <pthread.h>
 #include "../lib/util.h"
-#include <syslog.h>
 #include <signal.h>
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
+extern void log_info (char *json); // from logger.cpp
+extern void log_err (char *json); // from logger.cpp
+void log_init (char *name, char *verbosity); // from logger.cpp
 
 static bool exitFlag = false; // this flag is set to true when the program should exit
 
 bool
 relay_msg (struct data_wrapper*);
-void 
-log_msg (char *id, char *msg, enum command c);
 
 static pthread_mutex_t sem; // semaphore that will be used for race conditions on logfiles
 // would be more correct if you have a semaphore for every different file that could be opened
@@ -94,18 +94,19 @@ void
 	struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype
   	struct mbuf *io = &nc->recv_mbuf;
 	struct data_wrapper *data;
-	char *msg;
+	char *msg, *json;
 
   	if (io->buf != NULL) {
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
+		json = io->buf;
 		mbuf_remove(io, io->len);      // Discard data from recv buffer
 	} else { 
 		pthread_exit (NULL);
 	}
 	if (data->msg == NULL) {
 		// the json was invalid 
-		//
+		log_err (json);
 		// and logged to errlog
 		if (data->date != NULL) {
 			free (data->date);
@@ -119,7 +120,7 @@ void
 			exitFlag = true;
 			break;
 		case RECV :
-			log_msg (data->id, data->msg, data->cmd); // first log then frog
+			log_info (json); // first log
 			if (!peer_exist (data->id)) {
 				// guess what, peer doesn't exist
 				insert_peer (data->id);
@@ -129,7 +130,7 @@ void
       	  	break;
       	case SEND :
       		// mongoose is told that you want to send a message to a peer
-      	  	log_msg (data->id, data->msg, data->cmd);
+      	  	log_info (json);
       	  	relay_msg (data);
       	  	break;
 		case UPDATE:
@@ -198,15 +199,6 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
   	}
 }
 
-void
-log_msg ( char *onion,  char *msg, enum command MODE)
-{
-	// use syslog to log
-	openlog (onion, LOG_PID|LOG_CONS, LOG_USER);
-	syslog (LOG_INFO, "%s", msg);
-	closelog ();
-}
-
 bool
 relay_msg (struct data_wrapper *data)
 {
@@ -227,8 +219,12 @@ int
 main(int argc, char **argv) {
   	struct mg_mgr mgr;
   	char cwd[128];
+#if DEBUG
   	signal (SIGSEGV, dumpstack);
   	signal (SIGABRT, dumpstack);
+#endif
+	log_init ("file.log", "INFO");
+	log_init ("error.log", "ERROR");
 
   	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0){
 	  	fprintf(stdout, "Starting in daemon mode.\n");
