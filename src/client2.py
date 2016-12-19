@@ -68,7 +68,7 @@ def update_routine(portno, ui):
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
-        else: 
+        else:
             lock.acquire()
             print_line_cur (resp['date'] + resp['msg'], ui, 3) 
             lock.release()
@@ -94,7 +94,7 @@ def elaborate_command (line, portno, ui):
         return peerList, i
 
 def input_routine (portno, ui):
-    c = Completer (['/help', '/exit'])
+    c = Completer (['/help', '/exit', '/quit', '/peer'])
     # readline.set_completer (c.complete)
     # readline.parse_and_bind ("tab: complete")
     # readline.parse_and_bind ("set editing-mode vi")
