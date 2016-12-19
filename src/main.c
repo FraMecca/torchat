@@ -100,7 +100,6 @@ void
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		json = io->buf;
-		mbuf_remove(io, io->len);      // Discard data from recv buffer
 	} else { 
 		pthread_exit (NULL);
 	}
@@ -112,6 +111,7 @@ void
 			free (data->date);
 		}
 		free (data);
+		mbuf_remove(io, io->len);      // Discard data from recv buffer
 		return 0;
 	}
 
@@ -176,6 +176,7 @@ void
     free (data->msg); // free the data_wrapper
     free (data->date);
     free (data);
+	mbuf_remove(io, io->len);      // Discard data from recv buffer
     pthread_exit(NULL);
 }
 
