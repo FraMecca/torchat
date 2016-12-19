@@ -1,9 +1,11 @@
 ALL = src/main.c include/mongoose.c src/socks_helper.c src/util.c src/list.c
+LDIR := $(PWD)
 
 
 default: init build/logger.o build/jsonhelper.o build/main
 
 init:
+	echo $(LDIR)
 	mkdir -p build
 	echo 'Remember to execute export ( DOLLAR ) LD_LIBRARY_PATH= ( DOLLAR ) (pwd)/build'
 
@@ -16,7 +18,7 @@ build/jsonhelper.o: src/jsonhelper.cpp
 build/main: build/logger.o build/jsonhelper.o $(ALL)
 	g++ -shared -o build/liblogger.so build/logger.o
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o
-	gcc -L/home/francesco/Desktop/Programs/torchat/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldl -o build/main 
+	gcc -L$(LDIR)/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldl -o build/main 
 
 asan:
 	mkdir -p build
@@ -25,7 +27,7 @@ asan:
 	g++ -shared -o build/liblogger.so build/logger.o
 	g++ -c -Wall -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o -fsanitize=address
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g -fsanitize=address
-	gcc -L/home/francesco/Desktop/Programs/torchat/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -fsanitize=address
+	gcc -L$(LDIR)/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -fsanitize=address
 
 debug:
 	mkdir -p build
@@ -34,12 +36,4 @@ debug:
 	g++ -shared -o build/liblogger.so build/logger.o  -g -DDEBUG
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o -DDEBUG
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g -DDEBUG
-	gcc -L/home/francesco/Desktop/Programs/torchat/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG 
-
-#clang: 											# fra questo non funziona, lo commento per ora
-	#mkdir -p build
-	#cd build 										<-- nigga say what
-	#echo 'Remember to execute export ( DOLLAR ) LD_LIBRARY_PATH= (pwd)/build'
-	#g++ -c -Wall -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o
-	#g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g
-	#clang -L/home/francesco/Desktop/Programs/torchat/build $(ALL) -I. -g  -ljsonhelper -o main -lpthread
+	gcc -L$(LDIR)/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG 
