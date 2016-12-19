@@ -10,3 +10,6 @@ get_date ();
 
 char *
 get_short_date();
+
+void
+dumpstack ();

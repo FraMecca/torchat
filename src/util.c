@@ -4,7 +4,8 @@
 #include <time.h> // localtime
 #include <string.h>
 #include <stdio.h> // perror
-
+#include <signal.h> // sigsegv sigabrt
+#include <unistd.h> // system
 
 void
 exit_error (char *s)
@@ -34,4 +35,19 @@ get_short_date ()
 	char date[50] = {0};
 	strftime(date, 8, "%H:%M:%S-%d%m", tm);
 	return strdup(date);
+}
+
+void 
+dumpstack(int sig) {
+	char sys[160];
+
+	sprintf(sys, "echo 'where\ndetach' | gcore -o torchat_coredump %d", getpid());
+	system(sys);
+	// core has been dumped
+	if (sig == SIGSEGV) {
+		exit (139);
+	} else {
+		// sig == SIGABRT
+		exit (134);
+	}
 }
