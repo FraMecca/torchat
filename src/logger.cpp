@@ -62,6 +62,13 @@ log_init (const char *name, const char *verbosity)
 	// other cases
 }
 
+extern "C" void
+log_clear_datastructs ()
+{
+	free (infoLog);
+	free (errLog);
+}
+
 extern "C" char **
 get_history (const char *id, const int n, int *size)
 {

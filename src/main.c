@@ -23,6 +23,7 @@ extern char * convert_datastruct_to_char (const struct data_wrapper *data); // f
 extern void log_info (char *json); // from logger.cpp
 extern void log_err (char *json); // from logger.cpp
 void log_init (char *name, char *verbosity); // from logger.cpp
+void log_clear_datastructs (); // from logger.cpp
 
 static bool exitFlag = false; // this flag is set to true when the program should exit
 
@@ -87,9 +88,9 @@ read_tor_hostname (void)
 }
 
 void 
-*event_routine (void *ncV) 
+event_routine (struct mg_connection *nc) 
 {
-	struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype
+	/*struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype*/
   	struct mbuf *io = &nc->recv_mbuf;
 	struct data_wrapper *data;
 	char *json; // used to log
@@ -100,18 +101,15 @@ void
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		mbuf_remove(io, io->size);      // Discard data from recv buffer
 	} else { 
-		pthread_exit (NULL);
+		return;
 	}
 	if (data->msg == NULL) {
 		// the json was invalid 
 		log_err (json);
 		// and logged to errlog
-		if (data->date != NULL) {
-			free (data->date);
-		}
 		free (data);
 		free (json);
-		return 0;
+		return ;
 	}
 
 	switch (data->cmd) {
@@ -147,7 +145,7 @@ void
     free (data->date);
     free (data);
     free (json);
-    pthread_exit(NULL);
+    return;
 }
 
 
@@ -163,14 +161,14 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 
 	// now we just utilize MG_EV_RECV because the response must be send over TOR
   	if (ev == MG_EV_RECV) {
-  		pthread_t *th = NULL;
-  		// allocate th
-  		if ((th = malloc (sizeof (pthread_t))) == NULL) {
-  			exit_error ("malloc: th: ");
-  		}
+          /*pthread_t *th = NULL;*/
+          /*// allocate th*/
+          /*if ((th = malloc (sizeof (pthread_t))) == NULL) {*/
+              /*exit_error ("malloc: th: ");*/
+          /*}*/
     	/*case MG_EV_RECV:*/
-    	pthread_create (th, NULL, event_routine, nc);
-    	keep_track_of_threads (th);
+    	event_routine (nc);
+        /*keep_track_of_threads (th);*/
   	}
 }
 
@@ -216,6 +214,7 @@ main(int argc, char **argv) {
 
 	wait_all_threads (); 
 	clear_datastructs ();
+	log_clear_datastructs ();
   	mg_mgr_free(&mgr);
   	free (HOSTNAME);
   	pthread_mutex_destroy (&sem);
