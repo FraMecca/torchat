@@ -8,39 +8,30 @@
 #include "../lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
-
+extern char * HOSTNAME;
 // in this file there are the various functions used by main::event_routine
 // related to the various commands
 //
-//
-char *
-read_tor_hostname (void)
-{
-	// still hardcoded
-	// opens ../tor/hostname
-	FILE *fp = fopen ("tor/hostname", "r");
-	if (fp == NULL) {
-		exit_error ("fopen: torrc:");
-	}
-	char buf[50];
-	fscanf (fp, "%s", buf);
-	fclose (fp);
-	return strdup (buf);
-}
 
 void *
-send_routine(struct data_wrapper *data)
+send_routine(void *d)
 {
 	char id[30];
+	struct data_wrapper *data = (struct data_wrapper*)d;
+
 	strcpy (id, data->id); // save dest address
-	strcpy (data->id, read_tor_hostname());
+	strcpy (data->id, HOSTNAME);
+	data->cmd = RECV;
+	/*free (data->date);*/
+	data->date = get_short_date();
 
 	char *msg = convert_datastruct_to_char (data);
 	bool ret = send_over_tor (id, data->portno, msg, 9250);
+
 	if (!ret) {
 		exit_error ("send_over_tor");
 	}
-	free (msg);
+	/*free (msg);*/
 	pthread_exit(NULL);
 }
 
@@ -49,11 +40,9 @@ void
 relay_msg (struct data_wrapper *data)
 {
 	pthread_t t;
-    data->cmd = RECV;
-	free (data->date);
-	data->date = get_short_date();
+	
 	pthread_create(&t, NULL, &send_routine, data);
-	pthread_join(t, NULL);
+	/*pthread_join(t, NULL);*/
 	return;
 }
 

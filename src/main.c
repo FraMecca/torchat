@@ -31,7 +31,22 @@ static bool exitFlag = false; // this flag is set to true when the program shoul
 static pthread_mutex_t sem; // semaphore that will be used for race conditions on logfiles
 // would be more correct if you have a semaphore for every different file that could be opened
 
-static char *HOSTNAME = NULL; // will be read from torrc
+char *HOSTNAME = NULL; // will be read from torrc
+
+char *
+read_tor_hostname (void)
+{
+	// still hardcoded
+	// opens ../tor/hostname
+	FILE *fp = fopen ("tor/hostname", "r");
+	if (fp == NULL) {
+		exit_error ("fopen: torrc:");
+	}
+	char buf[50];
+	fscanf (fp, "%s", buf);
+	fclose (fp);
+	return strdup (buf);
+}
 
 static void skeleton_daemon(char *dir)
 {
@@ -88,7 +103,7 @@ event_routine (struct mg_connection *nc)
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
 		printf ("%d = size, %d = len\n", io->size, io->len);
 		mbuf_remove(io, io->size);      // Discard data from recv buffer
-	} else { 
+	} else {
 		return;
 	}
 	if (data->msg == NULL) {
@@ -182,7 +197,7 @@ main(int argc, char **argv) {
 	  	}
   	}
 
-  	HOSTNAME = read_tor_hostname ();
+ 	HOSTNAME = read_tor_hostname ();
   	pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
 
   	mg_mgr_init(&mgr, NULL);  // Initialize event manager object
@@ -205,7 +220,7 @@ main(int argc, char **argv) {
 	clear_datastructs ();
 	log_clear_datastructs ();
   	mg_mgr_free(&mgr);
-  	free (HOSTNAME);
+	free (HOSTNAME);
   	pthread_mutex_destroy (&sem);
   	return 0;
 }
