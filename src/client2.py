@@ -110,7 +110,7 @@ def input_routine (portno, ui):
             j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
             resp = send_to_mongoose(j, portno)
             c.update ([line])
-        else:
+        elif line != "":
             # the user input a command,
             # they start with /
             peerList, i = elaborate_command (line, portno, ui)
