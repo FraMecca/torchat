@@ -16,6 +16,7 @@ static pthread_mutex_t *sem = NULL; // mutex to initialize when the log files ar
 
 static char *infoLog = NULL; // store name of the infoLog
 static char *errLog = NULL; // same, err
+static char *debLog = NULL; // same, debug
 
 /*
  * loguru is already thread safe,
@@ -58,15 +59,24 @@ log_init (const char *name, const char *verbosity)
 	} else if (strcmp (verbosity, "ERROR") == 0) {
 		errLog = strdup (name);
 		loguru::add_file (name, loguru::Append, loguru::Verbosity_ERROR);
-	}
-	// other cases
+	} else if (strcmp (verbosity, "DEBUG") == 0) {
+		debLog = strdup (name);
+		loguru::add_file (name, loguru::Append, loguru::Verbosity_MAX);
+	} // other cases
 }
 
 extern "C" void
 log_clear_datastructs ()
 {
-	free (infoLog);
-	free (errLog);
+	if (infoLog != NULL) {
+		free (infoLog);
+	}
+	if (errLog != NULL) {
+		free (errLog);
+	}
+	if (debLog != NULL) {
+		free (debLog);
+	}
 }
 
 extern "C" char **

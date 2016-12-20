@@ -101,7 +101,6 @@ event_routine (struct mg_connection *nc)
   		strncpy (json, io->buf, io->size * sizeof (char));
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
-		printf ("%d = size, %d = len\n", io->size, io->len);
 		mbuf_remove(io, io->size);      // Discard data from recv buffer
 	} else {
 		return;
@@ -184,6 +183,7 @@ main(int argc, char **argv) {
   	signal (SIGSEGV, dumpstack);
   	signal (SIGABRT, dumpstack);
   	signal (SIGINT, dumpstack);
+  	log_init ("debug.log", "DEBUG");
 #endif
 	log_init ("file.log", "INFO");
 	log_init ("error.log", "ERROR");

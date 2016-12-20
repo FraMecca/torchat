@@ -6,6 +6,10 @@
 #include "../lib/datastructs.h"
 using json = nlohmann::json;
 
+#if DEBUG
+#include "../include/loguru.hpp"
+#endif
+
 /*
  * json j ={
  * {"cmd" = RECV or SEND},
@@ -77,10 +81,13 @@ convert_string_to_datastruct (const char *jsonCh)
 	 * dumping the json
 	 */
 	std::string st (jsonCh); // translate char* to std::string
-	if (std::count (st.begin (), st.end (), '}') > 1) {
+	if (std::count (st.begin (), st.end (), '}') >= 1) {
 		st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
 	}
-	//std::cout << "json.cpp:85: Received: " << st << std::endl;
+#if DEBUG
+	LOG_F (9, jsonCh); 
+	std::cout << "json.cpp:85: Received: " << st << std::endl;
+#endif
 
 	/*
 	 * now parse json
