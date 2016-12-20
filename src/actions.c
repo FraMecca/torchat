@@ -22,7 +22,7 @@ send_routine(void *d)
 	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME);
 	data->cmd = RECV;
-	/*free (data->date);*/
+	free (data->date);
 	data->date = get_short_date();
 
 	char *msg = convert_datastruct_to_char (data);
@@ -31,7 +31,7 @@ send_routine(void *d)
 	if (!ret) {
 		exit_error ("send_over_tor");
 	}
-	/*free (msg);*/
+	free (msg);
 	pthread_exit(NULL);
 }
 
@@ -40,8 +40,8 @@ void
 relay_msg (struct data_wrapper *data)
 {
 	pthread_t t;
-	
-	pthread_create(&t, NULL, &send_routine, data);
+
+	pthread_create(&t, NULL, &send_routine,(void*) data);
 	/*pthread_join(t, NULL);*/
 	return;
 }

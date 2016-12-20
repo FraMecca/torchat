@@ -146,9 +146,9 @@ event_routine (struct mg_connection *nc)
 		default: 
 			break;
     }
-    free (data->msg); // free the data_wrapper
-    free (data->date);
-    free (data);
+	/*free (data->msg); // free the data_wrapper*/
+	/*free (data->date);*/
+	/*free (data);*/
     return;
 }
 
