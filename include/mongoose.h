@@ -44,6 +44,7 @@
 #define CS_P_CUSTOM 0
 #define CS_P_UNIX 1
 #define CS_P_WINDOWS 2
+#define CS_P_ESP32 15
 #define CS_P_ESP8266 3
 #define CS_P_CC3200 4
 #define CS_P_MSP432 5
@@ -55,8 +56,8 @@
 #define CS_P_NXP_KINETIS 9
 #define CS_P_NRF51 12
 #define CS_P_NRF52 10
-#define CS_P_PIC32_HARMONY 11
-/* Next id: 15 */
+#define CS_P_PIC32 11
+/* Next id: 16 */
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -78,7 +79,9 @@
 #elif defined(FRDM_K64F) || defined(FREEDOM)
 #define CS_PLATFORM CS_P_NXP_KINETIS
 #elif defined(PIC32)
-#define CS_PLATFORM CS_P_PIC32_HARMONY
+#define CS_PLATFORM CS_P_PIC32
+#elif defined(ESP_PLATFORM)
+#define CS_PLATFORM CS_P_ESP32
 #elif defined(ICACHE_FLASH)
 #define CS_PLATFORM CS_P_ESP8266
 #elif defined(TARGET_IS_TM4C129_RA0) || defined(TARGET_IS_TM4C129_RA1) || \
@@ -95,7 +98,7 @@
 #define MG_NET_IF_SOCKET 1
 #define MG_NET_IF_SIMPLELINK 2
 #define MG_NET_IF_LWIP_LOW_LEVEL 3
-#define MG_NET_IF_PIC32_HARMONY 4
+#define MG_NET_IF_PIC32 4
 
 #define MG_SSL_IF_OPENSSL 1
 #define MG_SSL_IF_MBEDTLS 2
@@ -103,6 +106,7 @@
 
 /* Amalgamated: #include "common/platforms/platform_unix.h" */
 /* Amalgamated: #include "common/platforms/platform_windows.h" */
+/* Amalgamated: #include "common/platforms/platform_esp32.h" */
 /* Amalgamated: #include "common/platforms/platform_esp8266.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3200.h" */
 /* Amalgamated: #include "common/platforms/platform_cc3100.h" */
@@ -112,14 +116,16 @@
 /* Amalgamated: #include "common/platforms/platform_wince.h" */
 /* Amalgamated: #include "common/platforms/platform_nxp_lpc.h" */
 /* Amalgamated: #include "common/platforms/platform_nxp_kinetis.h" */
-/* Amalgamated: #include "common/platforms/platform_pic32_harmony.h" */
+/* Amalgamated: #include "common/platforms/platform_pic32.h" */
 
 /* Common stuff */
 
+#if !defined(WEAK)
 #if (defined(__GNUC__) || defined(__TI_COMPILER_VERSION__)) && !defined(_WIN32)
 #define WEAK __attribute__((weak))
 #else
 #define WEAK
+#endif
 #endif
 
 #ifdef __GNUC__
@@ -127,11 +133,13 @@
 #define NOINLINE __attribute__((noinline))
 #define WARN_UNUSED_RESULT __attribute__((warn_unused_result))
 #define NOINSTR __attribute__((no_instrument_function))
+#define DO_NOT_WARN_UNUSED __attribute__((unused))
 #else
 #define NORETURN
 #define NOINLINE
 #define WARN_UNUSED_RESULT
 #define NOINSTR
+#define DO_NOT_WARN_UNUSED
 #endif /* __GNUC__ */
 
 #ifndef ARRAY_SIZE
@@ -300,7 +308,7 @@ typedef struct _stati64 cs_stat_t;
 #endif
 
 #ifndef MG_ENABLE_HTTP_CGI
-#define MG_ENABLE_HTTP_CGI 1
+#define MG_ENABLE_HTTP_CGI MG_ENABLE_FILESYSTEM
 #endif
 
 #ifndef MG_NET_IF
@@ -439,7 +447,7 @@ typedef struct stat cs_stat_t;
 #endif
 
 #ifndef MG_ENABLE_HTTP_CGI
-#define MG_ENABLE_HTTP_CGI 1
+#define MG_ENABLE_HTTP_CGI MG_ENABLE_FILESYSTEM
 #endif
 
 #ifndef MG_NET_IF
@@ -448,6 +456,49 @@ typedef struct stat cs_stat_t;
 
 #endif /* CS_PLATFORM == CS_P_UNIX */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_UNIX_H_ */
+#ifdef MG_MODULE_LINES
+#line 1 "common/platforms/platform_esp32.h"
+#endif
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_ESP32_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_ESP32_H_
+#if CS_PLATFORM == CS_P_ESP32
+
+#include <assert.h>
+#include <ctype.h>
+#include <fcntl.h>
+#include <inttypes.h>
+#include <machine/endian.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+
+#define SIZE_T_FMT "u"
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
+#define to64(x) strtoll(x, NULL, 10)
+#define INT64_FMT PRId64
+#define INT64_X_FMT PRIx64
+#define __cdecl
+#define _FILE_OFFSET_BITS 32
+
+#define MG_LWIP 1
+
+#ifndef MG_NET_IF
+#define MG_NET_IF MG_NET_IF_SOCKET
+#endif
+
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
+#endif /* CS_PLATFORM == CS_P_ESP32 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_ESP32_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "common/platforms/platform_esp8266.h"
 #endif
@@ -866,7 +917,13 @@ typedef struct stat cs_stat_t;
 #define CS_COMMON_PLATFORMS_PLATFORM_MBED_H_
 #if CS_PLATFORM == CS_P_MBED
 
+/*
+ * mbed.h contains C++ code (e.g. templates), thus, it should be processed
+ * only if included directly to startup file (ex: main.cpp)
+ */
+#ifdef __cplusplus
 /* Amalgamated: #include "mbed.h" */
+#endif /* __cplusplus */
 
 #include <assert.h>
 #include <ctype.h>
@@ -875,6 +932,13 @@ typedef struct stat cs_stat_t;
 #include <stdint.h>
 #include <string.h>
 #include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <stdio.h>
+
+typedef struct stat cs_stat_t;
+#define DIRSEP '/'
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1
@@ -918,6 +982,8 @@ typedef int sock_t;
 const char *inet_ntop(int af, const void *src, char *dst, socklen_t size);
 char *inet_ntoa(struct in_addr in);
 int inet_pton(int af, const char *src, void *dst);
+int inet_aton(const char *cp, struct in_addr *inp);
+in_addr_t inet_addr(const char *cp);
 
 #endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK */
 
@@ -1027,7 +1093,8 @@ int gettimeofday(struct timeval *tp, void *tzp);
 #define CS_COMMON_PLATFORMS_SIMPLELINK_CS_SIMPLELINK_H_
 
 /* If simplelink.h is already included, all bets are off. */
-#if MG_NET_IF == MG_NET_IF_SIMPLELINK && !defined(__SIMPLELINK_H__)
+#if defined(MG_NET_IF) && MG_NET_IF == MG_NET_IF_SIMPLELINK && \
+    !defined(__SIMPLELINK_H__)
 
 #include <stdbool.h>
 
@@ -1410,19 +1477,19 @@ typedef struct stat cs_stat_t;
 #endif /* CS_PLATFORM == CS_P_NXP_KINETIS */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_NXP_KINETIS_H_ */
 #ifdef MG_MODULE_LINES
-#line 1 "common/platforms/platform_pic32_harmony.h"
+#line 1 "common/platforms/platform_pic32.h"
 #endif
 /*
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_PIC32_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_PIC32_H_
 
-#if CS_PLATFORM == CS_P_PIC32_HARMONY
+#if CS_PLATFORM == CS_P_PIC32
 
-#define MG_NET_IF MG_NET_IF_PIC32_HARMONY
+#define MG_NET_IF MG_NET_IF_PIC32
 
 #include <stdint.h>
 #include <time.h>
@@ -1440,11 +1507,15 @@ typedef TCP_SOCKET sock_t;
 #define SIZE_T_FMT "lu"
 #define INT64_FMT "lld"
 
+#ifndef CS_ENABLE_STDIO
+#define CS_ENABLE_STDIO 1
+#endif
+
 char* inet_ntoa(struct in_addr in);
 
-#endif /* CS_PLATFORM == CS_P_PIC32_HARMONY */
+#endif /* CS_PLATFORM == CS_P_PIC32 */
 
-#endif /* CS_COMMON_PLATFORMS_PLATFORM_PIC32_HARMONY_H_ */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_PIC32_H_ */
 #ifdef MG_MODULE_LINES
 #line 1 "common/platforms/lwip/mg_lwip.h"
 #endif
@@ -1614,13 +1685,12 @@ int mg_strncmp(const struct mg_str str1, const struct mg_str str2, size_t n);
 #ifndef CS_COMMON_MBUF_H_
 #define CS_COMMON_MBUF_H_
 
+#include <stdlib.h>
+/* Amalgamated: #include "common/platform.h" */
+
 #if defined(__cplusplus)
 extern "C" {
 #endif
-
-#include <stdlib.h>
-
-/* Amalgamated: #include "common/platform.h" */
 
 #ifndef MBUF_SIZE_MULTIPLIER
 #define MBUF_SIZE_MULTIPLIER 1.5
@@ -1837,6 +1907,23 @@ int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len);
 #ifndef CS_ENABLE_TO64
 #define CS_ENABLE_TO64 0
 #endif
+
+/*
+ * Expands to a string representation of its argument: e.g.
+ * `CS_STRINGIFY_LIT(5) expands to "5"`
+ */
+#define CS_STRINGIFY_LIT(x) #x
+
+/*
+ * Expands to a string representation of its argument, which is allowed
+ * to be a macro: e.g.
+ *
+ * #define FOO 123
+ * CS_STRINGIFY_MACRO(FOO)
+ *
+ * expands to 123.
+ */
+#define CS_STRINGIFY_MACRO(x) CS_STRINGIFY_LIT(x)
 
 #ifdef __cplusplus
 extern "C" {
@@ -4527,37 +4614,6 @@ void mg_serve_http(struct mg_connection *nc, struct http_message *hm,
 void mg_http_serve_file(struct mg_connection *nc, struct http_message *hm,
                         const char *path, const struct mg_str mime_type,
                         const struct mg_str extra_headers);
-#endif /* MG_ENABLE_FILESYSTEM */
-
-/*
- * Registers a callback for a specified http endpoint
- * Note: if callback is registered it is called instead of the
- * callback provided in mg_bind
- *
- * Example code snippet:
- *
- * ```c
- * static void handle_hello1(struct mg_connection *nc, int ev, void *ev_data) {
- *   (void) ev; (void) ev_data;
- *   mg_printf(nc, "HTTP/1.0 200 OK\r\n\r\n[I am Hello1]");
- *  nc->flags |= MG_F_SEND_AND_CLOSE;
- * }
- *
- * static void handle_hello1(struct mg_connection *nc, int ev, void *ev_data) {
- *  (void) ev; (void) ev_data;
- *   mg_printf(nc, "HTTP/1.0 200 OK\r\n\r\n[I am Hello2]");
- *  nc->flags |= MG_F_SEND_AND_CLOSE;
- * }
- *
- * void init() {
- *   nc = mg_bind(&mgr, local_addr, cb1);
- *   mg_register_http_endpoint(nc, "/hello1", handle_hello1);
- *   mg_register_http_endpoint(nc, "/hello1/hello2", handle_hello2);
- * }
- * ```
- */
-void mg_register_http_endpoint(struct mg_connection *nc, const char *uri_path,
-                               mg_event_handler_t handler);
 
 #if MG_ENABLE_HTTP_STREAMING_MULTIPART
 
@@ -4600,6 +4656,37 @@ typedef struct mg_str (*mg_fu_fname_fn)(struct mg_connection *nc,
 void mg_file_upload_handler(struct mg_connection *nc, int ev, void *ev_data,
                             mg_fu_fname_fn local_name_fn);
 #endif /* MG_ENABLE_HTTP_STREAMING_MULTIPART */
+#endif /* MG_ENABLE_FILESYSTEM */
+
+/*
+ * Registers a callback for a specified http endpoint
+ * Note: if callback is registered it is called instead of the
+ * callback provided in mg_bind
+ *
+ * Example code snippet:
+ *
+ * ```c
+ * static void handle_hello1(struct mg_connection *nc, int ev, void *ev_data) {
+ *   (void) ev; (void) ev_data;
+ *   mg_printf(nc, "HTTP/1.0 200 OK\r\n\r\n[I am Hello1]");
+ *  nc->flags |= MG_F_SEND_AND_CLOSE;
+ * }
+ *
+ * static void handle_hello1(struct mg_connection *nc, int ev, void *ev_data) {
+ *  (void) ev; (void) ev_data;
+ *   mg_printf(nc, "HTTP/1.0 200 OK\r\n\r\n[I am Hello2]");
+ *  nc->flags |= MG_F_SEND_AND_CLOSE;
+ * }
+ *
+ * void init() {
+ *   nc = mg_bind(&mgr, local_addr, cb1);
+ *   mg_register_http_endpoint(nc, "/hello1", handle_hello1);
+ *   mg_register_http_endpoint(nc, "/hello1/hello2", handle_hello2);
+ * }
+ * ```
+ */
+void mg_register_http_endpoint(struct mg_connection *nc, const char *uri_path,
+                               mg_event_handler_t handler);
 
 /*
  * Authenticates a HTTP request against an opened password file.
