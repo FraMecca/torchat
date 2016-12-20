@@ -2,33 +2,59 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 #include "../lib/datastructs.h"
 #include "../lib/socks_helper.h"
 #include "../lib/util.h"
-extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
-extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
+extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
+extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
 
 // in this file there are the various functions used by main::event_routine
 // related to the various commands
 //
 //
-void
-relay_msg (struct data_wrapper *data, char *hostname)
+char *
+read_tor_hostname (void)
 {
-	// relay client msg to the another peer on the tor network
+	// still hardcoded
+	// opens ../tor/hostname
+	FILE *fp = fopen ("tor/hostname", "r");
+	if (fp == NULL) {
+		exit_error ("fopen: torrc:");
+	}
+	char buf[50];
+	fscanf (fp, "%s", buf);
+	fclose (fp);
+	return strdup (buf);
+}
+
+void *
+send_routine(struct data_wrapper *data)
+{
 	char id[30];
-      	// first change command to RECV, not SEND
-    data->cmd = RECV;
 	strcpy (id, data->id); // save dest address
-	strcpy (data->id, hostname); // copy your hostname to the field
-	free (data->date);
-	data->date = get_short_date();
+	strcpy (data->id, read_tor_hostname());
+
 	char *msg = convert_datastruct_to_char (data);
 	bool ret = send_over_tor (id, data->portno, msg, 9250);
 	if (!ret) {
 		exit_error ("send_over_tor");
 	}
 	free (msg);
+	pthread_exit(NULL);
+}
+
+// relay client msg to the another peer on the tor network
+void
+relay_msg (struct data_wrapper *data)
+{
+	pthread_t t;
+    data->cmd = RECV;
+	free (data->date);
+	data->date = get_short_date();
+	pthread_create(&t, NULL, &send_routine, data);
+	pthread_join(t, NULL);
+	return;
 }
 
 void
