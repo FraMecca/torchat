@@ -96,9 +96,11 @@ event_routine (struct mg_connection *nc)
 	char *json; // used to log
 
   	if (io->buf != NULL && io->size > 0) {
-		json = strdup (io->buf);
+  		json = calloc (io->size, sizeof (char));
+  		strncpy (json, io->buf, io->size * sizeof (char));
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
+		printf ("%d = size, %d = len\n", io->size, io->len);
 		mbuf_remove(io, io->size);      // Discard data from recv buffer
 	} else { 
 		return;
@@ -118,11 +120,13 @@ event_routine (struct mg_connection *nc)
 			break;
 		case RECV :
 			log_info (json); // first log
+			free (json);
 			store_msg (data);
       	  	break;
       	case SEND :
       		// mongoose is told that you want to send a message to a peer
       	  	log_info (json);
+			free (json);
       	  	relay_msg (data, HOSTNAME);
       	  	break;
 		case UPDATE:
@@ -144,7 +148,6 @@ event_routine (struct mg_connection *nc)
     free (data->msg); // free the data_wrapper
     free (data->date);
     free (data);
-    free (json);
     return;
 }
 
