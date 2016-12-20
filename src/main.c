@@ -94,10 +94,10 @@ void
 	struct data_wrapper *data;
 	char *json; // used to log
 
-  	if (io->buf != NULL) {
+  	if (io->buf != NULL && io->size > 0) {
+		json = strdup (io->buf);
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
-		json = strdup (io->buf);
 		mbuf_remove(io, io->len);      // Discard data from recv buffer
 	} else { 
 		pthread_exit (NULL);
@@ -154,6 +154,10 @@ void
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
+	if (nc->recv_mbuf.size == 0) {
+		// can trash
+		return;
+	}
     // switch to a new thread and do everything in that thread
     /*the thread handles the connection and works on that.*/
 
