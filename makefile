@@ -1,4 +1,4 @@
-ALL = src/main.c include/mongoose.c src/socks_helper.c src/util.c src/list.c
+ALL = src/main.c include/mongoose.c src/socks_helper.c src/util.c src/list.c src/actions.c
 LDIR := $(PWD)
 
 

@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include "../lib/util.h"
 #include <signal.h>
+#include "../lib/actions.h" // event_routine functions
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
 extern void log_info (char *json); // from logger.cpp
@@ -24,9 +25,6 @@ extern void log_err (char *json); // from logger.cpp
 void log_init (char *name, char *verbosity); // from logger.cpp
 
 static bool exitFlag = false; // this flag is set to true when the program should exit
-
-bool
-relay_msg (struct data_wrapper*);
 
 static pthread_mutex_t sem; // semaphore that will be used for race conditions on logfiles
 // would be more correct if you have a semaphore for every different file that could be opened
@@ -94,12 +92,13 @@ void
 	struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype
   	struct mbuf *io = &nc->recv_mbuf;
 	struct data_wrapper *data;
-	char *msg, *json;
+	char *json; // used to log
 
   	if (io->buf != NULL) {
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
-		json = io->buf;
+		json = strdup (io->buf);
+		mbuf_remove(io, io->len);      // Discard data from recv buffer
 	} else { 
 		pthread_exit (NULL);
 	}
@@ -111,7 +110,7 @@ void
 			free (data->date);
 		}
 		free (data);
-		mbuf_remove(io, io->len);      // Discard data from recv buffer
+		free (json);
 		return 0;
 	}
 
@@ -121,62 +120,33 @@ void
 			break;
 		case RECV :
 			log_info (json); // first log
-			if (!peer_exist (data->id)) {
-				// guess what, peer doesn't exist
-				insert_peer (data->id);
-				// insert in hash tables only peer that sent RECV, not other cmd
-			}
-			insert_new_message (data->id, data->msg);
+			store_msg (data);
       	  	break;
       	case SEND :
       		// mongoose is told that you want to send a message to a peer
       	  	log_info (json);
-      	  	relay_msg (data);
+      	  	relay_msg (data, HOSTNAME);
       	  	break;
 		case UPDATE:
-			// the client asks for unread messages from data->id peer
-			// get the OLDEST, send as a json
-			// this is supposed to be executed periodically
-			// by the client
-			strncpy(data->id, data->msg,29*sizeof(char));
-			data->id[strlen(data->id)] = '\0';
-			// if no msg, get_unread_message should return NULL
-			if((msg = get_unread_message(data->msg)) != NULL){
-				// now we convert the message in a json and send it
-				free (data->msg);
-				data->msg = msg;
-			} else {
-				data->cmd = END;
-			}
-			char *unreadMsg = convert_datastruct_to_char(data);
-			mg_send (nc, unreadMsg, strlen(unreadMsg));
-			free (unreadMsg);
+			client_update (data, nc);
 			break;
 		case GET_PEERS :
-			// the client asked to receive the list of all the peers that send the server a message (not read yet)
-			// send the list as a parsed json, with peer field comma divided
-			// the char containing the list of peers commadivided is then put into a json 
-			// just store it in data.msg
-			free (data->msg);
-			data->msg = get_peer_list ();
-			if (data->msg == NULL) {
-				data->msg = strdup ("");
-				// needed if no peers messaged us
-			}
-			char *response = convert_datastruct_to_char (data);
-			if (nc->iface != NULL) {
-				// if iface is not null the client is waiting for response
-				mg_send (nc, response, strlen (response));
-			}
-			free (response);
+			send_peer_list_to_client (data, nc);
 			break;
+		case HISTORY :
+			// the client asked to receive the history  
+			// it specified the id and n lines
+			// (id in json[id], n in json[msg]
+			// send the various messages
+			break;
+
 		default: 
 			break;
     }
     free (data->msg); // free the data_wrapper
     free (data->date);
     free (data);
-	mbuf_remove(io, io->len);      // Discard data from recv buffer
+    free (json);
     pthread_exit(NULL);
 }
 
@@ -200,22 +170,6 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
   	}
 }
 
-bool
-relay_msg (struct data_wrapper *data)
-{
-	char id[30];
-      	// first change command to RECV, not SEND
-    data->cmd = RECV;
-	strcpy (id, data->id); // save dest address
-	strcpy (data->id, HOSTNAME); // copy your hostname to the field
-	free (data->date);
-	data->date = get_short_date();
-	char *msg = convert_datastruct_to_char (data);
-	bool ret = send_over_tor (id, data->portno, msg, 9250);
-	free (msg);
-	return ret;
-}
-
 int
 main(int argc, char **argv) {
   	struct mg_mgr mgr;
@@ -223,6 +177,7 @@ main(int argc, char **argv) {
 #if DEBUG
   	signal (SIGSEGV, dumpstack);
   	signal (SIGABRT, dumpstack);
+  	signal (SIGINT, dumpstack);
 #endif
 	log_init ("file.log", "INFO");
 	log_init ("error.log", "ERROR");

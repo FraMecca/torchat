@@ -30,6 +30,8 @@ convert_to_enum (const std::string cmd)
 		return EXIT;
 	} else if (cmd == "UPDATE") {
 		return UPDATE;
+	} else if (cmd == "HISTORY") {
+		return HISTORY;
 	} else if (cmd == "END") {
 		return END;
 	}
@@ -55,18 +57,14 @@ convert_from_enum (const enum command c)
 		case UPDATE : 
 			st = "UPDATE";
 			break;
+		case HISTORY :
+			st = "HISTORY";
+			break;
 		case END :
 			st = "END";
 			break;
 	}
 	return st;
-}
-
-static void log_error (const char *st)
-{
-	fprintf (stderr, "ERROR: %s\n", st); 
-	// should write a better error log
-	// TODO
 }
 
 extern "C" struct data_wrapper
@@ -96,7 +94,6 @@ convert_string_to_datastruct (const char *jsonCh)
 	try {	
 		j = json::parse (st);
 	} catch (const std::invalid_argument&) {
-		log_error (jsonCh);
 		data.msg = NULL;
 		return data;
 	}
