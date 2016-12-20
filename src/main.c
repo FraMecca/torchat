@@ -98,7 +98,7 @@ void
 		json = strdup (io->buf);
 		data = calloc (1, sizeof (struct data_wrapper));
 		*data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
-		mbuf_remove(io, io->len);      // Discard data from recv buffer
+		mbuf_remove(io, io->size);      // Discard data from recv buffer
 	} else { 
 		pthread_exit (NULL);
 	}

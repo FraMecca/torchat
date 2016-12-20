@@ -80,7 +80,7 @@ convert_string_to_datastruct (const char *jsonCh)
 	if (std::count (st.begin (), st.end (), '}') > 1) {
 		st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
 	}
-	std::cout << "json.cpp:85: Received: " << st << std::endl;
+	//std::cout << "json.cpp:85: Received: " << st << std::endl;
 
 	/*
 	 * now parse json
