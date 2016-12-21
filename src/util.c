@@ -32,9 +32,9 @@ get_short_date ()
 {
 	time_t t = time (NULL);
 	struct tm *tm = localtime (&t);
-	char *date = calloc(50, sizeof(char));
-	strftime(date, 8, "%H:%M:%S-%d%m", tm);
-	return date;
+	char date[50] = {0};
+	strftime(date, 8, "%H:%M", tm);
+	return strdup((char*)date);
 }
 
 void 
