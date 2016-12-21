@@ -1,9 +1,8 @@
 # TORchat
-===
 
 - [Status](#Status)
 - [Features](#Features)
-- [How it works](#How it works)
+- [How it works](#How-it-works)
 - [Design](#Design)
 - [Building](#Building)
 - [Usage](#Usage)
