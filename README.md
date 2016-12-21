@@ -7,6 +7,9 @@
 - [Building](#Building)
 - [Usage](#Usage)
 - [Development](#Development)
+	- [Daemon](#Daemon)
+	- [Client](#Client)
+	- [JSON](#JSON)
 - [Disclaimer](#Disclaimer)
 - [Todo](#Todo)
 
@@ -52,7 +55,6 @@ Just run make and set LD_LIBRARY_PATH as the build directory.
 ~~ still no cli arguments ~~
 
 ## Development
-===
 
 #### Daemon
 
@@ -74,7 +76,7 @@ There is an ongoing discussion about the possibility of adding encryption (maybe
 
 #### Client
 
-Clients are indipendent of the daemon.
+Clients are independent of the daemon.
 Currently a small curses python client is provided.
 
 #### JSON
