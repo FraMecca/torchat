@@ -71,7 +71,7 @@ convert_from_enum (const enum command c)
 	return st;
 }
 
-extern "C" struct data_wrapper
+extern "C" struct data_wrapper *
 convert_string_to_datastruct (const char *jsonCh)
 {
 	// receive a char sent by another peer and translate that into a datawrapper that contains all the informations
@@ -97,24 +97,23 @@ convert_string_to_datastruct (const char *jsonCh)
 	 * and log that to error log
 	 */
 	json j;
-	struct data_wrapper data;
+	struct data_wrapper *data;
 	try {	
 		j = json::parse (st);
 	} catch (const std::invalid_argument&) {
-		data.msg = NULL;
-		return data;
+		return NULL;
 	}
-
-	memset (data.id, 0, 30);
+	data = (struct data_wrapper *) calloc (1, sizeof (struct data_wrapper));
+	memset (data->id, 0, 30);
 	std::string jmsg = j["msg"];
-	data.msg = strdup (jmsg.c_str());
+	data->msg = strdup (jmsg.c_str());
 	std::string jid = j["id"];
-	strncpy (data.id, jid.c_str (), strlen (jid.c_str()));
-	data.id[strlen (jid.c_str ()) + 1] = '\0';
-	data.portno = j["portno"];
-	data.cmd = convert_to_enum (j["cmd"]);
+	strncpy (data->id, jid.c_str (), strlen (jid.c_str()));
+	data->id[strlen (jid.c_str ()) + 1] = '\0';
+	data->portno = j["portno"];
+	data->cmd = convert_to_enum (j["cmd"]);
 	std::string jdate = j["date"];
-	data.date = strdup (jdate.c_str ());
+	data->date = strdup (jdate.c_str ());
 
 	return data;
 }

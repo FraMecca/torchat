@@ -77,3 +77,6 @@ wait_all_threads ();
 
 void
 clear_datastructs ();
+
+void
+free_data_wrapper (struct data_wrapper *data);

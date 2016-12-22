@@ -13,11 +13,27 @@ extern char * HOSTNAME;
 // related to the various commands
 //
 
+void
+free_data_wrapper (struct data_wrapper *data)
+{
+	if (data->msg != NULL) {
+		free (data->msg);
+	}
+	if (data->date != NULL) {
+		free (data->date);
+	}
+	if  (data != NULL) {
+		free (data);
+	}
+}
+
 void *
 send_routine(void *d)
 {
+	// there is no need to call pthread_join, but thread resources need to be terminated
+	//
 	char id[30];
-	struct data_wrapper *data = (struct data_wrapper*)d;
+	struct data_wrapper *data = (struct data_wrapper*) d;
 
 	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME);
@@ -32,6 +48,8 @@ send_routine(void *d)
 		exit_error ("send_over_tor");
 	}
 	free (msg);
+	free_data_wrapper (data);
+	pthread_detach(pthread_self()); // needed to avoid memory leaks
 	pthread_exit(NULL);
 }
 

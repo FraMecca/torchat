@@ -13,6 +13,8 @@ static struct peer *head = NULL;
 // a pointer to the head of peer list
 
 struct threadList {
+	// not used
+	// see main.c
 	pthread_t *tid;
 	struct threadList *next;
 };
@@ -23,6 +25,10 @@ static struct threadList *threadListTail = NULL;
 void
 keep_track_of_threads (pthread_t *newT)
 {
+	// not used
+	// see main.c
+	//
+	//
 	// this function is used to keep track of the threads opened
 	// it is a simple list of tids
 	// that later will be iterated in order to wait for each thread
@@ -46,6 +52,8 @@ keep_track_of_threads (pthread_t *newT)
 void 
 wait_all_threads ()
 {
+	// not used
+	// see main.c
 	while (threadListHead != NULL) {
 		pthread_join (*threadListHead->tid, NULL);
 		struct threadList *tmp = threadListHead;
