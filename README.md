@@ -3,6 +3,7 @@
 - [Status](#Status)
 - [Features](#Features)
 - [How it works](#How-it-works)
+- [Try it](#Try-it)
 - [Design](#Design)
 - [Building](#Building)
 - [Usage](#Usage)
@@ -33,6 +34,45 @@ TORchat is an experimental P2P chat client that runs on the TOR network and allo
 
 ## How it works
 TORchat is a peer-to-peer instant messaging system built over the TOR Network [hidden services](https://www.torproject.org/docs/hidden-services.html.en). Your identity is your hidden service address, and contacts connect to you without leaving Tor. The rendezvous system makes it extremely hard for anyone to learn your identity from your address.
+
+## Try it
+
+At the current state, the various torrc values are embedded onto .c files. Later options and a shell script will be provided for that.
+
+Move into the TORchat folder and compile:
+
+` git clone http://francescomecca.eu:3000/pesceWanda/torchat `
+
+Or, if you preferer
+
+` git clone https://github.com/framecca/torchat `
+
+Then
+
+` cd torchat `
+
+` make `
+
+Now start tor with the provided torrc
+
+` tor -f tor/torrc `
+
+Now start the server
+
+`./build/main 8000 `
+
+The server listens for incoming connection from the port 8000. TOR redirects the traffic from port 80 of the hidden service to the server, trasparently.
+
+Your peer id is:
+
+` cat tor/hostname `
+
+Now start the python client
+
+` python3 src/client2.py 8000 `
+
+It will ask you for a peer id to communicate with.
+
 
 ## Design
 
