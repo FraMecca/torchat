@@ -92,7 +92,12 @@ Just run make and set LD_LIBRARY_PATH as the build directory.
 
 ## Usage
 
-~~ still no cli arguments ~~
+At the moment the only command line option that is provided is the daemon mode:
+
+` ./build/main -d 8000 `
+
+Without daemon mode, the server keeps logging on standard output (that is, on the current shell).
+With the daemon mode option, it detaches from the shell and continues its execution in background, therefore it can be monitored only through logs, which are kept in the main directory of the repository.
 
 ## Development
 
