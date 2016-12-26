@@ -14,9 +14,10 @@
 - [Disclaimer](#Disclaimer)
 - [Todo](#Todo)
 
-A simple chat client for the TOR network using [mongoose](cesanta.org/mongoose).
+A simple chat client for the TOR network using [mongoose](https://github.com/cesanta/mongoose).
 Inspired by [TorChat](https://github.com/prof7bit/TorChat)
-It is written in C with bindings for C++ libraries (json and loguru)
+It is written in C with bindings for C++ libraries.
+
 
 ## Status
 
@@ -56,6 +57,8 @@ Then
 Now start tor with the provided torrc
 
 ` tor -f tor/torrc `
+
+In case TOR complains about folder permission do `chmod 700 ./tor` to set the appropriate permissions.
 
 Now start the server
 
@@ -106,13 +109,13 @@ With the daemon mode option, it detaches from the shell and continues its execut
 The daemon aims to be as  small as possible. It has no external dependency and is written in less that 1000 loc. 
 Currently it supports only Linux and aims to do so.
 
-The daemon uses [mongoose](cesanta.org/mongoose) to manage events, TOR as a socks5 proxy, [loguru](github.com) to mantain logs and [json](github.com/nlohmann/json) for communication.
+The daemon uses [mongoose](https://github.com/cesanta/mongoose) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs and [json](https://github.com/nlohmann/json) for communication.
 
 The core of the daemon is written in C with bindings to embedded libraries in C++.
 
 Until the exit procedure is called, the daemon waits for messages from peers or clients (mg_mgr_poll) and acts accordingly to the JSON received.
 
-An [hash table](troydhanson/uthash)is mantained and used to store all the unread messages from the peers. As soon as a client connects, the read messages are removed from the hash table.
+An [hash table](https://troydhanson.github.io/uthash/)is mantained and used to store all the unread messages from the peers. As soon as a client connects, the read messages are removed from the hash table.
 
 The daemon only mantains two logs: one for the messages, one for the errors.
 Separate functions which enable to parse and divide the logs are provided.
