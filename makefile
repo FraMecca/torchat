@@ -7,13 +7,12 @@ default: init build/logger.o build/jsonhelper.o build/main
 init:
 	echo $(LDIR)
 	mkdir -p build
-	echo 'Remember to execute export ( DOLLAR ) LD_LIBRARY_PATH= ( DOLLAR ) (pwd)/build'
 
 build/logger.o: src/logger.cpp
 	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl 	-o build/logger.o
 
 build/jsonhelper.o: src/jsonhelper.cpp
-	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o #<-- removed the -g flag since this is not debug
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o 
 
 build/main: build/logger.o build/jsonhelper.o $(ALL)
 	g++ -shared -o build/liblogger.so build/logger.o
@@ -22,7 +21,6 @@ build/main: build/logger.o build/jsonhelper.o $(ALL)
 
 asan:
 	mkdir -p build
-	echo 'Remember to execute export ( DOLLAR ) LD_LIBRARY_PATH= (pwd)/build'
 	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o	
 	g++ -shared -o build/liblogger.so build/logger.o
 	g++ -c -Wall -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o -fsanitize=address
@@ -31,7 +29,6 @@ asan:
 
 debug:
 	mkdir -p build
-	echo 'Remember to execute export ( DOLLAR ) LD_LIBRARY_PATH= (pwd)/build'
 	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o -g -DDEBUG
 	g++ -shared -o build/liblogger.so build/logger.o  -g -DDEBUG
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o -DDEBUG
