@@ -70,7 +70,7 @@ def update_routine(portno, ui):
             sleep(0.5)
         else:
             lock.acquire()
-            print_line_cur (resp['date'] + resp['msg'], ui, 3) 
+            print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
             lock.release()
 
 def elaborate_command (line, portno, ui):
