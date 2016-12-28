@@ -38,8 +38,10 @@ send_routine(void *d)
 	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME);
 	data->cmd = RECV;
-	free (data->date);
-	data->date = get_short_date();
+	/*if (data->date != NULL) {*/ // not needed anymore because on RECV there is no date field on json
+		/*free (data->date);*/
+	/*}*/
+	/*data->date = get_short_date();*/
 
 	char *msg = convert_datastruct_to_char (data);
 	bool ret = send_over_tor (id, data->portno, msg, 9250);

@@ -4,18 +4,32 @@
 #include <stdio.h>
 #include <string.h>
 #include "../lib/datastructs.h"
+//#include "../lib/util.h"
 using json = nlohmann::json;
 
 #if DEBUG
 #include "../include/loguru.hpp"
 #endif
 
+char *
+get_date ()
+{
+	// copied from util.c
+	// get current date
+	time_t t = time (NULL);
+	struct tm *tm = localtime (&t);
+	char date[50];
+	strcpy (date, asctime (tm));
+	date[strlen (date)-1] = '\0'; // insert linetermination
+	return strdup (date);
+}
+
 /*
  * json j ={
  * {"cmd" = RECV or SEND},
  * {"portno" = n},
  * {"id" = "id" },
- * {"date" = "date"},
+ * {"date" = "date"}, // only when the communication is between client and daemon, not p2p
  * {"msg" = buf}
  * }
  */
@@ -112,8 +126,10 @@ convert_string_to_datastruct (const char *jsonCh)
 	data->id[strlen (jid.c_str ()) + 1] = '\0';
 	data->portno = j["portno"];
 	data->cmd = convert_to_enum (j["cmd"]);
-	std::string jdate = j["date"];
-	data->date = strdup (jdate.c_str ());
+	//std::string jdate = j["date"];
+	//data->date = strdup (jdate.c_str ());
+	// the json has no date field because communication between servers does not need this info field
+	data->date = get_date ();
 
 	return data;
 }
@@ -132,7 +148,12 @@ convert_datastruct_to_char (const struct data_wrapper *data)
 	j["id"] = data->id;
 	j["msg"] = data->msg;
 	j["portno"] = data->portno;
-	j["date"] = data->date;
+	if (data->cmd == UPDATE) {
+		// the date field is used only to communicate to the client
+		// the time of arrival of a message
+		// it is not used in server to server communication
+		j["date"] = data->date;
+	}
 	std::string st =  j.dump ();
 	return strdup  (st.c_str ());
 };
