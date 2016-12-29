@@ -4,6 +4,7 @@ import readline
 onionAscii = ['                 .....     \n', "              .'::;.       \n", '             .loo,         \n', '          .. lko.          \n', '           ;.,lc,          \n', "           c'.;:d          \n", "        .;c' .',;l:.       \n", '      ;c:.   ...;;:doc.    \n', "    cl.   .. ..'.lccclko.  \n", "  .d'  ...   ...';xlloodO, \n", "  x' ...   . .'.,,kdddddx0.\n", " ,d ..  ...  ..,';xkxxkkkKl\n", " ,d '. ..   .',.;;kOkkOOOKo\n", "  x.., '   ...:,;c0OOO000K'\n", "  .d..''.  ' .:;lxX0000KX: \n", "   .cc,,;' '..llOXK00KXx.  \n", '      ,:lxdcllk0WXKOd:.    \n', "          ';:cllc;.        \n"]
 
 # list of strings that compose the onion ascii art
+host = ""
 
 class ChatUI:
     def __init__(self, stdscr, userlist_width=30):
@@ -54,7 +55,7 @@ class ChatUI:
         self.stdscr.hline(h - 2, 0, "-", w)
         self.stdscr.refresh()
 
-        self.redraw_userlist(curr)
+        self.redraw_userlist(curr, host)
         self.redraw_chatbuffer(0)
         self.redraw_chatline()
 
@@ -68,9 +69,10 @@ class ChatUI:
         self.win_chatline.addstr(0, 0, self.inputbuffer[start:])
         self.win_chatline.refresh()
 
-    def redraw_userlist(self, curr):
+    def redraw_userlist(self, curr, hostname):
         """Redraw the userlist"""
-        # onion = open('src/onion.txt', 'r')
+        global host
+        host = hostname
         self.win_userlist.clear()
         h, w = self.win_userlist.getmaxyx()
         for i, name in enumerate(self.userlist):
@@ -84,12 +86,13 @@ class ChatUI:
                 
         # artList = onion.readlines()
         artList = onionAscii
-        i = h - 20
+        i = h - 21
         for line in artList:
             self.win_userlist.addstr(i, 0, line , curses.color_pair(4) | curses.A_BOLD)
             i += 1
         # onion.close()
-        self.win_userlist.addstr(i+1, int(w/2) - 3, "TORchat" , curses.color_pair(4) | curses.A_BOLD)
+        self.win_userlist.addstr(i+1, int(w/2) - 8, "TORchat Address:" , curses.color_pair(4) | curses.A_BOLD)
+        self.win_userlist.addstr(i+2, 3, hostname , curses.color_pair(4) | curses.A_BOLD)
         self.win_userlist.refresh()
 
 

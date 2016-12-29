@@ -17,6 +17,7 @@ enum command {
 	UPDATE,
 	GET_PEERS,
 	HISTORY,
+	HOST,
 	END,
 	EXIT
 };
@@ -77,6 +78,9 @@ wait_all_threads ();
 
 void
 clear_datastructs ();
+
+void
+destroy_mut();
 
 void
 free_data_wrapper (struct data_wrapper *data);

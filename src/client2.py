@@ -146,7 +146,7 @@ def send_to_mongoose (j, portno, wait=False):
         except:
             pass
 
-def get_peers(portno, ui):
+def get_peers(portno, ui, hostname):
     # ask for a list of peers with pending messages
     j = create_json (cmd='GET_PEERS')
     resp = send_to_mongoose (j, portno, wait=True)
@@ -158,7 +158,7 @@ def get_peers(portno, ui):
         i = 0
         peerList[0] = ui.wait_input("Onion Address: ")
         ui.userlist.append(peerList[0])
-        ui.redraw_userlist(i)# this redraws only the user panel
+        ui.redraw_userlist(i, hostname)# this redraws only the user panel
         if currId != "":
             ui.userlist.append(currId)
     else:
@@ -167,7 +167,7 @@ def get_peers(portno, ui):
         if not currId in peerList and currId != "":
             ui.userlist.append(currId)
             peerList.append(currId)
-        ui.redraw_userlist(None) # this redraws only the user panel
+        ui.redraw_userlist(None, hostname) # this redraws only the user panel
 
         # this avoids error crashing while selecting an ID
         while not rightId: 
@@ -180,9 +180,14 @@ def get_peers(portno, ui):
                     rightId = True
             except:
                 rightId = False
-        ui.redraw_userlist(i) # this redraws only the user panel
+        ui.redraw_userlist(i, hostname) # this redraws only the user panel
     return peerList, i
 
+def get_hostname(portno):
+    j = create_json(cmd="HOST")
+    resp = send_to_mongoose(j, portno, wait=True)
+    hostname = resp["msg"]
+    return hostname
 
 def main (stdscr,portno):
 
@@ -190,8 +195,9 @@ def main (stdscr,portno):
     # initiate the ui
     stdscr.clear() 
     ui = ChatUI(stdscr)
-
-    peerList, i = get_peers(portno, ui)
+    
+    hostname = get_hostname(portno)
+    peerList, i = get_peers(portno, ui, hostname)
     currId = peerList[i]
 
     # here we use one thread to update unread messages in background,

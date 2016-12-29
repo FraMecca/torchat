@@ -103,6 +103,28 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 }
 
 void
+send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, char*hostname)
+{
+	// the hostname is sent as a json (similarly to the peer list function below)
+	// the hostname is in the data->msg field, this is an explicit request from the client
+	//
+	free(data->msg);
+	data->msg = strdup(hostname);
+	if(data->msg == NULL){
+		data->msg = strdup("");
+		// should be a connection error here, but better be safe
+	}
+
+	char *response = convert_datastruct_to_char (data);
+	if (nc->iface != NULL) {
+		// if iface is not null the client is waiting for response
+		mg_send (nc, response, strlen (response));
+	}
+	free (response);
+
+}
+
+void
 send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 {
 	// the client asked to receive the list of all the peers that send the server a message (not read yet)

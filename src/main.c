@@ -146,7 +146,12 @@ event_routine (struct mg_connection *nc)
         // send the various messages
 		free_data_wrapper (data);
         break;
-
+	case HOST :
+		// the client required the hostname of the server
+		// send as a formatted json
+		send_hostname_to_client(data, nc, HOSTNAME);
+		free_data_wrapper (data);
+		break;
     default:
 		free_data_wrapper (data);
         break;
@@ -231,7 +236,7 @@ main(int argc, char **argv)
 								but exit with pthread_exit instead of 3 exit in order
 								for other threads not to be terminated
 							  */
-
+	destroy_mut(); // free the mutex allocated in list.c
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in log.c
     mg_mgr_free(&mgr); // terminate mongoose connection

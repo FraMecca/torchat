@@ -52,6 +52,8 @@ convert_to_enum (const std::string cmd)
 		return HISTORY;
 	} else if (cmd == "END") {
 		return END;
+	} else if (cmd == "HOST") {
+		return HOST;
 	}
 }
 
@@ -80,6 +82,9 @@ convert_from_enum (const enum command c)
 			break;
 		case END :
 			st = "END";
+			break;
+		case HOST:
+			st = "HOST";
 			break;
 	}
 	return st;
