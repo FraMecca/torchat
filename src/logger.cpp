@@ -68,6 +68,7 @@ log_init (const char *name, const char *verbosity)
 extern "C" void
 log_clear_datastructs ()
 {
+	loguru::remove_all_callbacks();
 	if (infoLog != NULL) {
 		free (infoLog);
 	}
@@ -77,6 +78,7 @@ log_clear_datastructs ()
 	if (debLog != NULL) {
 		free (debLog);
 	}
+	free(sem);
 }
 
 extern "C" char **
