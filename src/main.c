@@ -48,45 +48,6 @@ read_tor_hostname (void)
     return strdup (buf);
 }
 
-static void skeleton_daemon(char *dir)
-{
-    /*dir is the current working directory*/
-    /*this function daemonizes the main core of the chat*/
-    pid_t pid;
-    int x;
-
-    /* Fork off the parent process */
-    pid = fork();
-    /* An error occurred */
-    if (pid < 0) {
-        exit(EXIT_FAILURE);
-    } else if(pid > 0) {
-        exit(EXIT_SUCCESS); // the parent exites
-    }
-    /* On success: The child process becomes session leader */
-    if (setsid() < 0) {
-        exit(EXIT_FAILURE);
-    }
-    /* Catch, ignore and handle signals */
-    signal(SIGCHLD, SIG_IGN);
-    signal(SIGHUP, SIG_IGN);
-    /* Fork off for the second time, it is good practice*/
-    pid = fork();
-
-    /* An error occurred */
-    if (pid < 0) {
-        exit(EXIT_FAILURE);
-    } else if(pid > 0) {
-        exit(EXIT_SUCCESS); // the parent exites again
-    }
-    /* Set new file permissions */
-    umask(0);
-
-    /* Change the working directory to the current directory
-     * note that this might not be necessary, safety reason
-     */
-    chdir(dir);
-}
 
 void
 event_routine (struct mg_connection *nc)
@@ -194,6 +155,12 @@ main(int argc, char **argv)
 {
     struct mg_mgr mgr;
     char cwd[128];
+    
+	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
+        fprintf(stdout, "Starting in daemon mode.\n");
+        daemon(0, 0);
+    }
+
 #if DEBUG
     signal (SIGSEGV, dumpstack);
     signal (SIGABRT, dumpstack);
@@ -202,15 +169,6 @@ main(int argc, char **argv)
 #endif
     log_init ("file.log", "INFO");
     log_init ("error.log", "ERROR");
-
-    if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
-        fprintf(stdout, "Starting in daemon mode.\n");
-        if(getcwd(cwd, sizeof cwd) != NULL) {
-            skeleton_daemon(cwd);
-        } else {
-            perror("getcwd");
-        }
-    }
 
     HOSTNAME = read_tor_hostname ();
     pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
