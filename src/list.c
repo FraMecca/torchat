@@ -273,3 +273,12 @@ clear_datastructs ()
 		delete_peer (ptr);
 	}
 }
+
+void
+destroy_mut()
+{
+	// avoid closing without freeing the mutex allocated memory
+	if(mut != NULL){
+		free(mut);
+	}
+}
