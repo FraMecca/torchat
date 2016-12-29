@@ -91,7 +91,13 @@ For a list of possible commands, check the [Development section](#Development)
 
 TORchat has no external dependencies and just requires a C++11 compatible compiler.
 
-Just run make and set LD_LIBRARY_PATH as the build directory.
+To build the standar version (without debug logging), simply run:
+
+` make `
+
+To build the debug version, with improved logging and coredump for crashes, run:
+
+` make debug `
 
 ## Usage
 
@@ -124,8 +130,11 @@ There is an ongoing discussion about the possibility of adding encryption (maybe
 
 #### Client
 
-Clients are independent of the daemon.
-Currently a small curses python client is provided.
+Clients are independent of the daemon. To work properly, a "basic" client must be:
+ * Capable of sending messages though sockets
+ * Capable of parsing a JSON structure
+
+Currently a small python client is provided. It is based on curses, specifically on this abstraction (https://github.com/calzoneman/python-chatui.git).
 
 #### JSON
 
@@ -153,6 +162,7 @@ Commands are:
 * UPDATE : the client is polling for unread messages from a peer ("id" field);
 * GET_PEERS : the client asks the daemon for the id of the peers that wrote one or more messages;
 * HISTORY : the client is asking the daemon for the previous n ("msg" field) lines of conversation with a peer ("id" field);
+* HOST: the client is asking the daemon for the current hostname, that is, its current onion address.
 * END : the daemon notifies that the previous command has no response;
 * EXIT : starts exit procedure (clean datastructs and exit cleanly).
 
