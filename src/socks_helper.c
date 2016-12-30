@@ -65,11 +65,11 @@ send_message_to_socket(struct message *msgStruct, char *peerId)
 
 	// ops! C strings did it again
 	msgBuf[0] = '[';
-	strncat(msgBuf, peerId, sizeof(peerId));
+	strncat(msgBuf, peerId, strlen (peerId));
 	strncat(msgBuf, "]", 1);
-	strncat(msgBuf, msgStruct->date, sizeof(msgStruct->date));
+	strncat(msgBuf, msgStruct->date, strlen (msgStruct->date));
 	strncat(msgBuf, ":", 1);
-	strncat(msgBuf, msgStruct->content, sizeof(msgStruct->content));
+	strncat(msgBuf, msgStruct->content, strlen (msgStruct->content));
 
 	// sending the message to the socket
 	if(send(sock, msgBuf, strlen(msgBuf), 0) < 0){

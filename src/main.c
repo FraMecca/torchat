@@ -154,7 +154,6 @@ int
 main(int argc, char **argv)
 {
     struct mg_mgr mgr;
-    char cwd[128];
     
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
         fprintf(stdout, "Starting in daemon mode.\n");

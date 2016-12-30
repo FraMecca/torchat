@@ -1,5 +1,6 @@
 ALL = src/main.c include/mongoose.c src/socks_helper.c src/util.c src/list.c src/actions.c
 LDIR := $(PWD)
+DEBUG = -Wall -DDEBUG
 
 
 default: init build/logger.o build/jsonhelper.o build/main
@@ -29,8 +30,8 @@ asan:
 
 debug:
 	mkdir -p build
-	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o -g -DDEBUG
-	g++ -shared -o build/liblogger.so build/logger.o  -g -DDEBUG
-	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o -DDEBUG
-	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g -DDEBUG
-	gcc -L$(LDIR)/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build
+	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o -g $(DEBUG)
+	g++ -shared -o build/liblogger.so build/logger.o  -g $(DEBUG)
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o $(DEBUG)
+	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g $(DEBUG)
+	gcc -L$(LDIR)/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG)

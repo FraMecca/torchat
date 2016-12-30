@@ -175,7 +175,7 @@ delete_message (struct message *msg)
 {
 	// frees the message and deletes its content
 	// delete all messages
-	struct message *m = msg->next, *tmp;
+	struct message *tmp;
 	free(msg->content);
 	free(msg->date);
 	tmp = msg;
@@ -216,7 +216,7 @@ get_unread_message(const char *peerId)
 	if(msg == NULL){
 		return NULL;
 	}
-	int len = strlen(msg->content)+strlen(msg->date)+3;
+	/*int len = strlen(msg->content)+strlen(msg->date)+3;*/
 	char *m = strdup(msg->content);
 	currentPeer->msg = delete_message (currentPeer->msg);
 	if (currentPeer->msg == NULL) {

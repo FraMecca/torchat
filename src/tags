@@ -1,0 +1,99 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ChatUI	ui.py	/^class ChatUI:$/;"	c	language:Python
+Completer	client2.py	/^class Completer(object):$/;"	c	language:Python
+HOSTNAME	main.c	/^char *HOSTNAME = NULL; \/\/ will be read from torrc$/;"	v	language:C
+LOGURU_IMPLEMENTATION	logger.cpp	1;"	d	language:C++	file:
+__init__	client2.py	/^    def __init__(self, options):$/;"	m	language:Python	class:Completer
+__init__	ui.py	/^    def __init__(self, stdscr, userlist_width=30):$/;"	m	language:Python	class:ChatUI
+_linebuffer_add	ui.py	/^    def _linebuffer_add(self, msg):$/;"	m	language:Python	class:ChatUI
+chatbuffer_add	ui.py	/^    def chatbuffer_add(self, msg, color):$/;"	m	language:Python	class:ChatUI
+clear_datastructs	list.c	/^clear_datastructs ()$/;"	f	language:C
+client_update	actions.c	/^client_update (struct data_wrapper *data, struct mg_connection *nc)$/;"	f	language:C
+close_ui	ui.py	/^    def close_ui(self):$/;"	m	language:Python	class:ChatUI
+cmd	client.py	/^    cmd = "SEND"$/;"	v	language:Python
+complete	client2.py	/^    def complete(self, text, state=0):$/;"	m	language:Python	class:Completer
+convert_datastruct_to_char	jsonhelper.cpp	/^convert_datastruct_to_char (const struct data_wrapper *data)$/;"	f	language:C++
+convert_from_enum	jsonhelper.cpp	/^convert_from_enum (const enum command c)$/;"	f	language:C++	file:
+convert_string_to_datastruct	jsonhelper.cpp	/^convert_string_to_datastruct (const char *jsonCh)$/;"	f	language:C++
+convert_to_enum	jsonhelper.cpp	/^convert_to_enum (const std::string cmd)$/;"	f	language:C++	file:
+create_json	client2.py	/^def create_json (cmd='', msg='', id='localhost', portno=8000):$/;"	f	language:Python
+currId	client2.py	/^currId = ""$/;"	v	language:Python
+debLog	logger.cpp	/^static char *debLog = NULL; \/\/ same, debug$/;"	v	language:C++	file:
+delete_message	list.c	/^delete_message (struct message *msg)$/;"	f	language:C	file:
+delete_peer	list.c	/^delete_peer(struct peer *currentPeer)$/;"	f	language:C	file:
+dumpstack	util.c	/^dumpstack(int sig) {$/;"	f	language:C
+elaborate_command	client2.py	/^def elaborate_command (line, portno, ui):$/;"	f	language:Python
+errLog	logger.cpp	/^static char *errLog = NULL; \/\/ same, err$/;"	v	language:C++	file:
+ev_handler	main.c	/^ev_handler(struct mg_connection *nc, int ev, void *ev_data)$/;"	f	language:C	file:
+event_routine	main.c	/^event_routine (struct mg_connection *nc)$/;"	f	language:C
+exitFlag	client2.py	/^exitFlag = False$/;"	v	language:Python
+exitFlag	main.c	/^static bool exitFlag = false; \/\/ this flag is set to true when the program should exit$/;"	v	language:C	file:
+exit_error	util.c	/^exit_error (char *s)$/;"	f	language:C
+free_data_wrapper	actions.c	/^free_data_wrapper (struct data_wrapper *data)$/;"	f	language:C
+get_date	util.c	/^get_date ()$/;"	f	language:C
+get_history	logger.cpp	/^get_history (const char *id, const int n, int *size)$/;"	f	language:C++
+get_list_head	list.c	/^get_list_head()$/;"	f	language:C
+get_peer	list.c	/^get_peer (const char *id)$/;"	f	language:C	file:
+get_peer_list	list.c	/^get_peer_list ()$/;"	f	language:C
+get_peers	client2.py	/^def get_peers(portno, ui):$/;"	f	language:Python
+get_short_date	util.c	/^get_short_date ()$/;"	f	language:C
+get_tail	list.c	/^get_tail (struct message *h)$/;"	f	language:C	file:
+get_unread_message	list.c	/^get_unread_message(const char *peerId)$/;"	f	language:C
+head	list.c	/^static struct peer *head = NULL;$/;"	v	language:C	typeref:struct:peer	file:
+infoLog	logger.cpp	/^static char *infoLog = NULL; \/\/ store name of the infoLog$/;"	v	language:C++	file:
+input_routine	client2.py	/^def input_routine (portno, ui):$/;"	f	language:Python
+insert_new_message	list.c	/^insert_new_message  (const char *peerId, const char *content)$/;"	f	language:C
+insert_peer	list.c	/^insert_peer (const char *onion)$/;"	f	language:C
+ip	client.py	/^    ip = "ld74fqvoxpu5yi73.onion"$/;"	v	language:Python
+jsonStr	client.py	/^    jsonStr = ''.join (['{"cmd": "', cmd, '","id":"', ip, '", "portno": ', str(portno), ',"msg": "', msg, '","date": "80"}'])$/;"	v	language:Python
+keep_track_of_threads	list.c	/^keep_track_of_threads (pthread_t *newT)$/;"	f	language:C
+lock	client2.py	/^lock = Lock() # a binary semaphore$/;"	v	language:Python
+log_clear_datastructs	logger.cpp	/^log_clear_datastructs ()$/;"	f	language:C++
+log_err	logger.cpp	/^log_err (const char *err)$/;"	f	language:C++
+log_info	logger.cpp	/^log_info (const char *json)$/;"	f	language:C++
+log_init	logger.cpp	/^log_init (const char *name, const char *verbosity)$/;"	f	language:C++
+main	client.py	/^def main (portno):$/;"	f	language:Python
+main	client2.py	/^def main (stdscr,portno):$/;"	f	language:Python
+main	main.c	/^main(int argc, char **argv)$/;"	f	language:C
+msg	client.py	/^    msg = str (time.time ())$/;"	v	language:Python
+mut	list.c	/^static pthread_mutex_t *mut = NULL;$/;"	v	language:C	file:
+new_message	list.c	/^new_message (const char *content)$/;"	f	language:C	file:
+new_peer	list.c	/^new_peer (const char *id)$/;"	f	language:C	file:
+next	list.c	/^	struct threadList *next;$/;"	m	language:C	struct:threadList	typeref:struct:threadList::threadList	file:
+onionAscii	ui.py	/^onionAscii = ['                 .....     \\n', "              .'::;.       \\n", '             .loo,         \\n', '          .. lko.          \\n', '           ;.,lc,          \\n', "           c'.;:d          \\n", "        .;c' .',;l:.       \\n", '      ;c:.   ...;;:doc.    \\n', "    cl.   .. ..'.lccclko.  \\n", "  .d'  ...   ...';xlloodO, \\n", "  x' ...   . .'.,,kdddddx0.\\n", " ,d ..  ...  ..,';xkxxkkkKl\\n", " ,d '. ..   .',.;;kOkkOOOKo\\n", "  x.., '   ...:,;c0OOO000K'\\n", "  .d..''.  ' .:;lxX0000KX: \\n", "   .cc,,;' '..llOXK00KXx.  \\n", '      ,:lxdcllk0WXKOd:.    \\n', "          ';:cllc;.        \\n"]$/;"	v	language:Python
+peer_exist	list.c	/^peer_exist (const char *id)$/;"	f	language:C
+portno	client.py	/^    portno = 80$/;"	v	language:Python
+printBuf	client2.py	/^printBuf = list ()$/;"	v	language:Python
+print_line_cur	client2.py	/^def print_line_cur (line, ui, color):$/;"	f	language:Python
+prompt	ui.py	/^    def prompt(self, msg):$/;"	m	language:Python	class:ChatUI
+read_tor_hostname	main.c	/^read_tor_hostname (void)$/;"	f	language:C
+redraw_chatbuffer	ui.py	/^    def redraw_chatbuffer(self, color):$/;"	m	language:Python	class:ChatUI
+redraw_chatline	ui.py	/^    def redraw_chatline(self):$/;"	m	language:Python	class:ChatUI
+redraw_ui	ui.py	/^    def redraw_ui(self, curr):$/;"	m	language:Python	class:ChatUI
+redraw_userlist	ui.py	/^    def redraw_userlist(self, curr):$/;"	m	language:Python	class:ChatUI
+relay_msg	actions.c	/^relay_msg (struct data_wrapper *data)$/;"	f	language:C
+resize	ui.py	/^    def resize(self):$/;"	m	language:Python	class:ChatUI
+s	client.py	/^    s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)$/;"	v	language:Python
+sem	logger.cpp	/^static pthread_mutex_t *sem = NULL; \/\/ mutex to initialize when the log files are used outside of loguru$/;"	v	language:C++	file:
+sem	main.c	/^static pthread_mutex_t sem; \/\/ semaphore that will be used for race conditions on logfiles$/;"	v	language:C	file:
+send_message_to_socket	socks_helper.c	/^send_message_to_socket(struct message *msgStruct, char *peerId)$/;"	f	language:C
+send_over_tor	socks_helper.c	/^send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)$/;"	f	language:C
+send_peer_list_to_client	actions.c	/^send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)$/;"	f	language:C
+send_routine	actions.c	/^send_routine(void *d)$/;"	f	language:C
+send_to_mongoose	client2.py	/^def send_to_mongoose (j, portno, wait=False):$/;"	f	language:Python
+set_socket_timeout	socks_helper.c	/^set_socket_timeout (const int sockfd)$/;"	f	language:C	file:
+skeleton_daemon	main.c	/^static void skeleton_daemon(char *dir)$/;"	f	language:C	file:
+store_msg	actions.c	/^store_msg (struct data_wrapper *data)$/;"	f	language:C
+threadList	list.c	/^struct threadList {$/;"	s	language:C	file:
+threadListHead	list.c	/^static struct threadList *threadListHead = NULL;$/;"	v	language:C	typeref:struct:threadList	file:
+threadListTail	list.c	/^static struct threadList *threadListTail = NULL;$/;"	v	language:C	typeref:struct:threadList	file:
+tid	list.c	/^	pthread_t *tid;$/;"	m	language:C	struct:threadList	file:
+update	client2.py	/^    def update (self, options):$/;"	m	language:Python	class:Completer
+update_routine	client2.py	/^def update_routine(portno, ui):$/;"	f	language:Python
+wait_all_threads	list.c	/^wait_all_threads ()$/;"	f	language:C
+wait_input	ui.py	/^    def wait_input(self, prompt="", completer=None):$/;"	m	language:Python	class:ChatUI

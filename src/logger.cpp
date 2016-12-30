@@ -112,7 +112,7 @@ get_history (const char *id, const int n, int *size)
 			// split the string, | is the delimiter before the message
 			res[cnt] = strdup (tmp.substr (pos).c_str ());	 // it is still a list of json, needs to be parsed
 			cnt++;
-			if (n == cnt) {
+			if ((unsigned) n == cnt) {
 				// if n == 0 never enters
 				break;
 			}
