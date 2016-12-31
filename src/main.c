@@ -33,6 +33,69 @@ static pthread_mutex_t sem; // semaphore that will be used for race conditions o
 
 char *HOSTNAME = NULL; // will be read from torrc
 
+static void start_daemon()
+{
+    /* this function daemonizes the main core of the chat
+	 * while in daemon mode, only logging can be used
+	 * to monitor the server activity
+	 */
+#if DEBUG
+	printf("The server has been compiled with debug flags, but daemon mode shall not produce any output to stdout.\n");
+	printf("The logs can be used to monitor the daemon's behaviour, in particular:\n");
+	printf("\t* file.log contains general activity output\n");
+	printf("\t* error.log contains only the error output (marked red in file.log)\n");
+	printf("\t* debug.log contains a more verbose activity output useful for debugging.\n");
+	printf("Also, in case of SIGABRT, SIGINT or SIGSEGV a gdb compatible coredump is produced, containing the current PID of the daemon in its filename.\n");
+#endif
+    pid_t pid;
+    int x;
+	char *dir;
+
+    /* Fork off the parent process */
+    pid = fork();
+    /* An error occurred */
+    if (pid < 0) {
+        exit(EXIT_FAILURE);
+    } else if(pid > 0) {
+        exit(EXIT_SUCCESS); // the parent exites
+    }
+    /* On success: The child process becomes session leader */
+    if (setsid() < 0) {
+        exit(EXIT_FAILURE);
+    }
+    /* Catch, ignore and handle signals */
+    signal(SIGCHLD, SIG_IGN);
+    signal(SIGHUP, SIG_IGN);
+
+    /* Fork off for the second time, so that the daemon does not become session leader*/
+    pid = fork();
+    /* An error occurred */
+    if (pid < 0) {
+        exit(EXIT_FAILURE);
+    } else if(pid > 0) {
+        exit(EXIT_SUCCESS); // the parent exites again
+    }
+
+    /* Set new file permissions */
+    umask(0);
+
+	/* Change the working directory to the current one*/
+    if((dir = calloc(200, sizeof(char))) == NULL){
+		exit_error("allocation of cwd");
+		exit(EXIT_FAILURE);
+	}
+	getcwd(dir, 200);	
+	chdir(dir);
+	free(dir);
+
+	/* close all open file descriptors
+	 * this is needed in order to stop in/out to/from stdin, stdout, stderr
+	 */
+	for (x = sysconf(_SC_OPEN_MAX); x>=0; x--) {
+		close (x);
+	}
+}
+
 char *
 read_tor_hostname (void)
 {
@@ -157,7 +220,7 @@ main(int argc, char **argv)
     
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
         fprintf(stdout, "Starting in daemon mode.\n");
-        daemon(0, 0);
+        start_daemon();
     }
 
 #if DEBUG
