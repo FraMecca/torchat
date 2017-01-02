@@ -131,10 +131,14 @@ convert_string_to_datastruct (const char *jsonCh)
 	data->id[strlen (jid.c_str ()) + 1] = '\0';
 	data->portno = j["portno"];
 	data->cmd = convert_to_enum (j["cmd"]);
-	//std::string jdate = j["date"];
-	//data->date = strdup (jdate.c_str ());
 	// the json has no date field because communication between servers does not need this info field
-	data->date = get_date ();
+	if (j.find("date") != j.end()) {
+		// date is specified in the json
+		std::string jdate = j["date"];
+		data->date = strdup (jdate.c_str ());
+	} else {
+		data->date = get_date ();
+	}
 
 	return data;
 }
