@@ -140,45 +140,45 @@ event_routine (struct mg_connection *nc)
     }
 
     switch (data->cmd) {
-    case EXIT :
-        exitFlag = true;
-		free_data_wrapper (data);
-        break;
-    case RECV :
-        log_info (json); // first log
-        store_msg (data);
-		free_data_wrapper (data);
-        break;
-    case SEND :
-        // mongoose is told that you want to send a message to a peer
-        log_info (json);
-        relay_msg (data);
-		// data wrapper is free'd in thread
-        break;
-    case UPDATE:
-        client_update (data, nc);
-		free_data_wrapper (data);
-        break;
-    case GET_PEERS :
-        send_peer_list_to_client (data, nc);
-		free_data_wrapper (data);
-        break;
-    case HISTORY :
-        // the client asked to receive the history
-        // it specified the id and n lines
-        // (id in json[id], n in json[msg]
-        // send the various messages
-		free_data_wrapper (data);
-        break;
-	case HOST :
-		// the client required the hostname of the server
-		// send as a formatted json
-		send_hostname_to_client(data, nc, HOSTNAME);
-		free_data_wrapper (data);
-		break;
-    default:
-		free_data_wrapper (data);
-        break;
+    	case EXIT :
+        	exitFlag = true;
+			free_data_wrapper (data);
+        	break;
+    	case RECV :
+        	log_info (json); // first log
+        	store_msg (data);
+			free_data_wrapper (data);
+        	break;
+    	case SEND :
+        	// mongoose is told that you want to send a message to a peer
+        	log_info (json);
+        	relay_msg (data);
+			// data wrapper is free'd in thread
+        	break;
+    	case UPDATE:
+        	client_update (data, nc);
+			free_data_wrapper (data);
+        	break;
+    	case GET_PEERS :
+        	send_peer_list_to_client (data, nc);
+			free_data_wrapper (data);
+        	break;
+    	case HISTORY :
+        	// the client asked to receive the history
+        	// it specified the id and n lines
+        	// (id in json[id], n in json[msg]
+        	// send the various messages
+			free_data_wrapper (data);
+        	break;
+		case HOST :
+			// the client required the hostname of the server
+			// send as a formatted json
+			send_hostname_to_client(data, nc, HOSTNAME);
+			free_data_wrapper (data);
+			break;
+    	default:
+			free_data_wrapper (data);
+        	break;
     }
 
 	if (json != NULL) {
