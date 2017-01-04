@@ -1,13 +1,7 @@
 #include "../include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
-#include <sys/stat.h> // umask for daemonization
-#include <unistd.h>
-#include <netdb.h>
 #include <string.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/types.h>
 #include <strings.h>
 #include <stdbool.h>
 #include <time.h>

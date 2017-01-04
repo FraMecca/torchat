@@ -1,11 +1,6 @@
-#include <sys/types.h> // types
-#include <sys/socket.h> // socket types
-#include <netinet/in.h> // inet
 #include <arpa/inet.h> // inet
-#include <unistd.h> // socket
 #include <string.h> // strdup
 #include <stdlib.h> // calloc
-#include <netdb.h> // sockets
 #include <netinet/in.h> // socket types
 #include <strings.h> // bcopy
 #include <stdbool.h> // bool
@@ -13,6 +8,7 @@
 #include <errno.h> // perror
 #include <stdio.h> // perror
 #include "../lib/datastructs.h" // for message to socket
+#include <unistd.h> // close
 
 
 static bool 

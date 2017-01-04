@@ -5,7 +5,7 @@
 #include <string.h>
 #include <stdio.h> // perror
 #include <signal.h> // sigsegv sigabrt
-#include <unistd.h> // system
+#include <unistd.h> // getpid
 
 void
 exit_error (char *s)
