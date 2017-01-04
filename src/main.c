@@ -28,9 +28,6 @@ void log_clear_datastructs (); // from logger.cpp
 
 static bool exitFlag = false; // this flag is set to true when the program should exit
 
-static pthread_mutex_t sem; // semaphore that will be used for race conditions on logfiles
-// would be more correct if you have a semaphore for every different file that could be opened
-
 char *HOSTNAME = NULL; // will be read from torrc
 
 static void start_daemon()
@@ -197,19 +194,9 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
         // can trash
         return;
     }
-    // switch to a new thread and do everything in that thread
-    /*the thread handles the connection and works on that.*/
-
     // now we just utilize MG_EV_RECV because the response must be send over TOR
     if (ev == MG_EV_RECV) {
-        /*pthread_t *th = NULL;*/
-        /*// allocate th*/
-        /*if ((th = malloc (sizeof (pthread_t))) == NULL) {*/
-        /*exit_error ("malloc: th: ");*/
-        /*}*/
-        /*case MG_EV_RECV:*/
         event_routine (nc);
-        /*keep_track_of_threads (th);*/
     }
 }
 
@@ -233,7 +220,7 @@ main(int argc, char **argv)
     log_init ("error.log", "ERROR");
 
     HOSTNAME = read_tor_hostname ();
-    pthread_mutex_init (&sem, NULL); // initialize semaphore for log files
+    /*pthread_mutex_init (&sem, NULL); // initialize semaphore for log files // sem is in logger.cpp*/
 
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -258,9 +245,9 @@ main(int argc, char **argv)
 							  */
 	destroy_mut(); // free the mutex allocated in list.c
     clear_datastructs (); // free hash table entries
-    log_clear_datastructs (); // free static vars in log.c
+    log_clear_datastructs (); // free static vars in logger.cpp
     mg_mgr_free(&mgr); // terminate mongoose connection
     free (HOSTNAME);
-    pthread_mutex_destroy (&sem);
+    /*pthread_mutex_destroy (&sem);*/
 	pthread_exit (0); 			// see above
 }

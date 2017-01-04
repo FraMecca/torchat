@@ -39,6 +39,7 @@ get_short_date ()
 
 void 
 dumpstack(int sig) {
+	// use gcore to generate a coredump
 	char sys[160];
 
 	sprintf(sys, "echo 'where\ndetach' | gcore -o torchat_coredump %d", getpid());
@@ -46,6 +47,8 @@ dumpstack(int sig) {
 	// core has been dumped
 	if (sig == SIGSEGV) {
 		exit (139);
+	} else if (sig == SIGINT) {
+		exit (130);
 	} else {
 		// sig == SIGABRT
 		exit (134);
