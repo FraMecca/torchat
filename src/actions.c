@@ -70,7 +70,7 @@ relay_msg (struct data_wrapper *data)
 	    exit_error ("pthread_attr_setdetachstate");
 	}
 	pthread_create(&t, &attr, &send_routine,(void*) data);
-	/*pthread_join(t, NULL);*/
+	/*pthread_join(t, NULL);*/ //not needed, thread is detached and memory released on exit
 	return;
 }
 

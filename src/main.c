@@ -24,7 +24,8 @@ static bool exitFlag = false; // this flag is set to true when the program shoul
 
 char *HOSTNAME = NULL; // will be read from torrc
 
-static void start_daemon()
+static void
+start_daemon()
 {
     /* this function daemonizes the main core of the chat
 	 * while in daemon mode, only logging can be used
@@ -101,7 +102,6 @@ read_tor_hostname (void)
     fclose (fp);
     return strdup (buf);
 }
-
 
 void
 event_routine (struct mg_connection *nc)
@@ -180,7 +180,6 @@ event_routine (struct mg_connection *nc)
     return;
 }
 
-
 static void
 ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
@@ -234,7 +233,7 @@ main(int argc, char **argv)
 
     /*wait_all_threads ();*/ /* threads are detached
 								so there is no need to wait them and to keep track of them
-								but exit with pthread_exit instead of 3 exit in order
+								but exit with pthread_exit instead of exit in order
 								for other threads not to be terminated
 							  */
     clear_datastructs (); // free hash table entries
@@ -242,6 +241,5 @@ main(int argc, char **argv)
 	destroy_mut(); // free the mutex allocated in list.c
     mg_mgr_free(&mgr); // terminate mongoose connection
     free (HOSTNAME);
-    /*pthread_mutex_destroy (&sem);*/
 	pthread_exit (0); 			// see above
 }
