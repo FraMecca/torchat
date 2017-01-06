@@ -22,6 +22,7 @@ struct threadList {
 static struct threadList *threadListHead = NULL;
 static struct threadList *threadListTail = NULL;
 
+/*
 void
 keep_track_of_threads (pthread_t *newT)
 {
@@ -62,6 +63,7 @@ wait_all_threads ()
 		free (tmp);
 	}
 }
+*/
 
 static struct peer *
 new_peer (const char *id)
@@ -166,7 +168,6 @@ insert_new_message  (const char *peerId, const char *content)
 		tmp->next = new;
 		new->prev = tmp;
 	}
-	/*pthread_mutex_unlock (mut);*/
 	return true;
 }
 

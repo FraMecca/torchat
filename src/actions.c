@@ -27,9 +27,10 @@ free_data_wrapper (struct data_wrapper *data)
 	}
 }
 
-void *
+static void *
 send_routine(void *d)
 {
+	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
 	// there is no need to call pthread_join, but thread resources need to be terminated
 	//
 	char id[30];
@@ -51,8 +52,7 @@ send_routine(void *d)
 	}
 	free (msg);
 	free_data_wrapper (data);
-	pthread_detach(pthread_self()); // needed to avoid memory leaks
-	pthread_exit(NULL);
+	pthread_exit(NULL); // implicit
 }
 
 // relay client msg to the another peer on the tor network
@@ -60,8 +60,16 @@ void
 relay_msg (struct data_wrapper *data)
 {
 	pthread_t t;
-
-	pthread_create(&t, NULL, &send_routine,(void*) data);
+	pthread_attr_t attr; // create an attribute to specify that thread is detached
+	if (pthread_attr_init(&attr) != 0) {
+		// initialize pthread attr and check if error
+		exit_error ("pthread_attr_init");
+	}
+	// set detached state
+	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
+	    exit_error ("pthread_attr_setdetachstate");
+	}
+	pthread_create(&t, &attr, &send_routine,(void*) data);
 	/*pthread_join(t, NULL);*/
 	return;
 }

@@ -237,9 +237,9 @@ main(int argc, char **argv)
 								but exit with pthread_exit instead of 3 exit in order
 								for other threads not to be terminated
 							  */
-	destroy_mut(); // free the mutex allocated in list.c
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
+	destroy_mut(); // free the mutex allocated in list.c
     mg_mgr_free(&mgr); // terminate mongoose connection
     free (HOSTNAME);
     /*pthread_mutex_destroy (&sem);*/
