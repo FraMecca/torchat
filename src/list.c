@@ -198,6 +198,9 @@ delete_peer(struct peer *currentPeer)
 		exit_error ("pthread mutex: ");
 	}
 	HASH_DEL (head, currentPeer);
+	if (currentPeer->msg != NULL) {
+		free (currentPeer->msg);
+	}
 	pthread_mutex_unlock (mut);
 }
 
