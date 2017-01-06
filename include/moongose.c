@@ -587,6 +587,10 @@ typedef struct DIR {
 } DIR;
 #endif
 
+#if CS_ENABLE_SPIFFS
+extern spiffs *cs_spiffs_get_fs(void);
+#endif
+
 #if defined(_WIN32) || CS_ENABLE_SPIFFS
 DIR *opendir(const char *dir_name);
 int closedir(DIR *dir);
@@ -694,10 +698,14 @@ struct dirent *readdir(DIR *dir) {
 
 DIR *opendir(const char *dir_name) {
   DIR *dir = NULL;
-  extern spiffs fs;
+  spiffs *fs = cs_spiffs_get_fs();
 
-  if (dir_name != NULL && (dir = (DIR *) malloc(sizeof(*dir))) != NULL &&
-      SPIFFS_opendir(&fs, (char *) dir_name, &dir->dh) == NULL) {
+  if (dir_name == NULL || fs == NULL ||
+      (dir = (DIR *) calloc(1, sizeof(*dir))) == NULL) {
+    return NULL;
+  }
+
+  if (SPIFFS_opendir(fs, dir_name, &dir->dh) == NULL) {
     free(dir);
     dir = NULL;
   }
@@ -720,14 +728,14 @@ struct dirent *readdir(DIR *dir) {
 /* SPIFFs doesn't support directory operations */
 int rmdir(const char *path) {
   (void) path;
-  return ENOTDIR;
+  return ENOTSUP;
 }
 
 int mkdir(const char *path, mode_t mode) {
   (void) path;
   (void) mode;
   /* for spiffs supports only root dir, which comes from mongoose as '.' */
-  return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
+  return (strlen(path) == 1 && *path == '.') ? 0 : ENOTSUP;
 }
 
 #endif /* CS_ENABLE_SPIFFS */
@@ -3163,7 +3171,8 @@ void mg_socket_if_connect_tcp(struct mg_connection *nc,
 #endif
   rc = connect(nc->sock, &sa->sa, sizeof(sa->sin));
   nc->err = mg_is_error(rc) ? mg_get_errno() : 0;
-  LOG(LL_INFO, ("%p sock %d err %d", nc, nc->sock, nc->err));
+  DBG(("%p sock %d rc %d errno %d err %d", nc, nc->sock, rc, mg_get_errno(),
+       nc->err));
 }
 
 void mg_socket_if_connect_udp(struct mg_connection *nc) {
@@ -3482,8 +3491,7 @@ static void mg_ssl_begin(struct mg_connection *nc) {
 
 void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
   int worth_logging =
-      fd_flags != 0 || (nc->flags & (MG_F_WANT_READ | MG_F_SSL_HANDSHAKE_DONE |
-                                     MG_F_WANT_WRITE));
+      fd_flags != 0 || (nc->flags & (MG_F_WANT_READ | MG_F_WANT_WRITE));
   if (worth_logging) {
     DBG(("%p fd=%d fd_flags=%d nc_flags=%lu rmbl=%d smbl=%d", nc, nc->sock,
          fd_flags, nc->flags, (int) nc->recv_mbuf.len,
@@ -3498,7 +3506,11 @@ void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
         socklen_t len = sizeof(err);
         int ret =
             getsockopt(nc->sock, SOL_SOCKET, SO_ERROR, (char *) &err, &len);
-        if (ret != 0) err = 1;
+        if (ret != 0) {
+          err = 1;
+        } else if (err == EAGAIN || err == EWOULDBLOCK) {
+          err = 0;
+        }
       }
 #else
       /*
@@ -3541,10 +3553,7 @@ void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
     if ((fd_flags & _MG_F_FD_CAN_WRITE) && nc->send_mbuf.len > 0) {
       mg_write_to_socket(nc);
     }
-
-    if (!(fd_flags & (_MG_F_FD_CAN_READ | _MG_F_FD_CAN_WRITE))) {
-      mg_if_poll(nc, (time_t) now);
-    }
+    mg_if_poll(nc, (time_t) now);
     mg_if_timer(nc, now);
   }
 
@@ -3721,8 +3730,10 @@ time_t mg_socket_if_poll(struct mg_iface *iface, int timeout_ms) {
                    (FD_ISSET(nc->sock, &err_set) ? _MG_F_FD_ERROR : 0);
       }
 #if MG_LWIP
-      /* With LWIP socket emulation layer, we don't get write events */
-      fd_flags |= _MG_F_FD_CAN_WRITE;
+      /* With LWIP socket emulation layer, we don't get write events for UDP */
+      if ((nc->flags & MG_F_UDP) && nc->listener == NULL) {
+        fd_flags |= _MG_F_FD_CAN_WRITE;
+      }
 #endif
     }
     tmp = nc->next;
