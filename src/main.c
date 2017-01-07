@@ -115,7 +115,7 @@ event_routine (struct mg_connection *nc)
         json = calloc (io->size + 1, sizeof (char));
         strncpy (json, io->buf, io->size * sizeof (char));
 		json[io->size] = '\0';
-        data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
+        data = convert_string_to_datastruct (json); // parse a datastruct from the message received
         mbuf_remove(io, io->size);      // Discard data from recv buffer
     } else {
         return;
