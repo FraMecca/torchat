@@ -180,7 +180,7 @@ generate_error_json (const struct data_wrapper *data, char *error)
 	j["id"] = data->id;
 	j["msg"] = data->msg;
 	j["portno"] = data->portno;
-	j["error"] = error;
+	j["error"] = error; // this field contains the verbose error as specified in RFC
 	if (data->cmd == UPDATE) {
 		// the date field is used only to communicate to the client
 		// the time of arrival of a message
