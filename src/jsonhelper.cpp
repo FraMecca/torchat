@@ -166,3 +166,27 @@ convert_datastruct_to_char (const struct data_wrapper *data)
 	std::string st =  j.dump ();
 	return strdup  (st.c_str ());
 };
+
+extern "C" char *
+generate_error_json (const struct data_wrapper *data, char *error)
+{
+	/*
+	 * this function is used in case TOR sent a reply specifying
+	 * an error; see:
+	 * http://www.ietf.org/rfc/rfc1928.txt  - PART 6
+	 */
+	json j;
+	j["cmd"] = convert_from_enum (data->cmd);
+	j["id"] = data->id;
+	j["msg"] = data->msg;
+	j["portno"] = data->portno;
+	j["error"] = error;
+	if (data->cmd == UPDATE) {
+		// the date field is used only to communicate to the client
+		// the time of arrival of a message
+		// it is not used in server to server communication
+		j["date"] = data->date;
+	}
+	std::string st =  j.dump ();
+	return strdup  (st.c_str ());
+};

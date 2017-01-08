@@ -8,6 +8,7 @@
 #include "../lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
+extern char * generate_error_json (const struct data_wrapper *data, char *error);
 extern char * HOSTNAME;
 // in this file there are the various functions used by main::event_routine
 // related to the various commands
