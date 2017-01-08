@@ -54,6 +54,8 @@ convert_to_enum (const std::string cmd)
 		return END;
 	} else if (cmd == "HOST") {
 		return HOST;
+	} else if (cmd == "ERR") {
+		return ERR;
 	}
 }
 
@@ -74,7 +76,7 @@ convert_from_enum (const enum command c)
 		case GET_PEERS :
 			st = "GET_PEERS";
 			break;
-		case UPDATE : 
+		case UPDATE :
 			st = "UPDATE";
 			break;
 		case HISTORY :
@@ -83,8 +85,11 @@ convert_from_enum (const enum command c)
 		case END :
 			st = "END";
 			break;
-		case HOST:
+		case HOST :
 			st = "HOST";
+			break;
+		case ERR :
+			st = "ERR";
 			break;
 	}
 	return st;

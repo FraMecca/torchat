@@ -19,6 +19,7 @@ enum command {
 	HISTORY,
 	HOST,
 	END,
+	ERR,
 	EXIT
 };
 

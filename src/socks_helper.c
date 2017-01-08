@@ -78,7 +78,7 @@ send_message_to_socket(struct message *msgStruct, char *peerId)
 	return true;
 }
 
-bool
+char
 send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)
 { 
 	// buf is the json parsed char to be sent over a socket
@@ -107,7 +107,7 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     char resp1[2];
     recv(sock, resp1, 2, 0);
     if(resp1[1] != 0x00)    {
-        return false ; // Error, handshake failed ?
+        return resp1[1]; // Error, handshake failed ?
     }
 
     char  domainLen = (char)strlen(domain);
@@ -133,14 +133,17 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     char resp2[10];
     recv(sock, resp2, 10, 0);
     // if resp2 is ok, tor opened a socket to domain (.onion)
+	if(resp2[1] != 0){
+		return resp2[1];
+	}
 
     // Here you can normally use send and recv
     // buf is the message I want to send to peer
     if (send(sock, buf, strlen (buf), 0) < 0) {
-    	return false;
+    	return -1;
     	// shouldn't
     }
 
 	close (sock);
-    return true;
+    return 0;
 }
