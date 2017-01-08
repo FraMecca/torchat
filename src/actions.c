@@ -53,7 +53,7 @@ send_routine(void *d)
 	}
 	free (msg);
 	free_data_wrapper (data);
-	pthread_exit(NULL); // implicit
+	pthread_exit(0); // implicit
 }
 
 // relay client msg to the another peer on the tor network
@@ -71,6 +71,7 @@ relay_msg (struct data_wrapper *data)
 	    exit_error ("pthread_attr_setdetachstate");
 	}
 	pthread_create(&t, &attr, &send_routine,(void*) data);
+	pthread_attr_destroy (&attr);
 	/*pthread_join(t, NULL);*/ //not needed, thread is detached and memory released on exit
 	return;
 }
