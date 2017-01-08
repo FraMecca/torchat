@@ -13,6 +13,10 @@ extern char * HOSTNAME;
 // in this file there are the various functions used by main::event_routine
 // related to the various commands
 //
+struct data_conn {
+	struct data_wrapper *dataw;
+	struct mg_connection *conn;
+};
 
 void
 free_data_wrapper (struct data_wrapper *data)
@@ -35,7 +39,8 @@ send_routine(void *d)
 	// there is no need to call pthread_join, but thread resources need to be terminated
 	//
 	char id[30];
-	struct data_wrapper *data = (struct data_wrapper*) d;
+	struct data_conn *dc = (struct data_conn*) d;
+	struct data_wrapper *data = dc->dataw;
 
 	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME);
@@ -46,10 +51,13 @@ send_routine(void *d)
 	/*data->date = get_short_date();*/
 
 	char *msg = convert_datastruct_to_char (data);
-	bool ret = send_over_tor (id, data->portno, msg, 9250);
+	char ret = send_over_tor (id, data->portno, msg, 9250);
 
-	if (!ret) {
-		exit_error ("send_over_tor");
+	if (ret != 0) {
+		// this informs the client that an error has happened
+		char *jError = generate_error_json(data, &ret);
+		mg_send(dc->conn, jError, strlen(jError));
+		free(jError);
 	}
 	free (msg);
 	free_data_wrapper (data);
@@ -58,10 +66,15 @@ send_routine(void *d)
 
 // relay client msg to the another peer on the tor network
 void
-relay_msg (struct data_wrapper *data)
+relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 {
 	pthread_t t;
 	pthread_attr_t attr; // create an attribute to specify that thread is detached
+	struct data_conn *dc = calloc(1, sizeof(struct data_conn));
+
+	dc->conn = nc;
+	dc->dataw = data;
+
 	if (pthread_attr_init(&attr) != 0) {
 		// initialize pthread attr and check if error
 		exit_error ("pthread_attr_init");
@@ -70,8 +83,8 @@ relay_msg (struct data_wrapper *data)
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 	    exit_error ("pthread_attr_setdetachstate");
 	}
-	pthread_create(&t, &attr, &send_routine,(void*) data);
-	/*pthread_join(t, NULL);*/ //not needed, thread is detached and memory released on exit
+	pthread_create(&t, &attr, &send_routine,(void*) dc);
+	/*free(dataw);*/
 	return;
 }
 
