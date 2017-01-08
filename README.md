@@ -144,10 +144,11 @@ One possible JSON may be:
 ```
 /*
  * json j = {
+ * {"error" = "Connection refused"}, // not always used
+ * {"date" = "31-10-2016"}, // not always used
  * {"cmd" = SEND},
  * {"portno" = 80},
  * {"id" = "ld74fqvoxpu5yi73.onion" },
- * {"date" = "31-10-2016"},
  * {"msg" = "Alice says hi"}
  * }
  */
@@ -165,6 +166,10 @@ Commands are:
 * HOST: the client is asking the daemon for the current hostname, that is, its current onion address.
 * END : the daemon notifies that the previous command has no response;
 * EXIT : starts exit procedure (clean datastructs and exit cleanly).
+
+The `date` field is used only when the daemon communicates with the server. It must not be used when sending message between different hosts.
+
+The `error` field is used only when TOR reports an error in the communication and is set according to socks5 specification.
 
 ## Disclaimer
 
