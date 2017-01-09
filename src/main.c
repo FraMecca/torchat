@@ -237,6 +237,8 @@ main(int argc, char **argv)
     log_clear_datastructs (); // free static vars in logger.cpp
  	destroy_mut(); // free the mutex allocated in list.c
     mg_mgr_free(&mgr); // terminate mongoose connection
-    free (HOSTNAME);
+    if (HOSTNAME != NULL) {
+    	free (HOSTNAME);
+    }
     exit (EXIT_SUCCESS);
 }
