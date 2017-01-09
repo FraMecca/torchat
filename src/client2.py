@@ -110,7 +110,7 @@ def input_routine (portno, ui):
             j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
             resp = send_to_mongoose(j, portno, wait=True)
             if resp['cmd'] == 'ERR':
-                line = resp
+                print_line_cur(resp['msg'], ui, 1)
             c.update ([line])
         elif line != "":
             # the user input a command,
