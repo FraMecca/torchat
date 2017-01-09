@@ -110,7 +110,7 @@ def input_routine (portno, ui):
             j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
             resp = send_to_mongoose(j, portno, wait=True)
             if resp['cmd'] == 'ERR':
-                line = "Message was not sent. [ ERROR: " + resp['error'] + " ]"
+                line = resp
             c.update ([line])
         elif line != "":
             # the user input a command,
@@ -142,11 +142,8 @@ def send_to_mongoose (j, portno, wait=False):
     s.send (bytes (json.dumps (j), 'utf-8'))
     # wait for response only when needed (not for SEND)
     if wait:
-        try:
             resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
             return resp
-        except:
-            pass
 
 def get_peers(portno, ui, hostname):
     # ask for a list of peers with pending messages

@@ -2,21 +2,18 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
 #include "../lib/datastructs.h"
 #include "../lib/socks_helper.h"
 #include "../lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
 extern char * generate_error_json (const struct data_wrapper *data, char *error);
+extern void log_info (char *json); // from logger.cpp
+extern void log_err (char *json); // from logger.cpp
 extern char * HOSTNAME;
 // in this file there are the various functions used by main::event_routine
 // related to the various commands
 //
-struct data_conn {
-	struct data_wrapper *dataw;
-	struct mg_connection *conn;
-};
 
 void
 free_data_wrapper (struct data_wrapper *data)
@@ -32,66 +29,81 @@ free_data_wrapper (struct data_wrapper *data)
 	}
 }
 
-static void *
-send_routine(void *d)
+void
+announce_exit (struct data_wrapper *data, struct mg_connection *nc)
 {
-	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
-	// there is no need to call pthread_join, but thread resources need to be terminated
-	//
-	char id[30];
-	struct data_conn *dc = (struct data_conn*) d;
-	struct data_wrapper *data = dc->dataw;
+	// reply to client saying that you ACK the exit request and
+	// the server is exiting
+	data->cmd = END;
+	free (data->msg);
+	data->msg = strdup ("");
+	char *jOk = convert_datastruct_to_char (data);
+	/*log_info (msg);*/
+	mg_send(nc, jOk, strlen(jOk));
+	free (jOk);
+}
 
-	strcpy (id, data->id); // save dest address
-	strcpy (data->id, HOSTNAME);
-	data->cmd = RECV;
-	/*if (data->date != NULL) {*/ // not needed anymore because on RECV there is no date field on json
-		/*free (data->date);*/
-	/*}*/
-	/*data->date = get_short_date();*/
-
-	char *msg = convert_datastruct_to_char (data);
-	char ret = send_over_tor (id, data->portno, msg, 9250);
-
-	if (ret != 0) {
-		// this informs the client that an error has happened
-		char *jError = generate_error_json(data, &ret);
-		mg_send(dc->conn, jError, strlen(jError));
-		free(jError);
+static char *
+explain_sock_error (const char e)
+{
+	/*
+	 * in case of error the message returned to the client has in the msg field
+	 * an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
+	 */
+	switch (e) {
+		case '1' :
+			return strdup ("general SOCKS server failure");
+		case '2' :
+			return strdup ("connection not allowed by ruleset");
+		case 3 :
+			return strdup ("Network unreachable");
+		case 4 :
+			return strdup ("Host unreachable");
+		case 5 :
+			return strdup ("Connection refused");
+		case 6 : 
+			return strdup ("TTL expired");
+		case 7 :
+			return strdup ("Command not supported");
+		case 8 :
+			return strdup ("Address type not supported");
+		default :
+			return strdup ("TOR couldn't send the message"); // shouldn't go here
 	}
-	free (msg);
-	free_data_wrapper (data);
-	pthread_exit(0); // implicit
 }
 
 // relay client msg to the another peer on the tor network
 void
 relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 {
-	pthread_t t;
-	pthread_attr_t attr; // create an attribute to specify that thread is detached
-	struct data_conn *dc = calloc(1, sizeof(struct data_conn));
+	char id[30];
+	strcpy (id, data->id); // save dest address
+	strcpy (data->id, HOSTNAME);
+	data->cmd = RECV;
 
-	dc->conn = nc;
-	dc->dataw = data;
+	char *msg = convert_datastruct_to_char (data);
+	char ret = send_over_tor (id, data->portno, msg, 9250);
+	free (msg);
+	free (data->msg); // substitude below
 
-	if (pthread_attr_init(&attr) != 0) {
-		// initialize pthread attr and check if error
-		exit_error ("pthread_attr_init");
+	if (ret != 0) {
+		// this informs the client that an error has happened
+		// substitute cmd with ERR and msg with RFC error
+		data->cmd = ERR;
+		data->msg = explain_sock_error (ret);
+		char *jError = convert_datastruct_to_char (data);
+		log_err (jError);
+		mg_send(nc, jError, strlen(jError));
+		free(jError);
+	} else {
+		data->cmd = END;
+		data->msg = strdup (""); // is just an ACK, message can be empty
+		char *jOk = convert_datastruct_to_char (data);
+		/*log_info (jOk);*/
+		mg_send(nc, jOk, strlen(jOk));
+		free (jOk);
 	}
-	// set detached state
-	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
-	    exit_error ("pthread_attr_setdetachstate");
-	}
-<<<<<<< HEAD
-	pthread_create(&t, &attr, &send_routine,(void*) data);
-	pthread_attr_destroy (&attr);
-	/*pthread_join(t, NULL);*/ //not needed, thread is detached and memory released on exit
-=======
-	pthread_create(&t, &attr, &send_routine,(void*) dc);
-	/*free(dataw);*/
->>>>>>> a31fc44487d6074995e72242a81d5f9bcf55b5a1
-	return;
+	free_data_wrapper (data);
 }
 
 void
