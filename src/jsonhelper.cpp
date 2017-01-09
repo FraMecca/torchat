@@ -110,7 +110,7 @@ convert_string_to_datastruct (const char *jsonCh)
 	//} // not used anymore, io->buf is truncated to io->size
 #if DEBUG
 	LOG_F (9, jsonCh); 
-	std::cout << "json.cpp: << __LINE__ <<: Received: " << st << std::endl;
+	std::cout << "json.cpp:" << __LINE__ <<": Received: " << st << std::endl;
 #endif
 
 	/*
