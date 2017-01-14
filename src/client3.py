@@ -16,6 +16,7 @@ def ask_cleverbot (msg):
         print ("Starting cleverbot istance")
         cb = Cleverbot ()
     resp = cb.ask (msg)
+    sleep (1)
     print ('HOST:       ', resp)
     return resp
 
@@ -27,6 +28,16 @@ def print_json (j):
         print (j['msg'])
     else:
         pass
+def check_correct_json (resp):
+    if resp == None:
+        return True
+    # resp : string to bool
+    j = json.loads (resp)
+    if j['cmd'] == "ERR":
+        return false
+    else:
+        return true
+
 
 def update_routine(portno, currId):
     # this function queries the server for unread messages
@@ -42,8 +53,12 @@ def update_routine(portno, currId):
             return
         else:
             response = ask_cleverbot (resp['msg'])
-            j = create_json(cmd='SEND', msg=response, id=currId, portno = 80)
-            resp = send_to_mongoose(j, portno)
+            while True:
+                j = create_json(cmd='SEND', msg=response, id=currId, portno = 80)
+                resp = send_to_mongoose(j, portno)
+                if check_correct_json (resp):
+                    # try to send again if error in transmission
+                    break
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
     # create a dictionary and populate it, ready to be converted to a json string
