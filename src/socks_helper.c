@@ -107,7 +107,7 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     char resp1[2];
     recv(sock, resp1, 2, 0);
     if(resp1[1] != 0x00)    {
-        return resp1[1]; // Error, handshake failed ?
+        return 9; // Error, handshake failed ?
     }
 
     char  domainLen = (char)strlen(domain);

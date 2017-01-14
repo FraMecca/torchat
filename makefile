@@ -36,3 +36,11 @@ debug:
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o $(DEBUG)
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g $(DEBUG)
 	gcc -L$(LDIR)/build $(ALL) -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF)
+
+etrace:
+	mkdir -p build
+	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o -g $(DEBUG)
+	g++ -shared -o build/liblogger.so build/logger.o  -g $(DEBUG)
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o $(DEBUG)
+	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g $(DEBUG)
+	gcc -L$(LDIR)/build $(ALL) utils/ptrace.c -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF) -finstrument-functions

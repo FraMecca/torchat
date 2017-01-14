@@ -51,21 +51,25 @@ explain_sock_error (const char e)
 	 * an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
 	 */
 	switch (e) {
+		case  9 :
+			// not in RFC,
+			// used when handshake fails, so probably TOR has not been started
+			return strdup ("Could not send message. Is TOR running?");
 		case '1' :
 			return strdup ("general SOCKS server failure");
 		case '2' :
 			return strdup ("connection not allowed by ruleset");
-		case 3 :
+		case '3' :
 			return strdup ("Network unreachable");
-		case 4 :
+		case '4' :
 			return strdup ("Host unreachable");
-		case 5 :
+		case '5' :
 			return strdup ("Connection refused");
-		case 6 : 
+		case '6' : 
 			return strdup ("TTL expired");
-		case 7 :
+		case '7' :
 			return strdup ("Command not supported");
-		case 8 :
+		case '8' :
 			return strdup ("Address type not supported");
 		default :
 			return strdup ("TOR couldn't send the message"); // shouldn't go here
