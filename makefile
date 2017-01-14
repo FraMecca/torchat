@@ -44,3 +44,6 @@ etrace:
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -g -o build/jsonhelper.o $(DEBUG)
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o  -g $(DEBUG)
 	gcc -L$(LDIR)/build $(ALL) utils/ptrace.c -I. -g  -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF) -finstrument-functions
+
+clean:
+	rm -rf build/
