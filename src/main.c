@@ -97,7 +97,7 @@ read_tor_hostname (void)
     char buf[50];
     fscanf (fp, "%s", buf);
     fclose (fp);
-    return strdup (buf);
+    return STRDUP (buf);
 }
 
 void

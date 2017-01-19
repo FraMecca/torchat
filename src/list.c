@@ -92,7 +92,7 @@ new_message (const char *content)
 	new->next = NULL;
 	new->prev = NULL;
 	new->date = get_short_date ();
-	new->content = strdup (content);
+	new->content = STRDUP (content);
 	return new;
 }
 
@@ -176,7 +176,7 @@ get_unread_message(const char *peerId)
 		return NULL;
 	}
 	/*int len = strlen(msg->content)+strlen(msg->date)+3;*/
-	char *m = strdup(msg->content);
+	char *m = STRDUP(msg->content);
 	currentPeer->msg = delete_message (currentPeer->msg);
 	if (currentPeer->msg == NULL) {
 		// if we read every message of the peer, remove peer from hash table

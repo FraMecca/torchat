@@ -35,7 +35,7 @@ announce_exit (struct data_wrapper *data, struct mg_connection *nc)
 	// the server is exiting
 	data->cmd = END;
 	FREE (data->msg);
-	data->msg = strdup ("");
+	data->msg = STRDUP ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
 	mg_send(nc, jOk, strlen(jOk));
@@ -53,25 +53,25 @@ explain_sock_error (const char e)
 		case  9 :
 			// not in RFC,
 			// used when handshake fails, so probably TOR has not been started
-			return strdup ("Could not send message. Is TOR running?");
+			return STRDUP ("Could not send message. Is TOR running?");
 		case '1' :
-			return strdup ("general SOCKS server failure");
+			return STRDUP ("general SOCKS server failure");
 		case '2' :
-			return strdup ("connection not allowed by ruleset");
+			return STRDUP ("connection not allowed by ruleset");
 		case '3' :
-			return strdup ("Network unreachable");
+			return STRDUP ("Network unreachable");
 		case '4' :
-			return strdup ("Host unreachable");
+			return STRDUP ("Host unreachable");
 		case '5' :
-			return strdup ("Connection refused");
+			return STRDUP ("Connection refused");
 		case '6' : 
-			return strdup ("TTL expired");
+			return STRDUP ("TTL expired");
 		case '7' :
-			return strdup ("Command not supported");
+			return STRDUP ("Command not supported");
 		case '8' :
-			return strdup ("Address type not supported");
+			return STRDUP ("Address type not supported");
 		default :
-			return strdup ("TOR couldn't send the message"); // shouldn't go here
+			return STRDUP ("TOR couldn't send the message"); // shouldn't go here
 	}
 }
 
@@ -100,7 +100,7 @@ relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 		FREE(jError);
 	} else {
 		data->cmd = END;
-		data->msg = strdup (""); // is just an ACK, message can be empty
+		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		/*log_info (jOk);*/
 		mg_send(nc, jOk, strlen(jOk));
@@ -152,9 +152,9 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 	// the hostname is in the data->msg field, this is an explicit request from the client
 	//
 	FREE(data->msg);
-	data->msg = strdup(hostname);
+	data->msg = STRDUP(hostname);
 	if(data->msg == NULL){
-		data->msg = strdup("");
+		data->msg = STRDUP("");
 		// should be a connection error here, but better be safe
 	}
 
@@ -177,7 +177,7 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 	FREE (data->msg);
 	data->msg = get_peer_list ();
 	if (data->msg == NULL) {
-		data->msg = strdup ("");
+		data->msg = STRDUP ("");
 		// needed if no peers messaged us
 	}
 	char *response = convert_datastruct_to_char (data);
