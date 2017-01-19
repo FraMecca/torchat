@@ -128,6 +128,10 @@ convert_string_to_datastruct (const char *jsonCh)
 		return NULL;
 	}
 	data = (struct data_wrapper *) calloc (1, sizeof (struct data_wrapper));
+	if (data == NULL) {
+		std::cerr << "Failed alloc for data_wrapper " << __FILE__ << ":" << __LINE__ << std::endl;
+		exit (1);
+	}
 	memset (data->id, 0, 30);
 	std::string jmsg = j["msg"];
 	data->msg = strdup (jmsg.c_str());

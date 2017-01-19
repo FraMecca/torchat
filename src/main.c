@@ -7,6 +7,7 @@
 #include <signal.h>
 #include <errno.h>
 #include "include/mongoose.h"  // Include Mongoose API definitions
+#include "include/mem.h" // CALLOC and MALLOC
 #include "lib/datastructs.h"
 #include "lib/socks_helper.h"
 #include "lib/util.h"
@@ -71,10 +72,7 @@ start_daemon()
     umask(0);
 
 	/* Change the working directory to the current one*/
-    if((dir = calloc(200, sizeof(char))) == NULL){
-		exit_error("allocation of cwd");
-		exit(EXIT_FAILURE);
-	}
+    dir = CALLOC (200, sizeof(char));
 	getcwd(dir, 200);	
 	chdir(dir);
 	free(dir);
@@ -111,7 +109,7 @@ event_routine (struct mg_connection *nc)
     char *json; // used to log
 
     if (io->buf != NULL && io->size > 0) {
-        json = calloc (io->size + 1, sizeof (char));
+        json = CALLOC (io->size + 1, sizeof (char));
         strncpy (json, io->buf, io->size * sizeof (char));
 		json[io->size] = '\0';
         data = convert_string_to_datastruct (json); // parse a datastruct from the message received
@@ -174,7 +172,7 @@ event_routine (struct mg_connection *nc)
 
 	if (json != NULL) {
 		// should alway be not null
-		free (json);
+		FREE (json);
 	}
 	// data should be freed inside the jump table because it can be used in threads
     return;
@@ -242,7 +240,7 @@ main(int argc, char **argv)
  	destroy_mut(); // free the mutex allocated in list.c
     mg_mgr_free(&mgr); // terminate mongoose connection
     if (HOSTNAME != NULL) {
-    	free (HOSTNAME);
+    	FREE (HOSTNAME);
     }
     exit (EXIT_SUCCESS);
 }

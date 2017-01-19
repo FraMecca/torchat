@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "include/mem.h"
 #include "lib/datastructs.h"
 #include "lib/socks_helper.h"
 #include "lib/util.h"
@@ -19,12 +20,12 @@ void
 free_data_wrapper (struct data_wrapper *data)
 {
 	if (data->msg != NULL) {
-		free (data->msg);
+		FREE (data->msg);
 	}
 	if (data->date != NULL) {
-		free (data->date);
+		FREE (data->date);
 	}
-	free (data);
+	FREE (data);
 }
 
 void
@@ -33,12 +34,12 @@ announce_exit (struct data_wrapper *data, struct mg_connection *nc)
 	// reply to client saying that you ACK the exit request and
 	// the server is exiting
 	data->cmd = END;
-	free (data->msg);
+	FREE (data->msg);
 	data->msg = strdup ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
 	mg_send(nc, jOk, strlen(jOk));
-	free (jOk);
+	FREE (jOk);
 }
 
 static char *
@@ -85,8 +86,8 @@ relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 
 	char *msg = convert_datastruct_to_char (data);
 	char ret = send_over_tor (id, data->portno, msg, 9250);
-	free (msg);
-	free (data->msg); // substitude below
+	FREE (msg);
+	FREE (data->msg); // substitude below
 
 	if (ret != 0) {
 		// this informs the client that an error has happened
@@ -96,14 +97,14 @@ relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
 		mg_send(nc, jError, strlen(jError));
-		free(jError);
+		FREE(jError);
 	} else {
 		data->cmd = END;
 		data->msg = strdup (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		/*log_info (jOk);*/
 		mg_send(nc, jOk, strlen(jOk));
-		free (jOk);
+		FREE (jOk);
 	}
 	free_data_wrapper (data);
 }
@@ -134,14 +135,14 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 	char *msg;
 	if((msg = get_unread_message(data->msg)) != NULL){
 		// now we convert the message in a json and send it
-		free (data->msg);
+		FREE (data->msg);
 		data->msg = msg;
 	} else {
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
 	mg_send (nc, unreadMsg, strlen(unreadMsg));
-	free (unreadMsg);
+	FREE (unreadMsg);
 }
 
 void
@@ -150,7 +151,7 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 	// the hostname is sent as a json (similarly to the peer list function below)
 	// the hostname is in the data->msg field, this is an explicit request from the client
 	//
-	free(data->msg);
+	FREE(data->msg);
 	data->msg = strdup(hostname);
 	if(data->msg == NULL){
 		data->msg = strdup("");
@@ -162,7 +163,7 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 		// if iface is not null the client is waiting for response
 		mg_send (nc, response, strlen (response));
 	}
-	free (response);
+	FREE (response);
 
 }
 
@@ -173,7 +174,7 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 	// send the list as a parsed json, with peer field comma divided
 	// the char containing the list of peers commadivided is then put into a json 
 	// just store it in data.msg
-	free (data->msg);
+	FREE (data->msg);
 	data->msg = get_peer_list ();
 	if (data->msg == NULL) {
 		data->msg = strdup ("");
@@ -184,5 +185,5 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 		// if iface is not null the client is waiting for response
 		mg_send (nc, response, strlen (response));
 	}
-	free (response);
+	FREE (response);
 }
