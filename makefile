@@ -1,6 +1,8 @@
-ALL = src/main.c include/mongoose.c src/socks_helper.c src/util.c src/list.c src/actions.c
+ALL = $(SRC) $(INCLUDE)
+SRC = src/main.c src/socks_helper.c src/util.c src/list.c src/actions.c
+INCLUDE = include/mongoose.c include/mem.c include/assert.c include/except.c
 LDIR := $(PWD)
-DEBUG = -Wall -DDEBUG -Wextra
+DEBUG = -Wall -Wextra -DDEBUG -DNDEBUG
 CF = -DMG_ENABLE_THREADS
 I = -I. -Iinclude -Ilib
 
