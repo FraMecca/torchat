@@ -1,10 +1,10 @@
-#include "../include/mongoose.h"  // Include Mongoose API definitions
+#include "include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../lib/datastructs.h"
-#include "../lib/socks_helper.h"
-#include "../lib/util.h"
+#include "lib/datastructs.h"
+#include "lib/socks_helper.h"
+#include "lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
 extern char * generate_error_json (const struct data_wrapper *data, char *error);
@@ -24,9 +24,7 @@ free_data_wrapper (struct data_wrapper *data)
 	if (data->date != NULL) {
 		free (data->date);
 	}
-	if  (data != NULL) {
-		free (data);
-	}
+	free (data);
 }
 
 void

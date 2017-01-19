@@ -1,14 +1,14 @@
-#include "../include/json.hpp"
+#include "include/json.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../lib/datastructs.h"
+#include "lib/datastructs.h"
 //#include "../lib/util.h"
 using json = nlohmann::json;
 
 #if DEBUG
-#include "../include/loguru.hpp"
+#include "include/loguru.hpp"
 #endif
 
 char *

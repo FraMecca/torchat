@@ -7,7 +7,7 @@
 #include <time.h> // timestructs
 #include <errno.h> // perror
 #include <stdio.h> // perror
-#include "../lib/datastructs.h" // for message to socket
+#include "lib/datastructs.h" // for message to socket
 #include <unistd.h> // close
 
 

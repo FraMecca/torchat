@@ -6,11 +6,11 @@
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
-#include "../include/mongoose.h"  // Include Mongoose API definitions
-#include "../lib/datastructs.h"
-#include "../lib/socks_helper.h"
-#include "../lib/util.h"
-#include "../lib/actions.h" // event_routine functions
+#include "include/mongoose.h"  // Include Mongoose API definitions
+#include "lib/datastructs.h"
+#include "lib/socks_helper.h"
+#include "lib/util.h"
+#include "lib/actions.h" // event_routine functions
 
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
@@ -196,6 +196,10 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 int
 main(int argc, char **argv)
 {
+	if (argc < 2) {
+		fprintf (stdout, "USAGE...\n");
+		exit (EXIT_FAILURE);
+	}
     struct mg_mgr mgr;
     
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {

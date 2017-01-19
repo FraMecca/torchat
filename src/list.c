@@ -1,10 +1,10 @@
-#include "../lib/datastructs.h" // struct list
+#include "lib/datastructs.h" // struct list
 #include <string.h> // strdup
 #include <stdlib.h> // malloc
-#include "../lib/util.h" // get_date
+#include "lib/util.h" // get_date
 #include <stdbool.h>
-#include "../lib/socks_helper.h" // send_message_to_socket
-#include "../include/uthash.h"
+#include "lib/socks_helper.h" // send_message_to_socket
+#include "include/uthash.h"
 #include <pthread.h> // mutexes
 
 static pthread_mutex_t *mut = NULL;

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "../lib/datastructs.h"
+#include "lib/datastructs.h"
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 
 static char *

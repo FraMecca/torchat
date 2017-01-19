@@ -1,4 +1,4 @@
-#include "../lib/util.h"
+#include "lib/util.h"
 #include <stdlib.h> // exit
 #include <errno.h> // perror
 #include <time.h> // localtime
