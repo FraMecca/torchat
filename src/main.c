@@ -152,13 +152,6 @@ event_routine (struct mg_connection *nc)
         	send_peer_list_to_client (data, nc);
 			free_data_wrapper (data);
         	break;
-    	case HISTORY :
-        	// the client asked to receive the history
-        	// it specified the id and n lines
-        	// (id in json[id], n in json[msg]
-        	// send the various messages
-			free_data_wrapper (data);
-        	break;
 		case HOST :
 			// the client required the hostname of the server
 			// send as a formatted json
@@ -232,7 +225,7 @@ main(int argc, char **argv)
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
         // so mongoose halts and we can collect the threads
-        mg_mgr_poll(&mgr, 1000);
+        mg_mgr_poll(&mgr, 300);
     }
 
     clear_datastructs (); // free hash table entries

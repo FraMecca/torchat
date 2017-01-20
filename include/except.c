@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "assert.h"
+#include "ut_assert.h"
 #include "except.h"
 #define T Except_T
 Except_Frame *Except_stack = NULL;
@@ -15,7 +15,7 @@ void Except_raise(const T *e, const char *file,
 #else
 	Except_Frame *p = Except_stack;
 #endif
-	assert(e);
+	ut_assert(e);
 	if (p == NULL) {
 		fprintf(stderr, "Uncaught exception");
 		if (e->reason)
@@ -39,18 +39,18 @@ void Except_raise(const T *e, const char *file,
 	longjmp(p->env, Except_raised);
 }
 #ifdef WIN32
-_CRTIMP void __cdecl _assert(void *, void *, unsigned);
-#undef assert
-#define assert(e) ((e) || (_assert(#e, __FILE__, __LINE__), 0))
+_CRTIMP void __cdecl _ut_assert(void *, void *, unsigned);
+#undef ut_assert
+#define ut_assert(e) ((e) || (_ut_assert(#e, __FILE__, __LINE__), 0))
 
 int Except_index = -1;
 void Except_init(void) {
 	BOOL cond;
 
 	Except_index = TlsAlloc();
-	assert(Except_index != TLS_OUT_OF_INDEXES);
+	ut_assert(Except_index != TLS_OUT_OF_INDEXES);
 	cond = TlsSetValue(Except_index, NULL);
-	assert(cond == TRUE);
+	ut_assert(cond == TRUE);
 }
 
 void Except_push(Except_Frame *fp) {
@@ -58,7 +58,7 @@ void Except_push(Except_Frame *fp) {
 
 	fp->prev = TlsGetValue(Except_index);
 	cond = TlsSetValue(Except_index, fp);
-	assert(cond == TRUE);
+	ut_assert(cond == TRUE);
 }
 
 void Except_pop(void) {
@@ -66,6 +66,6 @@ void Except_pop(void) {
 	Except_Frame *tos = TlsGetValue(Except_index);
 
 	cond = TlsSetValue(Except_index, tos->prev);
-	assert(cond == TRUE);
+	ut_assert(cond == TRUE);
 }
 #endif

@@ -1,13 +1,13 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <string.h>
-#include "assert.h"
+#include "ut_assert.h"
 #include "except.h"
 #include "mem.h"
 const Except_T Mem_Failed = { "Allocation Failed" };
 void *Mem_alloc(long nbytes, const char *file, int line){
 	void *ptr;
-	assert(nbytes > 0);
+	ut_assert(nbytes > 0);
 	ptr = malloc(nbytes);
 	if (ptr == NULL)
 		{
@@ -21,8 +21,8 @@ void *Mem_alloc(long nbytes, const char *file, int line){
 void *Mem_calloc(long count, long nbytes,
 	const char *file, int line) {
 	void *ptr;
-	assert(count > 0);
-	assert(nbytes > 0);
+	ut_assert(count > 0);
+	ut_assert(nbytes > 0);
 	ptr = calloc(count, nbytes);
 	if (ptr == NULL)
 		{
@@ -39,8 +39,8 @@ void Mem_free(void *ptr) {
 }
 void *Mem_resize(void *ptr, long nbytes,
 	const char *file, int line) {
-	assert(ptr);
-	assert(nbytes > 0);
+	ut_assert(ptr);
+	ut_assert(nbytes > 0);
 	ptr = realloc(ptr, nbytes);
 	if (ptr == NULL)
 		{

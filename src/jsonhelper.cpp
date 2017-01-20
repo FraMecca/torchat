@@ -48,13 +48,12 @@ convert_to_enum (const std::string cmd)
 		return EXIT;
 	} else if (cmd == "UPDATE") {
 		return UPDATE;
-	} else if (cmd == "HISTORY") {
-		return HISTORY;
 	} else if (cmd == "END") {
 		return END;
 	} else if (cmd == "HOST") {
 		return HOST;
-	} else if (cmd == "ERR") {
+	} else /* if (cmd == "ERR") */ {
+		// it is the default case
 		return ERR;
 	}
 }
@@ -78,9 +77,6 @@ convert_from_enum (const enum command c)
 			break;
 		case UPDATE :
 			st = "UPDATE";
-			break;
-		case HISTORY :
-			st = "HISTORY";
 			break;
 		case END :
 			st = "END";

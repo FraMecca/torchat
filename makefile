@@ -1,9 +1,9 @@
 ALL = $(SRC) $(INCLUDE)
 SRC = src/main.c src/socks_helper.c src/util.c src/list.c src/actions.c
-INCLUDE = include/mongoose.c include/mem.c include/assert.c include/except.c
+INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c
 LDIR := $(PWD)
 DEBUG = -Wall -Wextra -DDEBUG -g
-CF = -DMG_ENABLE_THREADS
+CF = -DMG_ENABLE_THREADS -DMG_ENABLE_HTTP_WEBSOCKET=0
 I = -I. -Iinclude -Ilib
 
 
@@ -17,7 +17,7 @@ build/logger.o: src/logger.cpp
 	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl 	-o build/logger.o $I
 
 build/jsonhelper.o: src/jsonhelper.cpp
-	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o  $I $(DEBUG)
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o  $I 
 
 build/main: build/logger.o build/jsonhelper.o $(ALL)
 	g++ -shared -o build/liblogger.so build/logger.o 
@@ -26,10 +26,10 @@ build/main: build/logger.o build/jsonhelper.o $(ALL)
 
 asan:
 	mkdir -p build
-	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o $I
-	g++ -shared -o build/liblogger.so build/logger.o $I
-	g++ -c -Wall -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o -fsanitize=address $I
-	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   -fsanitize=address $I
+	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o $I $(DEBUG)
+	g++ -shared -o build/liblogger.so build/logger.o $I $(DEBUG)
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o -fsanitize=address $I $(DEBUG)
+	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   -fsanitize=address $I $(DEBUG)
 	gcc -L$(LDIR)/build $(ALL) $I $(DEBUG)   -ljsonhelper -o build/main -lpthread -fsanitize=address -Wl,-R$(LDIR)/build $(CF)
 
 debug:
