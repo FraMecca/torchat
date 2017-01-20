@@ -1,6 +1,6 @@
 /* $Id: assert.h 6 2007-01-22 00:45:22Z drhanson $ */
 #undef assert
-#ifdef NDEBUG
+#ifdef DEBUG
 #define assert(e) ((void)0)
 #else
 #include "except.h"
