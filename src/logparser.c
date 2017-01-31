@@ -4,6 +4,20 @@
 #include "../lib/datastructs.h"
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 
+void
+free_data_wrapper (struct data_wrapper *data)
+{
+	if (data->msg != NULL) {
+		free (data->msg);
+	}
+	if (data->date != NULL) {
+		free (data->date);
+	}
+	if  (data != NULL) {
+		free (data);
+	}
+}
+
 static char *
 convert_enum (enum command cmd)
 {
@@ -20,6 +34,7 @@ print_to_file (FILE *fp, struct data_wrapper *data)
 	char *cmd = convert_enum (data->cmd);
 	fprintf (fp, "{\"id\": \"%s\", \"portno\": %d ,\"date\": \"%s\",\"cmd\":\"%s\", \"msg\": \"%s\"}\n",
  		   	data->id, data->portno, data->date, cmd, data->msg);
+	free (cmd);
 }
 
 int
@@ -44,6 +59,7 @@ main (int argc, char **argv)
 			FILE *fc = fopen (data->id, "a");
 			print_to_file (fc, data);
 			fclose (fc);
+			free_data_wrapper (data);
 		}
 		free (buf);
 		buf = NULL;
