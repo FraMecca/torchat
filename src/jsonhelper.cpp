@@ -1,14 +1,14 @@
-#include "../include/json.hpp"
+#include "include/json.hpp"
 #include <iostream>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "../lib/datastructs.h"
+#include "lib/datastructs.h"
 //#include "../lib/util.h"
 using json = nlohmann::json;
 
 #if DEBUG
-#include "../include/loguru.hpp"
+#include "include/loguru.hpp"
 #endif
 
 char *
@@ -48,12 +48,13 @@ convert_to_enum (const std::string cmd)
 		return EXIT;
 	} else if (cmd == "UPDATE") {
 		return UPDATE;
-	} else if (cmd == "HISTORY") {
-		return HISTORY;
 	} else if (cmd == "END") {
 		return END;
 	} else if (cmd == "HOST") {
 		return HOST;
+	} else /* if (cmd == "ERR") */ {
+		// it is the default case
+		return ERR;
 	}
 }
 
@@ -74,17 +75,17 @@ convert_from_enum (const enum command c)
 		case GET_PEERS :
 			st = "GET_PEERS";
 			break;
-		case UPDATE : 
+		case UPDATE :
 			st = "UPDATE";
-			break;
-		case HISTORY :
-			st = "HISTORY";
 			break;
 		case END :
 			st = "END";
 			break;
-		case HOST:
+		case HOST :
 			st = "HOST";
+			break;
+		case ERR :
+			st = "ERR";
 			break;
 	}
 	return st;
@@ -100,12 +101,12 @@ convert_string_to_datastruct (const char *jsonCh)
 	 * dumping the json
 	 */
 	std::string st (jsonCh); // translate char* to std::string
-	if (std::count (st.begin (), st.end (), '}') >= 1) {
-		st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
-	}
+	//if (std::count (st.begin (), st.end (), '}') >= 1) {
+		//st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
+	//} // not used anymore, io->buf is truncated to io->size
 #if DEBUG
 	LOG_F (9, jsonCh); 
-	std::cout << "json.cpp:85: Received: " << st << std::endl;
+	std::cout << "json.cpp:" << __LINE__ <<": Received: " << st << std::endl;
 #endif
 
 	/*
@@ -123,6 +124,10 @@ convert_string_to_datastruct (const char *jsonCh)
 		return NULL;
 	}
 	data = (struct data_wrapper *) calloc (1, sizeof (struct data_wrapper));
+	if (data == NULL) {
+		std::cerr << "Failed alloc for data_wrapper " << __FILE__ << ":" << __LINE__ << std::endl;
+		exit (1);
+	}
 	memset (data->id, 0, 30);
 	std::string jmsg = j["msg"];
 	data->msg = strdup (jmsg.c_str());

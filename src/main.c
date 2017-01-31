@@ -1,17 +1,17 @@
-#include "../include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <stdbool.h>
 #include <time.h>
-#include "../lib/datastructs.h"
-#include <errno.h>
-#include "../lib/socks_helper.h"
-#include <pthread.h>
-#include "../lib/util.h"
 #include <signal.h>
-#include "../lib/actions.h" // event_routine functions
+#include <errno.h>
+#include "include/mongoose.h"  // Include Mongoose API definitions
+#include "include/mem.h" // CALLOC and MALLOC
+#include "lib/datastructs.h"
+#include "lib/socks_helper.h"
+#include "lib/util.h"
+#include "lib/actions.h" // event_routine functions
 
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
@@ -72,10 +72,7 @@ start_daemon()
     umask(0);
 
 	/* Change the working directory to the current one*/
-    if((dir = calloc(200, sizeof(char))) == NULL){
-		exit_error("allocation of cwd");
-		exit(EXIT_FAILURE);
-	}
+    dir = CALLOC (200, sizeof(char));
 	getcwd(dir, 200);	
 	chdir(dir);
 	free(dir);
@@ -100,7 +97,7 @@ read_tor_hostname (void)
     char buf[50];
     fscanf (fp, "%s", buf);
     fclose (fp);
-    return strdup (buf);
+    return STRDUP (buf);
 }
 
 void
@@ -112,10 +109,10 @@ event_routine (struct mg_connection *nc)
     char *json; // used to log
 
     if (io->buf != NULL && io->size > 0) {
-        json = calloc (io->size + 1, sizeof (char));
+        json = CALLOC (io->size + 1, sizeof (char));
         strncpy (json, io->buf, io->size * sizeof (char));
 		json[io->size] = '\0';
-        data = convert_string_to_datastruct (io->buf); // parse a datastruct from the message received
+        data = convert_string_to_datastruct (json); // parse a datastruct from the message received
         mbuf_remove(io, io->size);      // Discard data from recv buffer
     } else {
         return;
@@ -133,6 +130,7 @@ event_routine (struct mg_connection *nc)
     switch (data->cmd) {
     	case EXIT :
         	exitFlag = true;
+        	log_info (json);
 			free_data_wrapper (data);
         	break;
     	case RECV :
@@ -143,7 +141,7 @@ event_routine (struct mg_connection *nc)
     	case SEND :
         	// mongoose is told that you want to send a message to a peer
         	log_info (json);
-        	relay_msg (data);
+        	relay_msg (data, nc);
 			// data wrapper is free'd in thread
         	break;
     	case UPDATE:
@@ -152,13 +150,6 @@ event_routine (struct mg_connection *nc)
         	break;
     	case GET_PEERS :
         	send_peer_list_to_client (data, nc);
-			free_data_wrapper (data);
-        	break;
-    	case HISTORY :
-        	// the client asked to receive the history
-        	// it specified the id and n lines
-        	// (id in json[id], n in json[msg]
-        	// send the various messages
 			free_data_wrapper (data);
         	break;
 		case HOST :
@@ -174,7 +165,7 @@ event_routine (struct mg_connection *nc)
 
 	if (json != NULL) {
 		// should alway be not null
-		free (json);
+		FREE (json);
 	}
 	// data should be freed inside the jump table because it can be used in threads
     return;
@@ -196,6 +187,10 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 int
 main(int argc, char **argv)
 {
+	if (argc < 2) {
+		fprintf (stdout, "USAGE...\n");
+		exit (EXIT_FAILURE);
+	}
     struct mg_mgr mgr;
     
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
@@ -213,33 +208,32 @@ main(int argc, char **argv)
     log_init ("error.log", "ERROR");
 
     HOSTNAME = read_tor_hostname ();
-    /*pthread_mutex_init (&sem, NULL); // initialize semaphore for log files // sem is in logger.cpp*/
 
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
+    struct mg_connection *nc; 
 
     // Note that many connections can be added to a single event manager
     // Connections can be created at any point, e.g. in event handler function
     if(argc == 2) {
-        mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
+        nc = mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
     } else if (argc == 3) {	// daemon
-        mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
+        nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
-
+	
+	mg_enable_multithreading (nc); // each new connection is handled in a separate thread
+										// neeeded because some functions are blocking
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
         // so mongoose halts and we can collect the threads
-        mg_mgr_poll(&mgr, 1000);
+        mg_mgr_poll(&mgr, 300);
     }
 
-    /*wait_all_threads ();*/ /* threads are detached
-								so there is no need to wait them and to keep track of them
-								but exit with pthread_exit instead of exit in order
-								for other threads not to be terminated
-							  */
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
-	destroy_mut(); // free the mutex allocated in list.c
+ 	destroy_mut(); // free the mutex allocated in list.c
     mg_mgr_free(&mgr); // terminate mongoose connection
-    free (HOSTNAME);
-	pthread_exit (0); 			// see above
+    if (HOSTNAME != NULL) {
+    	FREE (HOSTNAME);
+    }
+    exit (EXIT_SUCCESS);
 }

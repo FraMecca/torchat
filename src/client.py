@@ -42,7 +42,8 @@ if __name__ == '__main__':
     s.connect (("localhost", int (8000)))
     cmd = "SEND"
     # ip = "hisqz2dygtajbnf7.onion"
-    ip = "ld74fqvoxpu5yi73.onion"
+    # ip = "ld74fqvoxpu5yi73.onion"
+    ip = "c62ux3uhxn3ax6h4.onion"
     msg = str (time.time ())
     jsonStr = ''.join (['{"cmd": "', cmd, '","id":"', ip, '", "portno": ', str(portno), ',"msg": "', msg, '","date": "80"}'])
     print ("Sending encoded json: ", jsonStr)

@@ -16,9 +16,9 @@ enum command {
 	RECV,
 	UPDATE,
 	GET_PEERS,
-	HISTORY,
 	HOST,
 	END,
+	ERR,
 	EXIT
 };
 

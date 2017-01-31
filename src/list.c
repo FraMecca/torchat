@@ -1,10 +1,11 @@
-#include "../lib/datastructs.h" // struct list
+#include "lib/datastructs.h" // struct list
+#include "include/mem.h"
 #include <string.h> // strdup
-#include <stdlib.h> // malloc
-#include "../lib/util.h" // get_date
+#include <stdlib.h> // MALLOC
+#include "lib/util.h" // get_date
 #include <stdbool.h>
-#include "../lib/socks_helper.h" // send_message_to_socket
-#include "../include/uthash.h"
+#include "lib/socks_helper.h" // send_message_to_socket
+#include "include/uthash.h"
 #include <pthread.h> // mutexes
 
 static pthread_mutex_t *mut = NULL;
@@ -19,59 +20,13 @@ struct threadList {
 	struct threadList *next;
 };
 
-static struct threadList *threadListHead = NULL;
-static struct threadList *threadListTail = NULL;
-
-/*
-void
-keep_track_of_threads (pthread_t *newT)
-{
-	// not used
-	// see main.c
-	//
-	//
-	// this function is used to keep track of the threads opened
-	// it is a simple list of tids
-	// that later will be iterated in order to wait for each thread
-	struct threadList *ptr = malloc (sizeof (struct threadList));
-	if (ptr == NULL) {
-		exit_error ("malloc");
-	} else {
-		ptr->tid = newT;
-		ptr->next = NULL;
-	}
-
-	if (threadListHead == NULL) {
-		threadListHead = ptr;
-		threadListTail = ptr;
-	} else {
-		threadListTail->next = ptr;
-		threadListTail = ptr;
-	}
-}
-
-void 
-wait_all_threads ()
-{
-	// not used
-	// see main.c
-	while (threadListHead != NULL) {
-		pthread_join (*threadListHead->tid, NULL);
-		struct threadList *tmp = threadListHead;
-		threadListHead = threadListHead->next;
-		free (tmp->tid);
-		free (tmp);
-	}
-}
-*/
-
 static struct peer *
 new_peer (const char *id)
 {
 	// allocate a new peer list
-	struct peer *new = calloc (1, sizeof (struct peer));
+	struct peer *new = CALLOC (1, sizeof (struct peer));
 	if (new == NULL) {
-		exit_error ("calloc");
+		exit_error ("CALLOC");
 	}
 	strncpy (new->id, id, strlen (id));
 	new->msg = NULL;
@@ -86,7 +41,7 @@ insert_peer (const char *onion)
 	// returns the head
 	struct peer *new = new_peer (onion);
 	if (mut == NULL) {
-		mut = malloc (sizeof (pthread_mutex_t));
+		mut = MALLOC (sizeof (pthread_mutex_t));
 		pthread_mutex_init (mut, NULL);
 	}
 	if (pthread_mutex_lock (mut) != 0) {
@@ -103,7 +58,7 @@ get_peer (const char *id)
 {
 	struct peer *p;
 	if (mut == NULL) {
-		mut = malloc (sizeof (pthread_mutex_t));
+		mut = MALLOC (sizeof (pthread_mutex_t));
 		pthread_mutex_init (mut, NULL);
 	}
 	if (pthread_mutex_lock (mut) != 0) {
@@ -129,15 +84,15 @@ new_message (const char *content)
 {
 	// first allocate a new message node
 	// then insert content and date
-	struct message *new = malloc (sizeof (struct message));
+	struct message *new = MALLOC (sizeof (struct message));
 
 	if (new == NULL) {
-		exit_error ("malloc");
+		exit_error ("MALLOC");
 	}
 	new->next = NULL;
 	new->prev = NULL;
 	new->date = get_short_date ();
-	new->content = strdup (content);
+	new->content = STRDUP (content);
 	return new;
 }
 
@@ -174,25 +129,25 @@ insert_new_message  (const char *peerId, const char *content)
 static struct message *
 delete_message (struct message *msg)
 {
-	// frees the message and deletes its content
+	// FREEs the message and deletes its content
 	// delete all messages
 	struct message *tmp;
-	free(msg->content);
-	free(msg->date);
+	FREE(msg->content);
+	FREE(msg->date);
 	tmp = msg;
 	msg = msg->next;
-	free(tmp);
+	FREE(tmp);
 	return msg;
 }
 
 static void
 delete_peer(struct peer *currentPeer)
 {
-	// frees the peer given and deletes its id
+	// FREEs the peer given and deletes its id
 	// note: here we suppose that the msg list
-	// of the peer has already been freed (see delete_message)
+	// of the peer has already been FREEd (see delete_message)
 	if (mut == NULL) {
-		mut = malloc (sizeof (pthread_mutex_t));
+		mut = MALLOC (sizeof (pthread_mutex_t));
 		pthread_mutex_init (mut, NULL);
 	}
 	if (pthread_mutex_lock (mut) != 0) {
@@ -200,7 +155,7 @@ delete_peer(struct peer *currentPeer)
 	}
 	HASH_DEL (head, currentPeer);
 	if (currentPeer->msg != NULL) {
-		free (currentPeer->msg);
+		FREE (currentPeer->msg);
 	}
 	pthread_mutex_unlock (mut);
 }
@@ -221,7 +176,7 @@ get_unread_message(const char *peerId)
 		return NULL;
 	}
 	/*int len = strlen(msg->content)+strlen(msg->date)+3;*/
-	char *m = strdup(msg->content);
+	char *m = STRDUP(msg->content);
 	currentPeer->msg = delete_message (currentPeer->msg);
 	if (currentPeer->msg == NULL) {
 		// if we read every message of the peer, remove peer from hash table
@@ -248,7 +203,7 @@ get_peer_list ()
 		return NULL;
 	} else {
 		if (mut == NULL) {
-			mut = malloc (sizeof (pthread_mutex_t));
+			mut = MALLOC (sizeof (pthread_mutex_t));
 			pthread_mutex_init (mut, NULL);
 		}
 		if (pthread_mutex_lock (mut) != 0) {
@@ -257,7 +212,7 @@ get_peer_list ()
 		HASH_ITER (hh, head, ptr, tmp) {
 			size += strlen (ptr->id) + 1; // +1 is for the comma
 		}
-		char *peerList = calloc (size + 1, sizeof (char));
+		char *peerList = CALLOC (size + 1, sizeof (char));
 		HASH_ITER (hh, head, ptr, tmp) {
 			// iterate again and concatenate the char*
 			strncat (peerList, ptr->id, strlen (ptr->id));
@@ -281,8 +236,8 @@ clear_datastructs ()
 void
 destroy_mut()
 {
-	// avoid closing without freeing the mutex allocated memory
+	// avoid closing without FREEing the mutex allocated memory
 	if(mut != NULL){
-		free(mut);
+		FREE(mut);
 	}
 }

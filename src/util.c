@@ -1,4 +1,5 @@
-#include "../lib/util.h"
+#include "lib/util.h"
+#include "include/mem.h"
 #include <stdlib.h> // exit
 #include <errno.h> // perror
 #include <time.h> // localtime
@@ -24,7 +25,7 @@ get_date ()
 	char date[50];
 	strcpy (date, asctime (tm));
 	date[strlen (date)-1] = '\0'; // insert linetermination
-	return strdup (date);
+	return STRDUP (date);
 }
 
 char *
@@ -34,7 +35,7 @@ get_short_date ()
 	struct tm *tm = localtime (&t);
 	char date[50] = {0};
 	strftime(date, 8, "%H:%M", tm);
-	return strdup((char*)date);
+	return STRDUP ((char*)date);
 }
 
 void 

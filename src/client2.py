@@ -93,6 +93,13 @@ def elaborate_command (line, portno, ui):
         currId = peerList[i]
         return peerList, i
 
+def send_message (line, portno, ui):
+    # send message is multithread because socket recv is blocking
+    j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
+    resp = send_to_mongoose(j, portno, wait=True)
+    if resp['cmd'] == 'ERR':
+        print_line_cur(resp['msg'], ui, 1)
+
 def input_routine (portno, ui):
     c = Completer (['/help', '/exit', '/quit', '/peer'])
     # readline.set_completer (c.complete)
@@ -107,8 +114,8 @@ def input_routine (portno, ui):
             # clearly the default action if the user does not input a command is
             # to send the message
             print_line_cur (line, ui, 2)
-            j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
-            resp = send_to_mongoose(j, portno)
+            t = Thread(target=send_message, args=(line, portno, ui))
+            t.start ()
             c.update ([line])
         elif line != "":
             # the user input a command,
@@ -140,11 +147,8 @@ def send_to_mongoose (j, portno, wait=False):
     s.send (bytes (json.dumps (j), 'utf-8'))
     # wait for response only when needed (not for SEND)
     if wait:
-        try:
             resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
             return resp
-        except:
-            pass
 
 def get_peers(portno, ui, hostname):
     # ask for a list of peers with pending messages

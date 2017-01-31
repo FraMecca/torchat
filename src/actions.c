@@ -1,13 +1,16 @@
-#include "../include/mongoose.h"  // Include Mongoose API definitions
+#include "include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <pthread.h>
-#include "../lib/datastructs.h"
-#include "../lib/socks_helper.h"
-#include "../lib/util.h"
+#include "include/mem.h"
+#include "lib/datastructs.h"
+#include "lib/socks_helper.h"
+#include "lib/util.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
+extern char * generate_error_json (const struct data_wrapper *data, char *error);
+extern void log_info (char *json); // from logger.cpp
+extern void log_err (char *json); // from logger.cpp
 extern char * HOSTNAME;
 // in this file there are the various functions used by main::event_routine
 // related to the various commands
@@ -17,61 +20,93 @@ void
 free_data_wrapper (struct data_wrapper *data)
 {
 	if (data->msg != NULL) {
-		free (data->msg);
+		FREE (data->msg);
 	}
 	if (data->date != NULL) {
-		free (data->date);
+		FREE (data->date);
 	}
-	if  (data != NULL) {
-		free (data);
-	}
+	FREE (data);
 }
 
-static void *
-send_routine(void *d)
+void
+announce_exit (struct data_wrapper *data, struct mg_connection *nc)
 {
-	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
-	// there is no need to call pthread_join, but thread resources need to be terminated
-	//
-	char id[30];
-	struct data_wrapper *data = (struct data_wrapper*) d;
+	// reply to client saying that you ACK the exit request and
+	// the server is exiting
+	data->cmd = END;
+	FREE (data->msg);
+	data->msg = STRDUP ("");
+	char *jOk = convert_datastruct_to_char (data);
+	/*log_info (msg);*/
+	mg_send(nc, jOk, strlen(jOk));
+	FREE (jOk);
+}
 
-	strcpy (id, data->id); // save dest address
-	strcpy (data->id, HOSTNAME);
-	data->cmd = RECV;
-	/*if (data->date != NULL) {*/ // not needed anymore because on RECV there is no date field on json
-		/*free (data->date);*/
-	/*}*/
-	/*data->date = get_short_date();*/
-
-	char *msg = convert_datastruct_to_char (data);
-	bool ret = send_over_tor (id, data->portno, msg, 9250);
-
-	if (!ret) {
-		exit_error ("send_over_tor");
+static char *
+explain_sock_error (const char e)
+{
+	/*
+	 * in case of error the message returned to the client has in the msg field
+	 * an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
+	 */
+	switch (e) {
+		case  9 :
+			// not in RFC,
+			// used when handshake fails, so probably TOR has not been started
+			return STRDUP ("Could not send message. Is TOR running?");
+		case '1' :
+			return STRDUP ("general SOCKS server failure");
+		case '2' :
+			return STRDUP ("connection not allowed by ruleset");
+		case '3' :
+			return STRDUP ("Network unreachable");
+		case '4' :
+			return STRDUP ("Host unreachable");
+		case '5' :
+			return STRDUP ("Connection refused");
+		case '6' : 
+			return STRDUP ("TTL expired");
+		case '7' :
+			return STRDUP ("Command not supported");
+		case '8' :
+			return STRDUP ("Address type not supported");
+		default :
+			return STRDUP ("TOR couldn't send the message"); // shouldn't go here
 	}
-	free (msg);
-	free_data_wrapper (data);
-	pthread_exit(NULL); // implicit
 }
 
 // relay client msg to the another peer on the tor network
 void
-relay_msg (struct data_wrapper *data)
+relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 {
-	pthread_t t;
-	pthread_attr_t attr; // create an attribute to specify that thread is detached
-	if (pthread_attr_init(&attr) != 0) {
-		// initialize pthread attr and check if error
-		exit_error ("pthread_attr_init");
+	char id[30];
+	strcpy (id, data->id); // save dest address
+	strcpy (data->id, HOSTNAME);
+	data->cmd = RECV;
+
+	char *msg = convert_datastruct_to_char (data);
+	char ret = send_over_tor (id, data->portno, msg, 9250);
+	FREE (msg);
+	FREE (data->msg); // substitude below
+
+	if (ret != 0) {
+		// this informs the client that an error has happened
+		// substitute cmd with ERR and msg with RFC error
+		data->cmd = ERR;
+		data->msg = explain_sock_error (ret);
+		char *jError = convert_datastruct_to_char (data);
+		log_err (jError);
+		mg_send(nc, jError, strlen(jError));
+		FREE(jError);
+	} else {
+		data->cmd = END;
+		data->msg = STRDUP (""); // is just an ACK, message can be empty
+		char *jOk = convert_datastruct_to_char (data);
+		/*log_info (jOk);*/
+		mg_send(nc, jOk, strlen(jOk));
+		FREE (jOk);
 	}
-	// set detached state
-	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
-	    exit_error ("pthread_attr_setdetachstate");
-	}
-	pthread_create(&t, &attr, &send_routine,(void*) data);
-	/*pthread_join(t, NULL);*/ //not needed, thread is detached and memory released on exit
-	return;
+	free_data_wrapper (data);
 }
 
 void
@@ -100,14 +135,14 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 	char *msg;
 	if((msg = get_unread_message(data->msg)) != NULL){
 		// now we convert the message in a json and send it
-		free (data->msg);
+		FREE (data->msg);
 		data->msg = msg;
 	} else {
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
 	mg_send (nc, unreadMsg, strlen(unreadMsg));
-	free (unreadMsg);
+	FREE (unreadMsg);
 }
 
 void
@@ -116,10 +151,10 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 	// the hostname is sent as a json (similarly to the peer list function below)
 	// the hostname is in the data->msg field, this is an explicit request from the client
 	//
-	free(data->msg);
-	data->msg = strdup(hostname);
+	FREE(data->msg);
+	data->msg = STRDUP(hostname);
 	if(data->msg == NULL){
-		data->msg = strdup("");
+		data->msg = STRDUP("");
 		// should be a connection error here, but better be safe
 	}
 
@@ -128,7 +163,7 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 		// if iface is not null the client is waiting for response
 		mg_send (nc, response, strlen (response));
 	}
-	free (response);
+	FREE (response);
 
 }
 
@@ -139,10 +174,10 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 	// send the list as a parsed json, with peer field comma divided
 	// the char containing the list of peers commadivided is then put into a json 
 	// just store it in data.msg
-	free (data->msg);
+	FREE (data->msg);
 	data->msg = get_peer_list ();
 	if (data->msg == NULL) {
-		data->msg = strdup ("");
+		data->msg = STRDUP ("");
 		// needed if no peers messaged us
 	}
 	char *response = convert_datastruct_to_char (data);
@@ -150,5 +185,5 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 		// if iface is not null the client is waiting for response
 		mg_send (nc, response, strlen (response));
 	}
-	free (response);
+	FREE (response);
 }

@@ -144,10 +144,10 @@ One possible JSON may be:
 ```
 /*
  * json j = {
+ * {"date" = "31-10-2016"}, // not always used
  * {"cmd" = SEND},
  * {"portno" = 80},
  * {"id" = "ld74fqvoxpu5yi73.onion" },
- * {"date" = "31-10-2016"},
  * {"msg" = "Alice says hi"}
  * }
  */
@@ -162,9 +162,12 @@ Commands are:
 * UPDATE : the client is polling for unread messages from a peer ("id" field);
 * GET_PEERS : the client asks the daemon for the id of the peers that wrote one or more messages;
 * HISTORY : the client is asking the daemon for the previous n ("msg" field) lines of conversation with a peer ("id" field);
-* HOST: the client is asking the daemon for the current hostname, that is, its current onion address.
-* END : the daemon notifies that the previous command has no response;
+* HOST : the client is asking the daemon for the current hostname, that is, its current onion address;
+* END : the daemon notifies that the previous command has succeded and that communication can end;
 * EXIT : starts exit procedure (clean datastructs and exit cleanly).
+* ERROR : in case TOR can't send the message or there is a sock failure, it reports the error;
+
+The `date` field is used only when the daemon communicates with the server. It must not be used when sending message between different hosts.
 
 ## Disclaimer
 
