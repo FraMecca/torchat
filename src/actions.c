@@ -16,59 +16,11 @@ extern char * HOSTNAME;
 // related to the various commands
 //
 //
-//***************************************************
-static char *
-explain_sock_error (const char e);
 struct data_conn { 
 	// used to wrap dataW and nc for pthread
 	struct data_wrapper *dataw;
 	struct mg_connection *conn;
 };
-
-static void *
-send_routine(void *d)
-{
-	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
-	// there is no need to call pthread_join, but thread resources need to be terminated
-	//
-	char id[30];
-	struct data_conn *dc = (struct data_conn*) d;
-	struct data_wrapper *data = dc->dataw;
-	struct mg_connection *nc = dc->conn;
-
-	strcpy (id, data->id); // save dest address
-	strcpy (data->id, HOSTNAME);
-	data->cmd = RECV;
-	/*if (data->date != NULL) {*/ // not needed anymore because on RECV there is no date field on json
-		/*free (data->date);*/
-	/*}*/
-	/*data->date = get_short_date();*/
-
-	char *msg = convert_datastruct_to_char (data);
-	char ret = send_over_tor (id, data->portno, msg, 9250);
-
-	if (ret != 0) {
-		// this informs the client that an error has happened
-		// substitute cmd with ERR and msg with RFC error
-		data->cmd = ERR;
-		data->msg = explain_sock_error (ret);
-		char *jError = convert_datastruct_to_char (data);
-		log_err (jError);
-		mg_send(nc, jError, strlen(jError));
-		FREE(jError);
-	} else {
-		data->cmd = END;
-		data->msg = STRDUP (""); // is just an ACK, message can be empty
-		char *jOk = convert_datastruct_to_char (data);
-		log_info (jOk);
-		mg_send(nc, jOk, strlen(jOk));
-		FREE (jOk);
-	}
-	FREE (msg);
-	free_data_wrapper (data);
-	pthread_exit(0); // implicit
-}
-//***************************************************
 
 
 void
@@ -130,6 +82,46 @@ explain_sock_error (const char e)
 	}
 }
 
+static void *
+send_routine(void *d)
+{
+	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
+	// there is no need to call pthread_join, but thread resources need to be terminated
+	//
+	char id[30];
+	struct data_conn *dc = (struct data_conn*) d;
+	struct data_wrapper *data = dc->dataw;
+	struct mg_connection *nc = dc->conn;
+
+	strcpy (id, data->id); // save dest address
+	strcpy (data->id, HOSTNAME);
+	data->cmd = RECV;
+
+	char *msg = convert_datastruct_to_char (data);
+	char ret = send_over_tor (id, data->portno, msg, 9250);
+
+	if (ret != 0) {
+		// this informs the client that an error has happened
+		// substitute cmd with ERR and msg with RFC error
+		data->cmd = ERR;
+		data->msg = explain_sock_error (ret);
+		char *jError = convert_datastruct_to_char (data);
+		log_err (jError);
+		mg_send(nc, jError, strlen(jError));
+		FREE(jError);
+	} else {
+		data->cmd = END;
+		data->msg = STRDUP (""); // is just an ACK, message can be empty
+		char *jOk = convert_datastruct_to_char (data);
+		log_info (jOk);
+		mg_send(nc, jOk, strlen(jOk));
+		FREE (jOk);
+	}
+	FREE (msg);
+	free_data_wrapper (data);
+	pthread_exit(0); // implicit
+}
+
 void
 relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 {
@@ -152,39 +144,6 @@ relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 	/*free(dataw);*/
 	return;
 }
-// relay client msg to the another peer on the tor network
-/*void*/
-/*relay_msg (struct data_wrapper *data, struct mg_connection *nc)*/
-/*{*/
-	/*char id[30];*/
-	/*strcpy (id, data->id); // save dest address*/
-	/*strcpy (data->id, HOSTNAME);*/
-	/*data->cmd = RECV;*/
-
-	/*char *msg = convert_datastruct_to_char (data);*/
-	/*char ret = send_over_tor (id, data->portno, msg, 9250);*/
-	/*FREE (msg);*/
-	/*FREE (data->msg); // substitude below*/
-
-	/*if (ret != 0) {*/
-		/*// this informs the client that an error has happened*/
-		/*// substitute cmd with ERR and msg with RFC error*/
-		/*data->cmd = ERR;*/
-		/*data->msg = explain_sock_error (ret);*/
-		/*char *jError = convert_datastruct_to_char (data);*/
-		/*log_err (jError);*/
-		/*mg_send(nc, jError, strlen(jError));*/
-		/*FREE(jError);*/
-	/*} else {*/
-		/*data->cmd = END;*/
-		/*data->msg = STRDUP (""); // is just an ACK, message can be empty*/
-		/*char *jOk = convert_datastruct_to_char (data);*/
-		/*[>log_info (jOk);<]*/
-		/*mg_send(nc, jOk, strlen(jOk));*/
-		/*FREE (jOk);*/
-	/*}*/
-	/*free_data_wrapper (data);*/
-/*}*/
 
 void
 store_msg (struct data_wrapper *data)
