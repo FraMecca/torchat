@@ -181,6 +181,9 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
     // now we just utilize MG_EV_RECV because the response must be send over TOR
     if (ev == MG_EV_RECV) {
         event_routine (nc);
+    /*} else if (ev == MG_EV_CLOSE) {*/
+		/*nc = NULL;*/
+        /*return;*/
     }
 }
 
@@ -220,7 +223,7 @@ main(int argc, char **argv)
         nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
 	
-	mg_enable_multithreading (nc); // each new connection is handled in a separate thread
+	/*mg_enable_multithreading (nc); // each new connection is handled in a separate thread*/
 										// neeeded because some functions are blocking
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
