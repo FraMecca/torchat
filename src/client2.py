@@ -138,7 +138,7 @@ def create_json (cmd='', msg='', id='localhost', portno=8000):
         j['portno'] = portno
         j['msg'] = msg
         j['cmd'] = cmd
-        j['date'] = strftime("[%H:%M] ", t)
+        j['date'] = strftime("%H:%M", t)
         return j
 
 def send_to_mongoose (j, portno, wait=False):
