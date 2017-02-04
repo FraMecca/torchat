@@ -109,21 +109,21 @@ explain_sock_error (const char e)
 			// not in RFC,
 			// used when handshake fails, so probably TOR has not been started
 			return STRDUP ("Could not send message. Is TOR running?");
-		case '1' :
+		case 1 :
 			return STRDUP ("general SOCKS server failure");
-		case '2' :
+		case 2 :
 			return STRDUP ("connection not allowed by ruleset");
-		case '3' :
+		case 3 :
 			return STRDUP ("Network unreachable");
-		case '4' :
+		case 4 :
 			return STRDUP ("Host unreachable");
-		case '5' :
+		case 5 :
 			return STRDUP ("Connection refused");
-		case '6' : 
+		case 6 : 
 			return STRDUP ("TTL expired");
-		case '7' :
+		case 7 :
 			return STRDUP ("Command not supported");
-		case '8' :
+		case 8 :
 			return STRDUP ("Address type not supported");
 		default :
 			return STRDUP ("TOR couldn't send the message"); // shouldn't go here
