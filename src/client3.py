@@ -14,7 +14,7 @@ def ask_cleverbot (msg):
     global cb
     if cb == None:
         print ("Starting cleverbot istance")
-        cb = Cleverbot ()
+        cb = Cleverbot ("TORchat")
     resp = cb.ask (msg)
     sleep (1)
     print ('HOST:       ', resp)
