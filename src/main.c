@@ -11,6 +11,7 @@
 #include "lib/datastructs.h"
 #include "lib/socks_helper.h"
 #include "lib/util.h"
+#include "lib/file_upload.h" //file upload support
 #include "lib/actions.h" // event_routine functions
 
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
@@ -152,6 +153,9 @@ event_routine (struct mg_connection *nc)
         	send_peer_list_to_client (data, nc);
 			free_data_wrapper (data);
         	break;
+		case FILEUP :
+			// manage file uploading
+			break;
 		case HOST :
 			// the client required the hostname of the server
 			// send as a formatted json
@@ -195,7 +199,7 @@ main(int argc, char **argv)
 		exit (EXIT_FAILURE);
 	}
     struct mg_mgr mgr;
-    
+
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
         fprintf(stdout, "Starting in daemon mode.\n");
         start_daemon();
@@ -222,9 +226,12 @@ main(int argc, char **argv)
     } else if (argc == 3) {	// daemon
         nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
-	
-	/*mg_enable_multithreading (nc); // each new connection is handled in a separate thread*/
-										// neeeded because some functions are blocking
+
+	// Register an endpoint (for file uploads)
+	mg_register_http_endpoint(nc, "/upload", handle_upload);
+	// Add http events management to the connection
+  	mg_set_protocol_http_websocket(nc);
+
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
         // so mongoose halts and we can collect the threads
