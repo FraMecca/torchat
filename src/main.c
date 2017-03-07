@@ -182,12 +182,12 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
         // can trash
         return;
     }
-	if (ev == MG_EV_HTTP_PART_BEGIN){
+	if (ev == MG_EV_HTTP_PART_BEGIN || ev == MG_EV_HTTP_PART_DATA || ev == MG_EV_HTTP_PART_END){
 		handle_upload(nc, ev, ev_data);
 	}
     // now we just utilize MG_EV_RECV because the response must be send over TOR
     if (ev == MG_EV_RECV) {
-        event_routine (nc);
+        event_routine (
     /*} else if (ev == MG_EV_CLOSE) {*/
 		/*nc = NULL;*/
         /*return;*/
