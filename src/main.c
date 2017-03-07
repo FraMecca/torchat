@@ -182,6 +182,9 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
         // can trash
         return;
     }
+	if (ev == MG_EV_HTTP_PART_BEGIN){
+		handle_upload(nc, ev, ev_data);
+	}
     // now we just utilize MG_EV_RECV because the response must be send over TOR
     if (ev == MG_EV_RECV) {
         event_routine (nc);
@@ -218,7 +221,7 @@ main(int argc, char **argv)
 
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
     struct mg_connection *nc; 
-
+	
     // Note that many connections can be added to a single event manager
     // Connections can be created at any point, e.g. in event handler function
     if(argc == 2) {
@@ -226,11 +229,12 @@ main(int argc, char **argv)
     } else if (argc == 3) {	// daemon
         nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
-
+	
 	// Register an endpoint (for file uploads)
 	mg_register_http_endpoint(nc, "/upload", handle_upload);
 	// Add http events management to the connection
   	mg_set_protocol_http_websocket(nc);
+
 
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
