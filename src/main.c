@@ -184,15 +184,11 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
     }
 	if (ev == MG_EV_HTTP_PART_BEGIN || ev == MG_EV_HTTP_PART_DATA || ev == MG_EV_HTTP_PART_END){
 		handle_upload(nc, ev, ev_data);
+		return;
 	}
     // now we just utilize MG_EV_RECV because the response must be send over TOR
-    else {
-		if (ev == MG_EV_RECV) {
+    else if (ev == MG_EV_RECV) {
         	event_routine (nc);
-    /*} else if (ev == MG_EV_CLOSE) {*/
-		/*nc = NULL;*/
-        /*return;*/
-    	}
 	}
 }
 
@@ -231,11 +227,12 @@ main(int argc, char **argv)
     } else if (argc == 3) {	// daemon
         nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
-	
+
+	// this doesn't work (yet)
 	// Register an endpoint (for file uploads)
-	mg_register_http_endpoint(nc, "/upload", handle_upload);
-	// Add http events management to the connection
-  	mg_set_protocol_http_websocket(nc);
+	/*mg_register_http_endpoint(nc, "/upload", handle_upload);*/
+	/*// Add http events management to the connection*/
+      /*mg_set_protocol_http_websocket(nc);*/
 
 
     while (!exitFlag) {  // start poll loop
