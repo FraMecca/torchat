@@ -102,18 +102,12 @@ read_tor_hostname (void)
 }
 
 void
-event_routine (struct mg_connection *nc, int ev, void *ev_data)
+event_routine (struct mg_connection *nc)
 {
     /*struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype*/
     struct mbuf *io = &nc->recv_mbuf;
     struct data_wrapper *data;
     char *json; // used to log
-
-	// for file uploads use a different handler
-	if (ev == MG_EV_HTTP_PART_BEGIN || ev == MG_EV_HTTP_PART_DATA || ev == MG_EV_HTTP_PART_END){
-		handle_upload(nc, ev, ev_data);
-		return;
-	}
 
     if (io->buf != NULL && io->size > 0) {
         json = CALLOC (io->size + 1, sizeof (char));
@@ -188,9 +182,14 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
         // can trash
         return;
     }
+	if (ev == MG_EV_HTTP_PART_BEGIN || ev == MG_EV_HTTP_PART_DATA || ev == MG_EV_HTTP_PART_END){
+		handle_upload(nc, ev, ev_data);
+		return;
+	}
     // now we just utilize MG_EV_RECV because the response must be send over TOR
     else if (ev == MG_EV_RECV) {
-        	event_routine (nc, ev, ev_data);
+		event_routine (nc);
+		return;
 	}
 }
 
