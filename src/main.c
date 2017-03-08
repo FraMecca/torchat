@@ -231,9 +231,9 @@ main(int argc, char **argv)
 
 	// this doesn't work (yet)
 	// Register an endpoint (for file uploads)
-	/*mg_register_http_endpoint(nc, "/upload", handle_upload);*/
-	/*// Add http events management to the connection*/
-      /*mg_set_protocol_http_websocket(nc);*/
+	mg_register_http_endpoint(nc, "/upload", handle_upload);
+	// Add http events management to the connection
+	mg_set_protocol_http_websocket(nc);
 
 
     while (!exitFlag) {  // start poll loop
