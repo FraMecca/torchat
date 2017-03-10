@@ -76,13 +76,22 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
   }
 }
 
-static bool file_received = true;
-static void * 
-file_upload_poll (void * mgr)
+static bool file_received = false;
+static void *
+file_upload_poll ()
 {
+    struct mg_mgr mgr;
+    mg_mgr_init(&mgr, NULL);  // Initialize event manager object
+
+    struct mg_connection *nc; 
+    nc = mg_bind(&mgr, "8001", handle_upload);  // Create listening connection and add it to the event manager
+	
+	// Add http events management to the connection
+	mg_set_protocol_http_websocket(nc);
+
 	while (!file_received) {
-        mg_mgr_poll((struct mg_mgr *) mgr, 300);
-    } 
+        mg_mgr_poll(&mgr, 300);
+    }
     return 0;
 }
 
@@ -101,20 +110,13 @@ manage_file_upload (struct data_wrapper *data)
  	// bind to it
  	// send a json confirming the acceptance and the selected port
  	// wait for file with the http ev handler
- 	//
+
 	// select random portrange
 	srand (time (NULL));
 	int p = rand () % (65535 - 2048) + 2048;
 	char port[6];
 	snprintf (port, sizeof (port), "%d", p);
 
-    struct mg_mgr mgr;
-    mg_mgr_init(&mgr, NULL);  // Initialize event manager object
-    struct mg_connection *nc; 
-    nc = mg_bind(&mgr, port, handle_upload);  // Create listening connection and add it to the event manager
-	// Add http events management to the connection
-	mg_set_protocol_http_websocket(nc);
-	
 	// advertise port
 	advertise_port (data, port); // just fill data_wrapper with information on port // main.c sends the msg
 	pthread_t t;
@@ -127,6 +129,6 @@ manage_file_upload (struct data_wrapper *data)
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 	    exit_error ("pthread_attr_setdetachstate");
 	}
-	pthread_create(&t, &attr, &file_upload_poll, (void * )&mgr);
+	pthread_create(&t, &attr, &file_upload_poll, NULL);
 	return;
 }

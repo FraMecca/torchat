@@ -52,10 +52,12 @@ convert_to_enum (const std::string cmd)
 		return END;
 	} else if (cmd == "FILEUP")	{
 		return FILEUP;
+	} else if (cmd == "FILEALLOC")	{
+		return FILEALLOC;
+	} else if (cmd == "FILEPORT")	{
+		return FILEPORT;
 	} else if (cmd == "HOST") {
 		return HOST;
-	} else if (cmd == "FILEPORT") {
-		return FILEPORT;
 	} else /* if (cmd == "ERR") */ {
 		// it is the default case
 		return ERR;
@@ -93,6 +95,9 @@ convert_from_enum (const enum command c)
 			break;
 		case FILEPORT :
 			st = "FILEPORT";
+			break;
+		case FILEALLOC :
+			st = "FILEALLOC";
 			break;
 		case ERR :
 			st = "ERR";

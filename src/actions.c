@@ -93,9 +93,15 @@ send_routine(void *d)
 	struct data_wrapper *data = dc->dataw;
 	struct mg_connection *nc = dc->conn;
 
-	strcpy (id, data->id); // save dest address
-	strcpy (data->id, HOSTNAME);
-	data->cmd = RECV;
+
+	// needed for file upload
+	if (data->cmd == FILEALLOC){
+		data->cmd = FILEUP;
+	} else {
+		data->cmd = RECV;
+		strcpy (id, data->id); // save dest address
+		strcpy (data->id, HOSTNAME);
+	}
 
 	char *msg = convert_datastruct_to_char (data);
 	char ret = send_over_tor (id, data->portno, msg, 9250);
@@ -182,7 +188,21 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 }
 
 void
-send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, char*hostname)
+send_fileport_to_client(struct data_wrapper *data, struct mg_connection *nc)
+{
+	// the port is sent as a json 
+	// the port is in the data->msg field
+
+	char *response = convert_datastruct_to_char (data);
+	if (nc->iface != NULL) {
+		// if iface is not null the client is waiting for response
+		mg_send (nc, response, strlen (response));
+	}
+	FREE (response);
+
+}
+void
+send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, char *hostname)
 {
 	// the hostname is sent as a json (similarly to the peer list function below)
 	// the hostname is in the data->msg field, this is an explicit request from the client

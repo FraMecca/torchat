@@ -153,10 +153,18 @@ event_routine (struct mg_connection *nc)
         	send_peer_list_to_client (data, nc);
 			free_data_wrapper (data);
         	break;
+		case FILEALLOC :
+			// relay FILEUP to the peer's server
+			log_info (json);
+			relay_msg(data, nc);
+			break;
 		case FILEUP :
 			// manage file uploading
 			manage_file_upload (data);
 			relay_msg (data, nc);
+			break;
+		case FILEPORT:
+			send_fileport_to_client(data,nc);
 			break;
 		case HOST :
 			// the client required the hostname of the server

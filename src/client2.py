@@ -73,6 +73,13 @@ def update_routine(portno, ui):
             print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
             lock.release()
 
+def send_message (line, portno, ui):
+    # send message is multithread because socket recv is blocking
+    j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
+    resp = send_to_mongoose(j, portno, wait=True)
+    if resp['cmd'] == 'ERR':
+        print_line_cur(resp['msg'], ui, 1)
+
 def elaborate_command (line, portno, ui):
     global exitFlag
     global currId
@@ -92,13 +99,23 @@ def elaborate_command (line, portno, ui):
         peerList, i = get_peers(portno, ui)
         currId = peerList[i]
         return peerList, i
+    elif line == '/fileup':
+        j = create_json(cmd='FILEALLOC', msg='', id=currId)
+        resp = send_to_mongoose(j, portno, wait=True)
+        port = resp["msg"]
+        return port
 
-def send_message (line, portno, ui):
-    # send message is multithread because socket recv is blocking
-    j = create_json(cmd='SEND', msg=line, id=currId, portno = 80)
-    resp = send_to_mongoose(j, portno, wait=True)
-    if resp['cmd'] == 'ERR':
-        print_line_cur(resp['msg'], ui, 1)
+
+def manage_commands(line, portno, ui):
+    if line == "/peer":
+        peerList, i = elaborate_command (line, portno, ui)
+        # if it gets here, is because we changed peer
+        ui.chatbuffer = []
+        ui.linebuffer = []
+        ui.redraw_ui(i)
+    elif line == "/fileup":
+        port = elaborate_command(line, portno, ui)
+        print_line_cur ("You can send at port: " + port, ui, 2)
 
 def input_routine (portno, ui):
     c = Completer (['/help', '/exit', '/quit', '/peer'])
@@ -120,11 +137,7 @@ def input_routine (portno, ui):
         elif line != "":
             # the user input a command,
             # they start with /
-            peerList, i = elaborate_command (line, portno, ui)
-            # if it gets here, is because we changed peer
-            ui.chatbuffer = []
-            ui.linebuffer = []
-            ui.redraw_ui(i)
+            manage_commands(line, portno, ui)
 
 
 def create_json (cmd='', msg='', id='localhost', portno=8000):
