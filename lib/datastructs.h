@@ -20,6 +20,7 @@ enum command {
 	END,
 	ERR,
 	FILEUP,
+	FILEPORT,
 	EXIT
 };
 

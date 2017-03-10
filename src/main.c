@@ -155,6 +155,8 @@ event_routine (struct mg_connection *nc)
         	break;
 		case FILEUP :
 			// manage file uploading
+			manage_file_upload (data);
+			relay_msg (data, nc);
 			break;
 		case HOST :
 			// the client required the hostname of the server
@@ -180,16 +182,9 @@ ev_handler(struct mg_connection *nc, int ev, void *ev_data)
 {
     if (nc->recv_mbuf.size == 0) {
         // can trash
-        return;
-    }
-	if (ev == MG_EV_HTTP_PART_BEGIN || ev == MG_EV_HTTP_PART_DATA || ev == MG_EV_HTTP_PART_END){
-		handle_upload(nc, ev, ev_data);
-		return;
-	}
-    // now we just utilize MG_EV_RECV because the response must be send over TOR
-    else if (ev == MG_EV_RECV) {
+    } else if (ev == MG_EV_RECV) {
+	// now we just utilize MG_EV_RECV because the response must be send over TOR
 		event_routine (nc);
-		return;
 	}
 }
 
@@ -200,7 +195,6 @@ main(int argc, char **argv)
 		fprintf (stdout, "USAGE...\n");
 		exit (EXIT_FAILURE);
 	}
-    struct mg_mgr mgr;
 
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
         fprintf(stdout, "Starting in daemon mode.\n");
@@ -218,6 +212,7 @@ main(int argc, char **argv)
 
     HOSTNAME = read_tor_hostname ();
 
+    struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
     struct mg_connection *nc; 
 	
@@ -229,9 +224,6 @@ main(int argc, char **argv)
         nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
 
-	// this doesn't work (yet)
-	// Register an endpoint (for file uploads)
-	mg_register_http_endpoint(nc, "/upload", handle_upload);
 	// Add http events management to the connection
 	mg_set_protocol_http_websocket(nc);
 

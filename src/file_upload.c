@@ -1,7 +1,12 @@
 #include "lib/file_upload.h"
+#include "lib/datastructs.h"
+#include "include/mem.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdbool.h>
 #include <stdlib.h>
+#include <time.h>
+#include <pthread.h>
 
 static int nosaveFlag = 0; // used to determine if tmpfile has to be removed or not
 
@@ -10,7 +15,7 @@ struct file_writer_data {
   size_t bytes_written;
 };
 
-void
+static void
 handle_upload(struct mg_connection *nc, int ev, void *p) {
 	// This function is called from the mg http event parser
 	// It is used to save a file to a local directory as soon as
@@ -19,7 +24,8 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
 	struct file_writer_data *data = (struct file_writer_data *) nc->user_data;
 	struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
 
-	switch (ev) {
+	// check io len, see main.c:112
+	 switch (ev) {
 		case MG_EV_HTTP_PART_BEGIN: {
 		  // the first time an uploaded file is received, populate the data struct
 		  if (data == NULL) { 
@@ -70,3 +76,57 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
   }
 }
 
+static bool file_received = true;
+static void * 
+file_upload_poll (void * mgr)
+{
+	while (!file_received) {
+        mg_mgr_poll((struct mg_mgr *) mgr, 300);
+    } 
+    return 0;
+}
+
+static void
+advertise_port (struct data_wrapper *data, char *port)
+{
+	data->cmd = FILEPORT;
+	FREE (data->msg);
+	data->msg = STRDUP (port);
+}
+
+void
+manage_file_upload (struct data_wrapper *data)
+{
+ 	// select a new random port
+ 	// bind to it
+ 	// send a json confirming the acceptance and the selected port
+ 	// wait for file with the http ev handler
+ 	//
+	// select random portrange
+	srand (time (NULL));
+	int p = rand () % (65535 - 2048) + 2048;
+	char port[6];
+	snprintf (port, sizeof (port), "%d", p);
+
+    struct mg_mgr mgr;
+    mg_mgr_init(&mgr, NULL);  // Initialize event manager object
+    struct mg_connection *nc; 
+    nc = mg_bind(&mgr, port, handle_upload);  // Create listening connection and add it to the event manager
+	// Add http events management to the connection
+	mg_set_protocol_http_websocket(nc);
+	
+	// advertise port
+	advertise_port (data, port); // just fill data_wrapper with information on port // main.c sends the msg
+	pthread_t t;
+	pthread_attr_t attr; // create an attribute to specify that thread is detached
+	if (pthread_attr_init(&attr) != 0) {
+		// initialize pthread attr and check if error
+		exit_error ("pthread_attr_init");
+	}
+	// set detached state
+	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
+	    exit_error ("pthread_attr_setdetachstate");
+	}
+	pthread_create(&t, &attr, &file_upload_poll, (void * )&mgr);
+	return;
+}

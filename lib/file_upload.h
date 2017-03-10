@@ -1,4 +1,6 @@
 #pragma once
 #include "include/mongoose.h"
+#include "lib/datastructs.h"
+#include "lib/util.h"
 void
-handle_upload(struct mg_connection *nc, int ev, void *p);
+manage_file_upload (struct data_wrapper *data);
