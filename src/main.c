@@ -224,8 +224,6 @@ main(int argc, char **argv)
         nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
 
-	// Add http events management to the connection
-	mg_set_protocol_http_websocket(nc);
 
 
     while (!exitFlag) {  // start poll loop
