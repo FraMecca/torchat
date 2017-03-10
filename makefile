@@ -1,10 +1,10 @@
 ALL = $(SRC) $(INCLUDE)
-SRC = src/main.c src/socks_helper.c src/util.c src/list.c src/actions.c
+SRC = src/main.c src/socks_helper.c src/util.c src/list.c src/actions.c src/file_upload.c
 INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c
 LDIR := $(PWD)
 ND = -DNDEBUG
 DEBUG = -Wall -Wextra -DDEBUG -g
-CF = -DMG_ENABLE_THREADS -DMG_ENABLE_HTTP_WEBSOCKET=0
+CF = -DMG_ENABLE_THREADS -DMG_ENABLE_HTTP_WEBSOCKET=0 -DMG_ENABLE_HTTP_STREAMING_MULTIPART
 I = -I. -Iinclude -Ilib
 
 

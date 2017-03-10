@@ -19,6 +19,7 @@ enum command {
 	HOST,
 	END,
 	ERR,
+	FILEUP,
 	EXIT
 };
 

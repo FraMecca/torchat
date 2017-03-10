@@ -50,6 +50,8 @@ convert_to_enum (const std::string cmd)
 		return UPDATE;
 	} else if (cmd == "END") {
 		return END;
+	} else if (cmd == "FILEUP")	{
+		return FILEUP;
 	} else if (cmd == "HOST") {
 		return HOST;
 	} else /* if (cmd == "ERR") */ {
@@ -83,6 +85,9 @@ convert_from_enum (const enum command c)
 			break;
 		case HOST :
 			st = "HOST";
+			break;
+		case FILEUP :
+			st = "FILEUP";
 			break;
 		case ERR :
 			st = "ERR";
