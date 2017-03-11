@@ -43,6 +43,7 @@ def update_routine(t, currId):
             # sleep(0.5)
             return
         else:
+            print (resp)
             response = ask_cleverbot (resp['msg'])
             while True:
                 j = t.create_json(cmd='SEND', msg=response, id=currId, portno = 80)
@@ -59,7 +60,7 @@ def main (portno):
         for userid in peerlist:
 #             currid = userid
             update_routine (t, userid)
-        sleep (1)
+        # sleep (1)
 
 
 # the wrapper is a curses function which performs a standard init process
