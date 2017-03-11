@@ -35,8 +35,8 @@ def update_routine(t, currId):
     # it runs until no messages from the given peer are left
     # then waits half a second and queries again
     while True:
-        resp = t.check_new_messages (currId)
-        if resp['cmd'] == 'END':
+        resp = t.check_new_messages_single (currId)
+        if resp = None:
             # sleep(0.5)
             return
         else:
