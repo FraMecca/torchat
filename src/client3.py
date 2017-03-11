@@ -5,21 +5,23 @@ import rlcompleter
 from time import sleep
 import os
 import sys
-from cleverbot import Cleverbot
+# from cleverbot import Cleverbot
 from libpy import Torchat
 
 exitFlag = False
 cb = None
+cnt = 0
 
 def ask_cleverbot (msg):
-    global cb
-    if cb == None:
-        print ("Starting cleverbot istance")
-        cb = Cleverbot ("TORchat")
-    resp = cb.ask (msg)
-    sleep (1)
-    print ('HOST:       ', resp)
-    return resp
+    # global cb
+    # if cb == None:
+        # print ("Starting cleverbot istance")
+        # cb = Cleverbot ("TORchat")
+    # resp = cb.ask (msg)
+    # sleep (1)
+    # print ('HOST:       ', resp)
+    cnt += 1
+    return 'msg ' + str (cnt)
 
 def print_json (j):
     print (j['id'], end=': ')
