@@ -36,7 +36,7 @@ def update_routine(t, currId):
     # then waits half a second and queries again
     while True:
         resp = t.check_new_messages_single (currId)
-        if resp = None:
+        if resp == None:
             # sleep(0.5)
             return
         else:
