@@ -60,7 +60,7 @@ def main (portno):
         for userid in peerlist:
 #             currid = userid
             update_routine (t, userid)
-        # sleep (1)
+        sleep (1)
 
 
 # the wrapper is a curses function which performs a standard init process
