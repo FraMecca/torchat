@@ -14,6 +14,7 @@ cnt = 0
 
 def ask_cleverbot (msg):
     # global cb
+    global cnt
     # if cb == None:
         # print ("Starting cleverbot istance")
         # cb = Cleverbot ("TORchat")
@@ -45,7 +46,7 @@ def update_routine(t, currId):
             response = ask_cleverbot (resp['msg'])
             while True:
                 j = t.create_json(cmd='SEND', msg=response, id=currId, portno = 80)
-                resp = t.send_to_mongoose(j, portno)
+                resp = t.send_to_mongoose(j) 
                 if not t.check_error (resp):
                     # try to send again if error in transmission
                     break
