@@ -75,7 +75,7 @@ class Torchat:
             else:
                 msgs.append (resp)
 
-    def check_new_message_single (self, currId):
+    def check_new_messages_single (self, currId):
         j = self.create_json (cmd='UPDATE', msg=currId)
         resp = self.send_to_mongoose (j)
         if resp['cmd'] == 'END':
