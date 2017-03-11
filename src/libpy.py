@@ -1,5 +1,5 @@
 import json, socket
-from time import strftime, localtime
+from time import strftime, localtime, ctime
 
 class Torchat:
     def __init__ (self, host, port):
@@ -16,7 +16,8 @@ class Torchat:
         else:
             j = dict ()
             j['id'] = id
-            j['portno'] = portno
+            j['portno'] = int (portno)
+            j['date'] = ctime ()[-13:]
             j['msg'] = msg
             j['cmd'] = cmd
             return j
@@ -72,4 +73,4 @@ class Torchat:
                 else:
                     return None
             else:
-                msgs.append (resp['date'] + " " + resp['msg'])
+                msgs.append (resp)
