@@ -119,7 +119,7 @@ send_routine(void *d)
 		log_err (jError);
 		mg_send(nc, jError, strlen(jError));
 		FREE(jError);
-	} else {
+	} else if (data->cmd != FILEPORT){ // fileport does not require jOk to be sent
 		data->cmd = END;
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
