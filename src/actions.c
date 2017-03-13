@@ -131,13 +131,19 @@ send_routine(void *d)
 void
 relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 {
-	pthread_t t;
-	pthread_attr_t attr; // create an attribute to specify that thread is detached
 	struct data_conn *dc = calloc(1, sizeof(struct data_conn));
 
+	/*struct mg_connection *newnc = MALLOC (sizeof (struct mg_connection));*/
+	/*memcpy (newnc, nc, sizeof (struct mg_connection));*/
+	/*newnc->iface = MALLOC (sizeof (struct mg_iface));*/
+	/*memcpy (newnc->iface, nc->iface, sizeof (struct mg_iface));*/
+	/*newnc->iface->vtable = MALLOC (sizeof (struct mg_iface_vtable));*/
+	/*memcpy (newnc->iface->vtable, nc->iface->vtable, sizeof (struct mg_iface_vtable));*/
 	dc->conn = nc;
 	dc->dataw = data;
 
+	pthread_t t;
+	pthread_attr_t attr; // create an attribute to specify that thread is detached
 	if (pthread_attr_init(&attr) != 0) {
 		// initialize pthread attr and check if error
 		exit_error ("pthread_attr_init");
