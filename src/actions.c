@@ -7,6 +7,7 @@
 #include "lib/socks_helper.h"
 #include "lib/util.h"
 #include <pthread.h>
+#include "actions.h"
 extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
 extern void log_info (char *json); // from logger.cpp
@@ -45,7 +46,7 @@ announce_exit (struct data_wrapper *data, struct mg_connection *nc)
 	data->msg = STRDUP ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
-	mg_send(nc, jOk, strlen(jOk));
+	MONGOOSE_SEND(nc, jOk, strlen(jOk));
 	FREE (jOk);
 }
 
@@ -117,14 +118,14 @@ send_routine(void *d)
 		data->msg = explain_sock_error (ret);
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
-		mg_send(nc, jError, strlen(jError));
+		MONGOOSE_SEND(nc, jError, strlen(jError));
 		FREE(jError);
 	} else if (data->cmd != FILEPORT){ // fileport does not require jOk to be sent
 		data->cmd = END;
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
-		mg_send(nc, jOk, strlen(jOk));
+		MONGOOSE_SEND (nc, jOk, strlen(jOk));
 		FREE (jOk);
 	}
 	FREE (msg);
@@ -193,7 +194,7 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
-	mg_send (nc, unreadMsg, strlen(unreadMsg));
+	MONGOOSE_SEND (nc, unreadMsg, strlen(unreadMsg));
 	FREE (unreadMsg);
 }
 
@@ -204,10 +205,8 @@ send_fileport_to_client(struct data_wrapper *data, struct mg_connection *nc)
 	// the port is in the data->msg field
 
 	char *response = convert_datastruct_to_char (data);
-	if (nc->iface != NULL) {
-		// if iface is not null the client is waiting for response
-		mg_send (nc, response, strlen (response));
-	}
+	// if iface is not null the client is waiting for response
+	MONGOOSE_SEND (nc, response, strlen (response));
 	FREE (response);
 
 }
@@ -225,12 +224,9 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 	}
 
 	char *response = convert_datastruct_to_char (data);
-	if (nc->iface != NULL) {
-		// if iface is not null the client is waiting for response
-		mg_send (nc, response, strlen (response));
-	}
+	// if iface is not null the client is waiting for response
+	MONGOOSE_SEND (nc, response, strlen (response));
 	FREE (response);
-
 }
 
 void
@@ -247,9 +243,7 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 		// needed if no peers messaged us
 	}
 	char *response = convert_datastruct_to_char (data);
-	if (nc->iface != NULL) {
-		// if iface is not null the client is waiting for response
-		mg_send (nc, response, strlen (response));
-	}
+	// if iface is not null the client is waiting for response
+	MONGOOSE_SEND (nc, response, strlen (response));
 	FREE (response);
 }

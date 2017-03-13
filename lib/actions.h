@@ -7,3 +7,5 @@ void client_update(struct data_wrapper *data,struct mg_connection *nc);
 void send_fileport_to_client(struct data_wrapper *data, struct mg_connection *nc);
 void send_peer_list_to_client(struct data_wrapper *data,struct mg_connection *nc);
 void send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, char *hostname);
+
+#define MONGOOSE_SEND(nc, json, len) if (nc->iface && nc->iface->vtable) mg_send (nc, json, len)

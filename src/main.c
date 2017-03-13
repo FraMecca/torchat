@@ -222,7 +222,6 @@ main(int argc, char **argv)
 
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
-    struct mg_connection *nc; 
 	
     // Note that many connections can be added to a single event manager
     // Connections can be created at any point, e.g. in event handler function
