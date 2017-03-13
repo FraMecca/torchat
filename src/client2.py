@@ -100,7 +100,7 @@ def elaborate_command (line, portno, ui):
         currId = peerList[i]
         return peerList, i
     elif line == '/fileup':
-        j = create_json(cmd='FILEALLOC', msg='', id=currId)
+        j = create_json(cmd='FILEALLOC', msg=currId)
         resp = send_to_mongoose(j, portno, wait=True)
         port = resp["msg"]
         return port
