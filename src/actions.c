@@ -98,6 +98,7 @@ send_routine(void *d)
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
 		strcpy (id, data->msg); // save dest address
+		data->portno = 80;
 	} else {
 		data->cmd = RECV;
 		strcpy (id, data->id); // save dest address
