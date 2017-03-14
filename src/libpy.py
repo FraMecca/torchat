@@ -5,6 +5,7 @@ class Torchat:
     def __init__ (self, host, port):
         self.host = host
         self.port = port
+        self.onion = self.get_hostname()
 
     def create_json (self, cmd='', msg='', id='localhost', portno=None):
         # create a dictionary and populate it, ready to be converted to a json string
@@ -35,23 +36,21 @@ class Torchat:
         resp = self.send_to_mongoose (j)
         peerList = resp['msg'].split (',')
 
-        if peerList[0] == '': # no peers have written you! 
-            return []
-        else:
-            return peerList
+        return peerList
 
     def get_hostname(self):
-        j = self.create_json(cmd="HOST")
-        resp = self.send_to_mongoose(j)
+        resp = self.send_message(command="HOST", line="", currentId="localhost")
         return resp["msg"]
 
     def close_server (self):
         j = self.create_json(cmd='EXIT', msg='')
         self.send_to_mongoose(j)
 
-    def send_message (self, line, portno, currId):
+    def send_message (self, command, line, currentId, sendPort=""): # added cmd for fileup needs
         # portno is the one used by the other server, usually 80
-        j = self.create_json(cmd='SEND', msg=line, id=currId, portno = portno)
+        if sendPort == "":
+            sendPort = self.port
+        j = self.create_json(cmd=command, msg=line, id=currentId, portno = sendPort)
         return self.send_to_mongoose(j)
 
     def check_error (self, j):
