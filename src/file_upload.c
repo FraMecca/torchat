@@ -76,10 +76,10 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
   }
 }
 
-static bool file_received = false;
 static void *
 file_upload_poll ()
 {
+ 	bool file_received = false;
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -92,6 +92,8 @@ file_upload_poll ()
 	while (!file_received) {
         mg_mgr_poll(&mgr, 300);
     }
+    // close connection
+    // and free resources
     return 0;
 }
 
