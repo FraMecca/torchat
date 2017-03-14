@@ -226,9 +226,9 @@ main(int argc, char **argv)
     // Note that many connections can be added to a single event manager
     // Connections can be created at any point, e.g. in event handler function
     if(argc == 2) {
-        nc = mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
+        mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
     } else if (argc == 3) {	// daemon
-        nc = mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
+        mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
 
 
