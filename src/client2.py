@@ -44,125 +44,139 @@ class Completer(object):
             response = ''
         return response
 
-def print_line_cur (line, ui, color):
-    # append sent messages and received messages to the buffer
-    # then send them to the ui and pop them one by one
-    global printBuf
-    printBuf.append (line)
-    for l in printBuf:
-        ui.chatbuffer_add(l, color)
-        printBuf.pop()
+class Client:
+    # main class for the client
+    # args are the UI class and the Torchat class
+    # (initialized in main)
+    def __init__(self, ui, torchat):
+        self.ui = ui;
+        self.torchat = torchat;
+        self.currId = ""
+        self.peerList, i = self.get_peers()
+        self.currId = self.peerList[i]
+        self.printBuf = list()
+        self.exitFlag = False
 
-def send_input_message (msg, t, ui):
-    # this sends the message to the peer, does not deal with commands to the client
-    # send_message is multithread because socket recv is blocking
-    resp = t.send_message(command="SEND", line=msg, currentId=currId, sendPort=80)
-    if resp['cmd'] == 'ERR':
-        print_line_cur(resp['msg'], ui, 1)
+    def print_line_cur (self, line, color):
+        # append sent messages and received messages to the buffer
+        # then send them to the ui and pop them one by one
+        # global printBuf
+        self.printBuf.append (line)
+        for l in self.printBuf:
+            self.ui.chatbuffer_add(l, color)
+            self.printBuf.pop()
 
-def elaborate_command (line, t, ui):
-    # this processes the commands received from the input buffer (the ones with "/")
-    global exitFlag
-    global currId
-    if line == '/exit':
-    # this sends an exit to the client AND to the server
-        t.send_message(command='EXIT', line='', currentId="localhost")
-        exitFlag = True
-        exit ()
-    elif line == '/quit': 
-        # only the client exits here
-        exitFlag = True
-        exit()
-    elif line == '/peer': 
-        # update peers list, possibly select a new one
-        peerList, i = get_peers(t, ui)
-        currId = peerList[i]
-        ui.chatbuffer = []
-        ui.linebuffer = []
-        ui.redraw_ui(i)
-    elif line == '/fileup': 
-        # upload files: start by requiring a random port to the peer
-        t.send_message(command='FILEALLOC', line=currId, currentId="localhost")
+    def send_input_message (self, msg):
+        # this sends the message to the peer
+        # does not deal with commands to the client
+        # send_message is multithread because socket recv is blocking
+        resp = self.torchat.send_message(command="SEND", line=msg, currentId=self.currId, sendPort=80)
+        if resp['cmd'] == 'ERR':
+            self.print_line_cur(resp['msg'], ui, 1)
 
-def send_file_info (port):
-    fi = ui.wait_input ("Absolute path and filename separated by a space: ")
-    fileInfo = fi + " " + port + " " + currId
-    t.send_message(command='FILEINFO', line=fileInfo, currentId="localhost")
+    def elaborate_command (self, line):
+        # this processes the commands received from the input buffer (the ones with "/")
+        # global exitFlag
+        # global currId
+        if line == '/exit':
+        # this sends an exit to the client AND to the server
+            self.torchat.send_message(command='EXIT', line='', currentId="localhost")
+            self.exitFlag = True
+            exit ()
+        elif line == '/quit':
+            # only the client exits here
+            self.exitFlag = True
+            exit()
+        elif line == '/peer':
+            # update peers list, possibly select a new one
+            self.peerList, i = get_peers(t, ui)
+            currId = self.peerList[i]
+            self.ui.chatbuffer = []
+            self.ui.linebuffer = []
+            self.ui.redraw_ui(i)
+        elif line == '/fileup':
+            # upload files: start by requiring a random port to the peer
+            self.torchat.send_message(command='FILEALLOC', line=currId, currentId="localhost")
 
-def get_peers(t, ui):
-    # ask for a list of peers with pending messages
-    peerList = t.get_peers()
-    rightId = False
-    ui.userlist = list()
+    def send_file_info (self, port):
+        fi = self.ui.wait_input ("Absolute path and filename separated by a space: ")
+        fileInfo = fi + " " + port + " " + self.currId
+        self.torchat.send_message(command='FILEINFO', line=fileInfo, currentId="localhost")
 
-    # this part is the peer list UI management
-    if peerList[0] == '': # no peers have written you!
-        i = 0
-        peerList[0] = ui.wait_input("Onion Address: ")
-        ui.userlist.append(peerList[0])
-        ui.redraw_userlist(i, t.onion)# this redraws only the user panel
-        if currId != "":
-            ui.userlist.append(currId)
-    else:
-        for userid in peerList: # print them all with an integer id associated
-            ui.userlist.append(userid)
-        if not currId in peerList and currId != "":
-            ui.userlist.append(currId)
-            peerList.append(currId)
-        ui.redraw_userlist(None, t.onion) # this redraws only the user panel
+    def get_peers(self):
+        # ask for a list of peers with pending messages
+        peerList = self.torchat.get_peers()
+        rightId = False
+        self.ui.userlist = list()
 
-        # this avoids error crashing while selecting an ID
-        while not rightId: 
-            choice = ui.wait_input("Peer Id (a number): ")
-            try:
-                i = int(choice) - 1
-                if i >= len(peerList) or i < 0:
+        # this part is the peer list UI management
+        if peerList[0] == '': # no peers have written you!
+            i = 0
+            peerList[0] = self.ui.wait_input("Onion Address: ")
+            self.ui.userlist.append(peerList[0])
+            self.ui.redraw_userlist(i, self.torchat.onion)# this redraws only the user panel
+            if self.currId != "":
+                self.ui.userlist.append(self.currId)
+        else:
+            for userid in peerList: # print them all with an integer id associated
+                self.ui.userlist.append(userid)
+            if not self.currId in peerList and self.currId != "":
+                self.ui.userlist.append(currId)
+                peerList.append(currId)
+            self.ui.redraw_userlist(None, t.onion) # this redraws only the user panel
+
+            # this avoids error crashing while selecting an ID
+            while not rightId: 
+                choice = self.ui.wait_input("Peer Id (a number): ")
+                try:
+                    i = int(choice) - 1
+                    if i >= len(peerList) or i < 0:
+                        rightId = False
+                    else:
+                        rightId = True
+                except:
                     rightId = False
-                else:
-                    rightId = True
-            except:
-                rightId = False
-        ui.redraw_userlist(i, t.onion) # this redraws only the user panel
-    return peerList, i
+            self.ui.redraw_userlist(i, self.torchat.onion) # this redraws only the user panel
+        return peerList, i
 
-def update_routine(t, ui):
+def update_routine(cli):
     # this function queries the server for unread messages
     # it runs until no messages from the given peer are left
     # then waits half a second and queries again
     global lock
     while True:
-        if exitFlag:
-            ui.close_ui()
+        if cli.exitFlag:
+            cli.ui.close_ui()
             exit()
-        resp = t.send_message (command="UPDATE", line=currId, currentId="localhost")
+        resp = cli.torchat.send_message (command="UPDATE", line=currId, currentId="localhost")
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
         elif resp['cmd'] == 'FILEPORT':
-            send_file_info(resp['msg'])
+            cli.send_file_info(resp['msg'])
         else:
             lock.acquire()
-            print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
+            cli.print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
             lock.release()
 
-def input_routine (t, ui):
+def input_routine (cli):
     # processes the input buffer each return
     c = Completer (['/help', '/exit', '/quit', '/peer', '/fileup'])
     while True:
         # the input is taken from the bottom window in the ui
         # and printed directly (it is actually sent below)
-        line = ui.wait_input(completer = c)
+        line = cli.ui.wait_input(completer = c)
         if len (line) > 0 and line[0] != '/':
             # here we send to mongoose / tor
             # if the user does not input a command send the message (done on a separate thread)
-            print_line_cur (line, ui, 2)
-            td = Thread(target=send_input_message, args=(line, t, ui))
+            cli.print_line_cur (line, ui, 2)
+            td = Thread(target=cli.send_input_message, args=(line,))
             td.start ()
             c.update ([line])
         elif line != "":
             # the user inputs a command,
             # they start with "/"
-            elaborate_command(line, t, ui)
+            cli.elaborate_command(line, t, ui)
 
 def main (stdscr, portno):
     global currId
@@ -174,17 +188,16 @@ def main (stdscr, portno):
     # initialize Torchat class
     t = Torchat('localhost', portno)
 
-    # start by getting unread peers from the server, and isolating the current one loaded
-    peerList, i = get_peers(t, ui)
-    currId = peerList[i]
-
+    # initialize client
+    cli = Client(ui, t)
+    
     # here we use one thread to update unread messages in background,
     # the foreground one gets the input
     # they both work on the same buffer (printBuf) and thus a
     # semaphore is needed to prevent race conditions
-    t1 = Thread(target=update_routine, args=(t, ui))
+    t1 = Thread(target=update_routine, args=(cli,))
     t1.start()
-    input_routine (t, ui)
+    input_routine (cli)
 
 # the wrapper is a curses function which performs a standard init process
 # the ui init is then continued by the call to the ChatUi class (see main)
