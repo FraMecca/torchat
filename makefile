@@ -1,9 +1,8 @@
-ALL = $(SRC) $(INCLUDE)
+ALL = $(SRC) $(INCLUDE)  
 SRC = src/main.c src/socks_helper.c src/util.c src/list.c src/actions.c src/file_upload.c
 INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c
 LDIR := $(PWD)
-ND = -DNDEBUG
-DEBUG = -Wall -Wextra -DDEBUG -g
+DEBUG = -Wall -Wextra -g -UNDEBUG
 CF = -DMG_ENABLE_THREADS -DMG_ENABLE_HTTP_WEBSOCKET=0 -DMG_ENABLE_HTTP_STREAMING_MULTIPART
 I = -I. -Iinclude -Ilib
 
@@ -15,15 +14,16 @@ init:
 	mkdir -p build
 
 build/logger.o: src/logger.cpp
-	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl 	-o build/logger.o $(ND)
+	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl 	-o build/logger.o -DNDEBUG $(I)
 
 build/jsonhelper.o: src/jsonhelper.cpp
-	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o  $(ND)
+	echo $(CF)
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o -DNDEBUG
 
 build/main: build/logger.o build/jsonhelper.o $(ALL)
 	g++ -shared -o build/liblogger.so build/logger.o
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o
-	gcc -L$(LDIR)/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldl -o build/main -Wl,-R$(LDIR)/build $(ND)
+	gcc -L$(LDIR)/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldl -o build/main -Wl,-R$(LDIR)/build  -NDEBUG
 	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -lcurl -o build/logger.o $I
 
 build/jsonhelper.o: src/jsonhelper.cpp

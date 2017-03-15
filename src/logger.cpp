@@ -1,8 +1,5 @@
 #define LOGURU_IMPLEMENTATION 1
 #include "include/loguru.hpp"
-//loguru::init (argc, argv);
-//#define LOGURU_CATCH_SIGABRT 1
-//#define LOGURU_UNSAFE_SIGNAL_HANDLER 1
 #include <iostream>
 #include <fstream>
 #include <string>
