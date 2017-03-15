@@ -169,7 +169,7 @@ def input_routine (cli):
         if len (line) > 0 and line[0] != '/':
             # here we send to mongoose / tor
             # if the user does not input a command send the message (done on a separate thread)
-            cli.print_line_cur (line, ui, 2)
+            cli.print_line_cur (line, cli.ui, 2)
             td = Thread(target=cli.send_input_message, args=(line,))
             td.start ()
             c.update ([line])
