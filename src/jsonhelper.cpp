@@ -7,7 +7,7 @@
 //#include "../lib/util.h"
 using json = nlohmann::json;
 
-#if DEBUG
+#ifndef NDEBUG
 #include "include/loguru.hpp"
 #endif
 
@@ -124,7 +124,7 @@ convert_string_to_datastruct (const char *jsonCh)
 	//if (std::count (st.begin (), st.end (), '}') >= 1) {
 		//st.erase (st.find ('}') + 1, std::string::npos); // it seems that mongoose doesn't clean io->buf, so we truncate the string after the first \{
 	//} // not used anymore, io->buf is truncated to io->size
-#if DEBUG
+#ifndef NDEBUG
 	LOG_F (9, jsonCh); 
 	std::cout << "json.cpp:" << __LINE__ <<": Received: " << st << std::endl;
 #endif

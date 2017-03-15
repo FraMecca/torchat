@@ -33,14 +33,6 @@ start_daemon()
 	 * while in daemon mode, only logging can be used
 	 * to monitor the server activity
 	 */
-#if DEBUG
-	printf("The server has been compiled with debug flags, but daemon mode shall not produce any output to stdout.\n");
-	printf("The logs can be used to monitor the daemon's behaviour, in particular:\n");
-	printf("\t* file.log contains general activity output\n");
-	printf("\t* error.log contains only the error output (marked red in file.log)\n");
-	printf("\t* debug.log contains a more verbose activity output useful for debugging.\n");
-	printf("Also, in case of SIGABRT, SIGINT or SIGSEGV a gdb compatible coredump is produced, containing the current PID of the daemon in its filename.\n");
-#endif
     pid_t pid;
     int x;
 	char *dir;
@@ -215,7 +207,7 @@ main(int argc, char **argv)
         start_daemon();
     }
 
-#if DEBUG
+#ifndef NDEBUG
     signal (SIGSEGV, dumpstack);
     signal (SIGABRT, dumpstack);
     signal (SIGINT, dumpstack);
