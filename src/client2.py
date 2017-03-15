@@ -173,7 +173,7 @@ def input_routine (cli):
         elif line != "":
             # the user inputs a command,
             # they start with "/"
-            cli.elaborate_command(line, t, ui)
+            cli.elaborate_command(line)
 
 def main (stdscr, portno):
     global currId
