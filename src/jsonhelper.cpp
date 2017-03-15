@@ -56,6 +56,8 @@ convert_to_enum (const std::string cmd)
 		return FILEALLOC;
 	} else if (cmd == "FILEPORT")	{
 		return FILEPORT;
+	} else if (cmd == "FILEINFO")	{
+		return FILEINFO;
 	} else if (cmd == "HOST") {
 		return HOST;
 	} else /* if (cmd == "ERR") */ {
@@ -98,6 +100,9 @@ convert_from_enum (const enum command c)
 			break;
 		case FILEALLOC :
 			st = "FILEALLOC";
+			break;
+		case FILEINFO :
+			st = "FILEINFO";
 			break;
 		case ERR :
 			st = "ERR";

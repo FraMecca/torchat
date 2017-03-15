@@ -1,16 +1,12 @@
-import json
-import socket
 import readline
-from time import localtime, strftime
 import rlcompleter
 from curses import wrapper
 import curses
 from time import sleep
-import os
 from threading import Thread, Lock
 import threading
 
-from libpy import Torchat
+from libtorchat import Torchat
 from ui import ChatUI
 # many thanks to https://github.com/calzoneman/python-chatui.git
 # for this curses implementation of a chat UI
@@ -57,37 +53,20 @@ def print_line_cur (line, ui, color):
         ui.chatbuffer_add(l, color)
         printBuf.pop()
 
-
-def update_routine(t, ui):
-    # this function queries the server for unread messages
-    # it runs until no messages from the given peer are left
-    # then waits half a second and queries again
-    global lock
-    while True:
-        if exitFlag:
-            ui.close_ui()
-            exit()
-        resp = t.send_message (command="UPDATE", line=currId, currentId="localhost")
-        # the json is not printed if no messages are received
-        if resp['cmd'] == 'END':
-            sleep(0.5)
-        else:
-            lock.acquire()
-            print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
-            lock.release()
-
 def send_input_message (msg, t, ui):
-    # send message is multithread because socket recv is blocking
+    # this sends the message to the peer, does not deal with commands to the client
+    # send_message is multithread because socket recv is blocking
     resp = t.send_message(command="SEND", line=msg, currentId=currId, sendPort=80)
     if resp['cmd'] == 'ERR':
         print_line_cur(resp['msg'], ui, 1)
 
 def elaborate_command (line, t, ui):
+    # this processes the commands received from the input buffer (the ones with "/")
     global exitFlag
     global currId
     if line == '/exit':
     # this sends an exit to the client AND to the server
-        t.send_message(command='EXIT', line='', id="localhost")
+        t.send_message(command='EXIT', line='', currentId="localhost")
         exitFlag = True
         exit ()
     elif line == '/quit': 
@@ -103,29 +82,12 @@ def elaborate_command (line, t, ui):
         ui.redraw_ui(i)
     elif line == '/fileup': 
         # upload files: start by requiring a random port to the peer
-        resp = t.send_message(command='FILEALLOC', line=currId, currentId="localhost")
-        port = resp["msg"]
-        print_line_cur ("You can send at port: " + port, ui, 2)
+        t.send_message(command='FILEALLOC', line=currId, currentId="localhost")
 
-
-def input_routine (t, ui):
-    c = Completer (['/help', '/exit', '/quit', '/peer', '/fileup'])
-    while True:
-        # the input is taken from the bottom window in the ui
-        # and printed directly (it is actually sent below)
-        line = ui.wait_input(completer = c)
-        if len (line) > 0 and line[0] != '/':
-            # here we send to mongoose / tor
-            # if the user does not input a command send the message (done on a separate thread)
-            print_line_cur (line, ui, 2)
-            td = Thread(target=send_input_message, args=(line, t, ui))
-            td.start ()
-            c.update ([line])
-        elif line != "":
-            # the user input a command,
-            # they start with /
-            elaborate_command(line, t, ui)
-
+def send_file_info (port):
+    fi = ui.wait_input ("Absolute path and filename separated by a space: ")
+    fileInfo = fi + " " + port + " " + currId
+    t.send_message(command='FILEINFO', line=fileInfo, currentId="localhost")
 
 def get_peers(t, ui):
     # ask for a list of peers with pending messages
@@ -163,6 +125,45 @@ def get_peers(t, ui):
         ui.redraw_userlist(i, t.onion) # this redraws only the user panel
     return peerList, i
 
+def update_routine(t, ui):
+    # this function queries the server for unread messages
+    # it runs until no messages from the given peer are left
+    # then waits half a second and queries again
+    global lock
+    while True:
+        if exitFlag:
+            ui.close_ui()
+            exit()
+        resp = t.send_message (command="UPDATE", line=currId, currentId="localhost")
+        # the json is not printed if no messages are received
+        if resp['cmd'] == 'END':
+            sleep(0.5)
+        elif resp['cmd'] == 'FILEPORT':
+            send_file_info(resp['msg'])
+        else:
+            lock.acquire()
+            print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
+            lock.release()
+
+def input_routine (t, ui):
+    # processes the input buffer each return
+    c = Completer (['/help', '/exit', '/quit', '/peer', '/fileup'])
+    while True:
+        # the input is taken from the bottom window in the ui
+        # and printed directly (it is actually sent below)
+        line = ui.wait_input(completer = c)
+        if len (line) > 0 and line[0] != '/':
+            # here we send to mongoose / tor
+            # if the user does not input a command send the message (done on a separate thread)
+            print_line_cur (line, ui, 2)
+            td = Thread(target=send_input_message, args=(line, t, ui))
+            td.start ()
+            c.update ([line])
+        elif line != "":
+            # the user inputs a command,
+            # they start with "/"
+            elaborate_command(line, t, ui)
+
 def main (stdscr, portno):
     global currId
 
@@ -172,6 +173,8 @@ def main (stdscr, portno):
 
     # initialize Torchat class
     t = Torchat('localhost', portno)
+
+    # start by getting unread peers from the server, and isolating the current one loaded
     peerList, i = get_peers(t, ui)
     currId = peerList[i]
 

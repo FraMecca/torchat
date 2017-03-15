@@ -120,7 +120,7 @@ send_routine(void *d)
 		log_err (jError);
 		MONGOOSE_SEND(nc, jError, strlen(jError));
 		FREE(jError);
-	} else if (data->cmd != FILEPORT){ // fileport does not require jOk to be sent
+	} else if (data->cmd != FILEPORT && data->cmd != FILEUP){ // fileport and fileup do not require jOk to be sent
 		data->cmd = END;
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
@@ -205,6 +205,7 @@ send_fileport_to_client(struct data_wrapper *data, struct mg_connection *nc)
 	// the port is in the data->msg field
 
 	char *response = convert_datastruct_to_char (data);
+	printf("%s", response);
 	// if iface is not null the client is waiting for response
 	MONGOOSE_SEND (nc, response, strlen (response));
 	FREE (response);

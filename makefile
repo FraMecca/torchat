@@ -24,7 +24,7 @@ build/main: build/logger.o build/jsonhelper.o $(ALL)
 	g++ -shared -o build/liblogger.so build/logger.o
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o
 	gcc -L$(LDIR)/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldl -o build/main -Wl,-R$(LDIR)/build $(ND)
-	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl 	-o build/logger.o $I
+	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -lcurl -o build/logger.o $I
 
 build/jsonhelper.o: src/jsonhelper.cpp
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o  $I 
@@ -48,7 +48,7 @@ debug:
 	g++ -shared -o build/liblogger.so build/logger.o   $(DEBUG) $I
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o $(DEBUG) $I
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   $(DEBUG) $I
-	gcc -L$(LDIR)/build $(ALL) $I   -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF)
+	gcc -L$(LDIR)/build $(ALL) $I   -ljsonhelper -o build/main -lpthread -llogger -ldl -lcurl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF)
 
 etrace:
 	mkdir -p build
@@ -56,7 +56,7 @@ etrace:
 	g++ -shared -o build/liblogger.so build/logger.o   $(DEBUG) $I
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o $(DEBUG) $I
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   $(DEBUG) $I
-	gcc -L$(LDIR)/build $(ALL) utils/ptrace.c $I   -ljsonhelper -o build/main -lpthread -llogger -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF) -finstrument-functions
+	gcc -L$(LDIR)/build $(ALL) utils/ptrace.c $I   -ljsonhelper -o build/main -lpthread -llogger -lcurl -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF) -finstrument-functions
 
 clean:
 	rm -rf build/

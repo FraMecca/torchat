@@ -24,6 +24,7 @@ void log_clear_datastructs (); // from logger.cpp
 static bool exitFlag = false; // this flag is set to true when the program should exit
 
 char *HOSTNAME = NULL; // will be read from torrc
+struct fileAddr *file = NULL; // file information data structure (for file upload)
 
 static void
 start_daemon()
@@ -164,7 +165,12 @@ event_routine (struct mg_connection *nc)
 			relay_msg (data, nc);
 			break;
 		case FILEPORT:
-			send_fileport_to_client(data,nc);
+			send_fileport_to_client(data, nc);
+			break;
+		case FILEINFO:
+			load_info(data, file);
+			// send file here
+			send_file(file);
 			break;
 		case HOST :
 			// the client required the hostname of the server

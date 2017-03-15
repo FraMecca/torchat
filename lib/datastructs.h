@@ -22,6 +22,7 @@ enum command {
 	FILEALLOC,
 	FILEUP,
 	FILEPORT,
+	FILEINFO,
 	EXIT
 };
 
