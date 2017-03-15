@@ -123,7 +123,7 @@ class Client:
             if not self.currId in peerList and self.currId != "":
                 self.ui.userlist.append(currId)
                 peerList.append(currId)
-            self.ui.redraw_userlist(None, t.onion) # this redraws only the user panel
+            self.ui.redraw_userlist(None, self.torchat.onion) # this redraws only the user panel
 
             # this avoids error crashing while selecting an ID
             while not rightId: 
@@ -156,7 +156,7 @@ def update_routine(cli):
             cli.send_file_info(resp['msg'])
         else:
             lock.acquire()
-            cli.print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], ui, 3) 
+            cli.print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], cli.ui, 3) 
             lock.release()
 
 def input_routine (cli):
