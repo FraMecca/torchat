@@ -11,10 +11,7 @@ from ui import ChatUI
 # many thanks to https://github.com/calzoneman/python-chatui.git
 # for this curses implementation of a chat UI
 
-printBuf = list ()
 lock = Lock() # a binary semaphore
-exitFlag = False
-currId = ""
 
 class Completer(object):
     # this is a completer that works on the input buffer
@@ -148,7 +145,7 @@ def update_routine(cli):
         if cli.exitFlag:
             cli.ui.close_ui()
             exit()
-        resp = cli.torchat.send_message (command="UPDATE", line=currId, currentId="localhost")
+        resp = cli.torchat.send_message (command="UPDATE", line=cli.currId, currentId="localhost", sendPort=8000)
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
@@ -156,7 +153,7 @@ def update_routine(cli):
             cli.send_file_info(resp['msg'])
         else:
             lock.acquire()
-            cli.print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], cli.ui, 3) 
+            cli.print_line_cur ('[' + resp['date'] + '] ' + resp['msg'], 3) 
             lock.release()
 
 def input_routine (cli):
