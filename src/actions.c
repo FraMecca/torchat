@@ -93,17 +93,17 @@ send_routine(void *d)
 	struct data_conn *dc = (struct data_conn*) d;
 	struct data_wrapper *data = dc->dataw;
 	struct mg_connection *nc = dc->conn;
-
-
+	
 	// needed for file upload
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
-		strcpy (id, data->msg); // save dest address
+		strncpy (id, data->msg, strlen(data->msg)); // save dest address
+		/*id = STRDUP(data->msg);*/
 		data->portno = 80;
 	} else if (data->cmd != FILEPORT){
-			data->cmd = RECV;
+		data->cmd = RECV;
+		strcpy (id, data->id); // save dest address
 	}
-	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
@@ -134,14 +134,10 @@ send_routine(void *d)
 void
 relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 {
+	if(data == NULL){
+		exit_error("Invalid data structure.");
+	}
 	struct data_conn *dc = calloc(1, sizeof(struct data_conn));
-
-	/*struct mg_connection *newnc = MALLOC (sizeof (struct mg_connection));*/
-	/*memcpy (newnc, nc, sizeof (struct mg_connection));*/
-	/*newnc->iface = MALLOC (sizeof (struct mg_iface));*/
-	/*memcpy (newnc->iface, nc->iface, sizeof (struct mg_iface));*/
-	/*newnc->iface->vtable = MALLOC (sizeof (struct mg_iface_vtable));*/
-	/*memcpy (newnc->iface->vtable, nc->iface->vtable, sizeof (struct mg_iface_vtable));*/
 	dc->conn = nc;
 	dc->dataw = data;
 
@@ -156,7 +152,6 @@ relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 	    exit_error ("pthread_attr_setdetachstate");
 	}
 	pthread_create(&t, &attr, &send_routine,(void*) dc);
-	/*free(dataw);*/
 	return;
 }
 
