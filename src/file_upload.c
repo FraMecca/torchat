@@ -11,6 +11,7 @@
 // these are for file upload functions, the other for file recv
 #include <sys/sendfile.h>
 #include <sys/stat.h>
+#include <sys/socket.h>
 #include <fcntl.h>
 #include <arpa/inet.h> // inet
 #include <netinet/in.h> // socket types
@@ -79,13 +80,13 @@ load_info(struct data_wrapper *data, struct fileAddr *file)
 struct fileAddr *
 next_file(struct fileAddr *fList)
 {
-	struct fileAddr *file = fList;
-	FREE(file->host);
-	FREE(file->port);
-	FREE(file->name);
-	FREE(file->path);
-	FREE(file);
-	return file->next;
+	struct fileAddr *file = fList->next;
+	FREE(fList->host);
+	FREE(fList->port);
+	FREE(fList->name);
+	FREE(fList->path);
+	FREE(fList);
+	return file;
 }
 
 int
@@ -189,66 +190,6 @@ void send_file(struct fileAddr *file)
 
 // FROM HERE DOWNWARDS: ONLY FILE RECV FUNCTION
 
-static void
-handle_upload(struct mg_connection *nc, int ev, void *p) {
-	// This function is called from the mg http event parser
-	// It is used to save a file to a local directory as soon as
-	// an HTTP POST request with target /upload is received
-	struct file_writer_data *data = (struct file_writer_data *) nc->user_data;
-	struct mg_http_multipart_part *mp = (struct mg_http_multipart_part *) p;
-
-	// check io len, see main.c:112
-	 switch (ev) {
-		case MG_EV_HTTP_PART_BEGIN: {
-		  // the first time an uploaded file is received, populate the data struct
-		  if (data == NULL) { 
-			data = calloc(1, sizeof(struct file_writer_data));
-			if(mp->file_name != NULL && strcmp(mp->file_name, "") != 0){
-				data->fp = fopen(mp->file_name, "w+b");
-				nosaveFlag = 1;
-			}else {
-				// if a file is not given (should be) open a temporary one.
-				// note: this file is actually needed even if a file is given, 
-				// prevents SEGVs. If the file name is given, tmpfile is removed
-				// at the end of the transfer
-				data->fp = fopen("tmpfile", "w+b");	
-			}
-			data->bytes_written = 0;
-
-			if (data->fp == NULL) {
-			  nc->flags |= MG_F_SEND_AND_CLOSE;
-			  return;
-			}
-			nc->user_data = (void *) data;
-		  }
-		  break;
-		}
-		case MG_EV_HTTP_PART_DATA: { 
-		  // while data chunks are received, write them
-
-		  if (fwrite(mp->data.p, 1, mp->data.len, data->fp) != mp->data.len) {
-			nc->flags |= MG_F_SEND_AND_CLOSE;
-			return;
-		  }
-		  data->bytes_written += mp->data.len;
-		  break;
-		}
-		case MG_EV_HTTP_PART_END: {
-		  // upload finished, write confirm and close
-
-		  nc->flags |= MG_F_SEND_AND_CLOSE;
-		  fclose(data->fp);
-		  FREE(data);
-		  nc->user_data = NULL;
-		  if(nosaveFlag){
-			remove("tmpfile");
-			nosaveFlag = 0;
-		  }
-		  break;
-	}
-  }
-}
-
 static void *
 file_upload_poll (void *rp)
 {
@@ -256,20 +197,52 @@ file_upload_poll (void *rp)
 	// poll for the file to be transfered
 	char *port = (char*) rp;
  	bool file_received = false;
-    struct mg_mgr mgr;
-    mg_mgr_init(&mgr, NULL);  // Initialize event manager object
+	int socket_desc , client_sock , c , read_size;
 
-    struct mg_connection *nc; 
-    nc = mg_bind(&mgr, port, handle_upload);  // Create listening connection and add it to the event manager
-	
-	// Add http events management to the connection
-	mg_set_protocol_http_websocket(nc);
-
-	while (!file_received) {
-        mg_mgr_poll(&mgr, 300);
+    struct sockaddr_in server, client;
+    char client_message[2000];
+     
+    //Create socket
+    socket_desc = socket(AF_INET , SOCK_STREAM , 0);
+    if (socket_desc == -1)
+    {
+        printf("Could not create socket");
     }
-    // close connection TODO
-    // and FREE resources TODO
+     
+    //Prepare the sockaddr_in structure
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(atoi(port));	
+	
+	//Bind
+    if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
+    {
+        //print the error message
+        perror("bind failed. Error");
+        return 1;
+    }
+    puts("bind done");
+     
+    //Listen
+    listen(socket_desc , 3);
+     
+    //Accept and incoming connection
+    puts("Waiting for incoming connections...");
+    c = sizeof(struct sockaddr_in);
+     
+    //accept connection from an incoming client
+    client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
+    if (client_sock < 0)
+    {
+        perror("accept failed");
+        return 1;
+    }
+    puts("Connection accepted");
+     
+    //Receive a message from client
+    while( (read_size = recv(client_sock , client_message , 4096 , 0)) > 0 ){
+		printf("eccolo");
+	}
     return 0;
 }
 
