@@ -97,7 +97,7 @@ send_file_over_tor(struct fileAddr *file, const int torPort)
     struct sockaddr_in socketAddr;
 	
 	char *domain = STRDUP(file->host);
-	int portno = file->port);
+	int portno = file->port;
 	/*int portno = 80;*/
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
