@@ -2,15 +2,19 @@
 #include "lib/datastructs.h"
 #include "include/mem.h"
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <time.h>
 #include <pthread.h>
 // these are for file upload functions, the other for file recv
-#include <curl/curl.h>
+#include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <arpa/inet.h> // inet
+#include <netinet/in.h> // socket types
+#include <errno.h> // perror
 
 static int nosaveFlag = 0; // used to determine if tmpfile has to be removed or not
 
@@ -20,6 +24,27 @@ struct file_writer_data {
 };
 
 // FILE UPLOAD FUNCTIONS
+
+static bool 
+set_socket_timeout (const int sockfd)
+{
+	// this function sets the socket timeout
+	// 120s
+	    struct timeval timeout;      
+	    timeout.tv_sec = 120;
+	    timeout.tv_usec = 0;
+
+	    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	        perror("setsockopt failed\n");
+	        return false;
+	    }
+
+	    if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	        perror("setsockopt failed\n");
+	        return false;
+	    }
+	    return true;
+}
 
 struct fileAddr *
 load_info(struct data_wrapper *data, struct fileAddr *file)
@@ -63,79 +88,70 @@ next_file(struct fileAddr *fList)
 	return file->next;
 }
 
-char *
-build_dest_addr(char *host, char *port)
-{
-	// build the curl destination address
-	char *addr;
-	if(!(addr = calloc(strlen(host) + strlen(port) + 10, sizeof(char)))){
-		exit(1);
+int
+send_file_over_tor(struct fileAddr *file, const int torPort)
+{ 
+	// buf is the json parsed char to be sent over a socket
+    int sock;
+    struct sockaddr_in socketAddr;
+	
+	char *domain = file->host;
+	int portno = atoi(file->port);
+
+    sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (!set_socket_timeout (sock)) {
+    	perror ("setsockopt");
+    	exit (1);
+    }
+    socketAddr.sin_family       = AF_INET;
+    socketAddr.sin_port         = htons(torPort);
+    socketAddr.sin_addr.s_addr  = inet_addr("127.0.0.1");
+
+    connect(sock, (struct sockaddr*)&socketAddr, sizeof(struct sockaddr_in));
+
+    char handShake[3] =
+    {
+        0x05, // SOCKS 5
+        0x01, // One Authentication Method
+        0x00  // No AUthentication
+    };
+    send(sock, handShake, 3, 0);
+
+    char resp1[2];
+    recv(sock, resp1, 2, 0);
+    if(resp1[1] != 0x00)    {
+        return 9; // Error, handshake failed ?
+    }
+
+    char  domainLen = (char)strlen(domain);
+    short port = htons(portno);
+
+    char TmpReq[4] = {
+          0x05, // SOCKS5
+          0x01, // CONNECT
+          0x00, // RESERVED
+          0x03, // domain
+        };
+
+    char* req2 = malloc ((4+1+domainLen + 2) *sizeof (char));
+
+    memcpy(req2, TmpReq, 4);                // 5, 1, 0, 3
+    memcpy(req2 + 4, &domainLen, 1);        // Domain Length
+    memcpy(req2 + 5, domain, domainLen);    // Domain
+    memcpy(req2 + 5 + domainLen, &port, 2); // Port
+
+    send(sock, (char*)req2, 4 + 1 + domainLen + 2, 0);
+    free (req2);
+
+    char resp2[10];
+    recv(sock, resp2, 10, 0);
+    // if resp2 is ok, tor opened a socket to domain (.onion)
+	if(resp2[1] != 0){
+		return resp2[1];
 	}
-
-	strncpy(addr, host, strlen(host));
-	strncat(addr, ":", 1);
-	strncat(addr, port, strlen(port));
-	strncat(addr, "/upload", 7);
-	return addr;
-}
-
-void
-post_curl_req(struct fileAddr *file)
-{
-	// this sends the files through a POST request (http)
-	// the form is built by libcurl
-	// the filename is the name you would give to the file sent
-	// the filepath is the absolute path to the file
-	CURL *curl;
-	CURLcode res;
-	char *dest_addr;
-	FILE *fd;
-	struct curl_httppost *formpost=NULL;
-	struct curl_httppost *lastptr=NULL;
-
-	// format arguments
-	dest_addr = build_dest_addr(file->host, file->port);
-
-	if(!(fd=fopen(file->path, "rb"))){
-		exit_error("file not found");
-	}
-
-	// Fill in the file upload field 
-	  curl_formadd(&formpost,
-			   &lastptr,
-			   CURLFORM_COPYNAME, file->name,
-			   CURLFORM_FILE, file->path,
-			   CURLFORM_END);
-	// fill in the filename field
-	curl_formadd(&formpost,
-			   &lastptr,
-			   CURLFORM_FILENAME, file->name,
-			   CURLFORM_COPYNAME, file->name,
-			   CURLFORM_COPYCONTENTS, file->path,
-			   CURLFORM_END);
-
-	curl = curl_easy_init();
-	if(curl){
-		//upload endpoint
-		curl_easy_setopt(curl, CURLOPT_URL, dest_addr);
-		//set SOCKS5 proxy
-		curl_easy_setopt(curl, CURLOPT_PROXY, "127.0.0.1:9250");
-		curl_easy_setopt(curl, CURLOPT_PORT, 8000);
-		curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
-		//enable uploading to endpoint
-		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
-
-		//enable verbose output
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-
-		// send request
-		if((res = curl_easy_perform(curl)) != CURLE_OK){
-			exit_error("unable to perform POST request");
-		}
-		curl_easy_cleanup(curl);
-	}
-	fclose(fd);
-	FREE(dest_addr);
+	int	fd = open(file->path, O_RDONLY);
+	while(sendfile(sock, fd, NULL, 4096) > 0);
+	return 0;
 }
 
 void *
@@ -148,7 +164,7 @@ send_file_routine(void *fI)
 	// retrieve the infos on the current files to send
 	struct fileAddr *file = (struct fileAddr *) fI;
 	while(file){
-		post_curl_req(file);
+		send_file_over_tor(file, 9250);			
 		file = next_file(file);
 	}
 }
