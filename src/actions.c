@@ -180,7 +180,7 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 	strncpy(data->id, data->msg,29*sizeof(char));
 	data->id[strlen(data->id)] = '\0';
 	// if no msg, get_unread_message should return NULL
-	struct message *msg;
+	struct message *msg = NULL;
 	if((msg = get_unread_message(data->msg)) != NULL){
 		// now we convert the message in a json and send it
 		FREE (data->msg);
@@ -193,8 +193,10 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
 	MONGOOSE_SEND (nc, unreadMsg, strlen(unreadMsg));
-
-	FREE (unreadMsg); FREE (msg->date); FREE (msg->content); FREE (msg);
+	FREE (unreadMsg);
+	if(msg){
+		FREE (msg->date); FREE (msg->content); FREE (msg);	
+	}
 }
 
 void
