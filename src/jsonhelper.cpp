@@ -181,7 +181,7 @@ convert_datastruct_to_char (const struct data_wrapper *data)
 	j["id"] = data->id;
 	j["msg"] = data->msg;
 	j["portno"] = data->portno;
-	if (data->cmd == UPDATE) {
+	if (data->cmd == UPDATE || data->cmd == RECV) {
 		// the date field is used only to communicate to the client
 		// the time of arrival of a message
 		// it is not used in server to server communication
