@@ -80,7 +80,7 @@ peer_exist (const char *id)
 }
 
 static struct message *
-new_message (const char *content)
+new_message (const char *content, enum command cmd)
 {
 	// first allocate a new message node
 	// then insert content and date
@@ -93,6 +93,7 @@ new_message (const char *content)
 	new->prev = NULL;
 	new->date = get_short_date ();
 	new->content = STRDUP (content);
+	new->cmd = cmd;
 	return new;
 }
 
@@ -107,7 +108,7 @@ get_tail (struct message *h)
 }
 
 bool
-insert_new_message  (const char *peerId, const char *content)
+insert_new_message  (const char *peerId, const char *content, enum command cmd)
 {
 	// insert a new message to a message list
 	// most recent at tail 
@@ -115,13 +116,13 @@ insert_new_message  (const char *peerId, const char *content)
 	//
 	// does not check that peer exist
 	struct peer *p = get_peer (peerId);
-	struct message *new = new_message (content);
+	struct message *newMsg = new_message (content, cmd);
 	if(p->msg == NULL){
-		p->msg = new;
+		p->msg = newMsg;
 	} else {
 		struct message *tmp = get_tail (p->msg);
-		tmp->next = new;
-		new->prev = tmp;
+		tmp->next = newMsg;
+		newMsg->prev = tmp;
 	}
 	return true;
 }

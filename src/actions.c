@@ -167,7 +167,7 @@ store_msg (struct data_wrapper *data)
 		insert_peer (data->id);
 		// insert in hash tables only peer that sent RECV, not other cmd
 	}
-	insert_new_message (data->id, data->msg);
+	insert_new_message (data->id, data->msg, data->cmd);
 }
 
 void

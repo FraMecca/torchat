@@ -41,6 +41,7 @@ struct data_wrapper {
 struct message {
 	char *content;
 	char *date;
+	enum command cmd;
 	struct message  *next;
 	struct message  *prev;
 };
@@ -69,7 +70,7 @@ struct peer *
 get_list_head();
 
 bool
-insert_new_message  (const char *peerId, const char *content);
+insert_new_message  (const char *peerId, const char *content, enum command cmd);
 
 char *
 get_peer_list ();
