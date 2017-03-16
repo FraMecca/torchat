@@ -153,6 +153,7 @@ event_routine (struct mg_connection *nc)
 			break;
 		case FILEUP :
 			// manage file uploading
+			log_info(json);
 			manage_file_upload (data);
 			relay_msg (data, nc);
 			break;
@@ -162,6 +163,7 @@ event_routine (struct mg_connection *nc)
 			free_data_wrapper(data);
 			break;
 		case FILEINFO:
+			log_info(json);
 			load_info(data, file);
 			// send file here
 			send_file(file);
