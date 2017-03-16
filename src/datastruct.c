@@ -91,7 +91,7 @@ new_message (const char *content, char *date, enum command cmd)
 	}
 	new->next = NULL;
 	new->prev = NULL;
-	new->date = date;
+	new->date = STRDUP (date);
 	new->content = STRDUP (content);
 	new->cmd = cmd;
 	return new;
