@@ -57,7 +57,7 @@ struct peer {
 //bool
 //check_peers_for_messages(const char *id);
 
-char *
+struct message *
 get_unread_message(const char *peerId);
 
 bool
