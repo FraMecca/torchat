@@ -29,8 +29,9 @@ class Torchat:
         s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
         s.connect ((self.host, int (self.port)))
         s.send (bytes (json.dumps (j), 'utf-8'))
-        resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
-        return resp
+        if wait:
+            resp = json.loads (s.recv (5000).decode ('utf-8')) # a dictionary
+            return resp
 
     def get_peers(self):        # returns a list
         # ask for a list of peers with pending messages
