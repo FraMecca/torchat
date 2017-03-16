@@ -3,3 +3,4 @@ SocksPort 9250
 DataDirectory tor/
 HiddenServiceDir tor/
 HiddenServicePort 80 127.0.0.1:8000
+HiddenServicePort 43434 127.0.0.1:43434
