@@ -237,7 +237,7 @@ file_upload_poll (void *rp)
 {
 	// create a new connection on the port advertised
 	// poll for the file to be transfered
-	char *port = (char *) rp;
+	char *port = (char*) rp;
  	bool file_received = false;
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
@@ -276,7 +276,7 @@ manage_file_upload (struct data_wrapper *data)
 	// select random portrange
 	srand (time (NULL));
 	int p = rand () % (65535 - 2048) + 2048;
-	char port[6];
+	char *port = MALLOC(6*sizeof(char));
 	snprintf (port, sizeof (port), "%d", p);
 
 	// advertise port
@@ -293,6 +293,7 @@ manage_file_upload (struct data_wrapper *data)
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 	    exit_error ("pthread_attr_setdetachstate");
 	}
+	printf("%s", port);
 	pthread_create(&t, &attr, &file_upload_poll, (void*)port);
 	return;
 }
