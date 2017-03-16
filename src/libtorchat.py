@@ -42,7 +42,7 @@ class Torchat:
         return peerList
 
     def get_hostname(self):
-        resp = self.send_message(command="HOST", line="", currentId="localhost")
+        resp = self.send_message(command="HOST", line="", currentId="localhost", wait=True)
         return resp["msg"]
 
     def close_server (self):
