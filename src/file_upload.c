@@ -268,8 +268,10 @@ manage_file_upload (struct data_wrapper *data)
 
 	// select random portrange
 	srand (time (NULL));
-	int p = rand () % (65535 - 2048) + 2048;
+	/*int p = rand () % (65535 - 2048) + 2048;*/
+	int p = 8888;
 	char *port = MALLOC(6*sizeof(char));
+
 	snprintf (port, sizeof (port), "%d", p);
 
 	// advertise port
