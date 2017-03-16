@@ -80,7 +80,7 @@ peer_exist (const char *id)
 }
 
 static struct message *
-new_message (const char *content, enum command cmd)
+new_message (const char *content, char *date, enum command cmd)
 {
 	// first allocate a new message node
 	// then insert content and date
@@ -91,7 +91,7 @@ new_message (const char *content, enum command cmd)
 	}
 	new->next = NULL;
 	new->prev = NULL;
-	new->date = get_short_date ();
+	new->date = date;
 	new->content = STRDUP (content);
 	new->cmd = cmd;
 	return new;
@@ -116,7 +116,7 @@ insert_new_message  (const char *peerId, const char *content, enum command cmd)
 	//
 	// does not check that peer exist
 	struct peer *p = get_peer (peerId);
-	struct message *newMsg = new_message (content, cmd);
+	struct message *newMsg = new_message (content, get_short_date (), cmd);
 	if(p->msg == NULL){
 		p->msg = newMsg;
 	} else {
@@ -161,7 +161,7 @@ delete_peer(struct peer *currentPeer)
 	pthread_mutex_unlock (mut);
 }
 
-char *
+struct message *
 get_unread_message(const char *peerId)
 {
 	// for the given peer
@@ -177,14 +177,14 @@ get_unread_message(const char *peerId)
 		return NULL;
 	}
 	/*int len = strlen(msg->content)+strlen(msg->date)+3;*/
-	char *m = STRDUP(msg->content);
+	struct message *retMsg = new_message (msg->content, msg->date, msg->cmd); 
 	currentPeer->msg = delete_message (currentPeer->msg);
 	if (currentPeer->msg == NULL) {
 		// if we read every message of the peer, remove peer from hash table
 		delete_peer (currentPeer);
 	}
 	
-	return m;
+	return retMsg;
 }
 
 struct peer *
