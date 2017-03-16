@@ -96,7 +96,7 @@ post_curl_req(struct fileAddr *file)
 	// format arguments
 	dest_addr = build_dest_addr(file->host, file->port);
 
-	if(!(fd=fopen(dest_addr, "rb"))){
+	if(!(fd=fopen(file->path, "rb"))){
 		exit_error("file not found");
 	}
 

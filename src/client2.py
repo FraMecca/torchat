@@ -71,7 +71,7 @@ class Client:
         # send_message is multithread because socket recv is blocking
         resp = self.torchat.send_message(command="SEND", line=msg, currentId=self.currId, sendPort=80, wait=True)
         if resp['cmd'] == 'ERR':
-            self.print_line_cur(resp['msg'], ui, 1)
+            self.print_line_cur(resp['msg'], 1)
 
     def elaborate_command (self, line):
         # this processes the commands received from the input buffer (the ones with "/")
