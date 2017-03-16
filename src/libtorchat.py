@@ -25,7 +25,7 @@ class Torchat:
             j['cmd'] = cmd
             return j
 
-    def send_to_mongoose (self, j):
+    def send_to_mongoose (self, j, wait=False):
         s = socket.socket (socket.AF_INET, socket.SOCK_STREAM)
         s.connect ((self.host, int (self.port)))
         s.send (bytes (json.dumps (j), 'utf-8'))
@@ -48,12 +48,12 @@ class Torchat:
         j = self.create_json(cmd='EXIT', msg='')
         self.send_to_mongoose(j)
 
-    def send_message (self, command, line, currentId, sendPort=""): # added cmd for fileup needs
+    def send_message (self, command, line, currentId, sendPort="", wait): # added cmd for fileup needs
         # portno is the one used by the other server, usually 80
         if sendPort == "":
             sendPort = self.port
         j = self.create_json(cmd=command, msg=line, id=currentId, portno = sendPort)
-        return self.send_to_mongoose(j)
+        return self.send_to_mongoose(j, wait)
 
     def check_error (self, j):
         if j['cmd'] == 'ERR':

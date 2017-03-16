@@ -67,7 +67,7 @@ class Client:
         # this sends the message to the peer
         # does not deal with commands to the client
         # send_message is multithread because socket recv is blocking
-        resp = self.torchat.send_message(command="SEND", line=msg, currentId=self.currId, sendPort=80)
+        resp = self.torchat.send_message(command="SEND", line=msg, currentId=self.currId, sendPort=80, wait=True)
         if resp['cmd'] == 'ERR':
             self.print_line_cur(resp['msg'], ui, 1)
 
@@ -77,7 +77,7 @@ class Client:
         # global currId
         if line == '/exit':
         # this sends an exit to the client AND to the server
-            self.torchat.send_message(command='EXIT', line='', currentId="localhost")
+            self.torchat.send_message(command='EXIT', line='', currentId="localhost", wait=False)
             self.exitFlag = True
             exit ()
         elif line == '/quit':
@@ -93,12 +93,12 @@ class Client:
             self.ui.redraw_ui(i)
         elif line == '/fileup':
             # upload files: start by requiring a random port to the peer
-            self.torchat.send_message(command='FILEALLOC', line=self.currId, currentId="localhost")
+            self.torchat.send_message(command='FILEALLOC', line=self.currId, currentId="localhost", wait=False)
 
     def send_file_info (self, port):
         fi = self.ui.wait_input ("Absolute path and filename separated by a space: ")
         fileInfo = fi + " " + port + " " + self.currId
-        self.torchat.send_message(command='FILEINFO', line=fileInfo, currentId="localhost")
+        self.torchat.send_message(command='FILEINFO', line=fileInfo, currentId="localhost", wait=False)
 
     def get_peers(self):
         # ask for a list of peers with pending messages
@@ -145,7 +145,7 @@ def update_routine(cli):
         if cli.exitFlag:
             cli.ui.close_ui()
             exit()
-        resp = cli.torchat.send_message (command="UPDATE", line=cli.currId, currentId="localhost", sendPort=8000)
+        resp = cli.torchat.send_message (command="UPDATE", line=cli.currId, currentId="localhost", sendPort=8000, wait=True)
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
