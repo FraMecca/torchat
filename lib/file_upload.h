@@ -11,6 +11,6 @@ struct fileAddr {
 	struct fileAddr *next;
 };
 
-void load_info(struct data_wrapper *data, struct fileAddr *file);
+struct fileAddr *load_info(struct data_wrapper *data, struct fileAddr *file);
 void send_file(struct fileAddr *file);
 void manage_file_upload (struct data_wrapper *data);

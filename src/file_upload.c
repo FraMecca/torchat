@@ -21,7 +21,7 @@ struct file_writer_data {
 
 // FILE UPLOAD FUNCTIONS
 
-void
+struct fileAddr *
 load_info(struct data_wrapper *data, struct fileAddr *file)
 {
 	// this function loads informations about files received by the client
@@ -48,6 +48,7 @@ load_info(struct data_wrapper *data, struct fileAddr *file)
 		newFile->next = file;
 		file = newFile;
 	}
+	return file;
 }
 
 struct fileAddr *

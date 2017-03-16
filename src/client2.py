@@ -53,6 +53,8 @@ class Client:
         self.currId = self.peerList[i]
         self.printBuf = list()
         self.exitFlag = False
+        self.filePath = None
+        self.fileName = None
 
     def print_line_cur (self, line, color):
         # append sent messages and received messages to the buffer
@@ -91,14 +93,19 @@ class Client:
             self.ui.chatbuffer = []
             self.ui.linebuffer = []
             self.ui.redraw_ui(i)
-        elif line == '/fileup':
+        elif '/fileup' in line:
+            data = line.split(' ')
+            if len(data) != 3:
+                self.print_line_cur("/fileup [filePath] [fileName]", 1)
+                return
+            self.filePath = data[1]
+            self.fileName = data[2]
             # upload files: start by requiring a random port to the peer
             self.torchat.send_message(command='FILEALLOC', line=self.currId, currentId=self.currId, wait=False)
 
     def send_file_info (self, port):
-        fi = self.ui.wait_input ("Absolute path and filename separated by a space: ")
-        fileInfo = fi + " " + port + " " + self.currId
-        self.torchat.send_message(command='FILEINFO', line=fileInfo, currentId="localhost", wait=False)
+        fileInfo = self.filePath + " " + self.fileName + " " + port + " " + self.currId
+        self.torchat.send_message('FILEINFO', fileInfo, "localhost", wait=False)
 
     def get_peers(self):
         # ask for a list of peers with pending messages
@@ -146,6 +153,9 @@ def update_routine(cli):
             cli.ui.close_ui()
             exit()
         resp = cli.torchat.send_message (command="UPDATE", line=cli.currId, currentId="localhost", sendPort=8000, wait=True)
+        # with open("tmp", 'a') as fp:
+            # fp.write(resp['cmd']+' '+resp['msg']+'\n'+resp['date'])
+            # fp.write('\n')
         # the json is not printed if no messages are received
         if resp['cmd'] == 'END':
             sleep(0.5)
