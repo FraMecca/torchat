@@ -102,9 +102,8 @@ send_routine(void *d)
 		data->portno = 80;
 	} else {
 			data->cmd = RECV;
-		}
-		strcpy (id, data->id); // save dest address
 	}
+	strcpy (id, data->id); // save dest address
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
