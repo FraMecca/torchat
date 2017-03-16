@@ -48,7 +48,7 @@ class Torchat:
         j = self.create_json(cmd='EXIT', msg='')
         self.send_to_mongoose(j)
 
-    def send_message (self, command, line, currentId, sendPort="", wait): # added cmd for fileup needs
+    def send_message (self, command, line, currentId, sendPort="", wait=False): # added cmd for fileup needs
         # portno is the one used by the other server, usually 80
         if sendPort == "":
             sendPort = self.port
