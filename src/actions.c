@@ -100,7 +100,7 @@ send_routine(void *d)
 		data->cmd = FILEUP;
 		strcpy (id, data->msg); // save dest address
 		data->portno = 80;
-	} else {
+	} else if (data->cmd != FILEPORT){
 			data->cmd = RECV;
 	}
 	strcpy (id, data->id); // save dest address
