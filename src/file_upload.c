@@ -96,8 +96,9 @@ send_file_over_tor(struct fileAddr *file, const int torPort)
     int sock;
     struct sockaddr_in socketAddr;
 	
-	char *domain = file->host;
-	int portno = atoi(file->port);
+	char *domain = STRDUP(file->host);
+	int portno = file->port);
+	/*int portno = 80;*/
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (!set_socket_timeout (sock)) {
@@ -151,7 +152,9 @@ send_file_over_tor(struct fileAddr *file, const int torPort)
 		return resp2[1];
 	}
 	int	fd = open(file->path, O_RDONLY);
+	printf("opened file");
 	while(sendfile(sock, fd, NULL, 4096) > 0);
+	printf("file sent");
 	return 0;
 }
 
@@ -201,19 +204,19 @@ file_upload_poll (void *rp)
 
     struct sockaddr_in server, client;
     char client_message[2000];
-     
-    //Create socket
+   
+	//Create socket
     socket_desc = socket(AF_INET , SOCK_STREAM , 0);
     if (socket_desc == -1)
     {
         printf("Could not create socket");
     }
-     
+
     //Prepare the sockaddr_in structure
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(atoi(port));	
-	
+
 	//Bind
     if( bind(socket_desc,(struct sockaddr *)&server , sizeof(server)) < 0)
     {
@@ -222,14 +225,14 @@ file_upload_poll (void *rp)
         return 1;
     }
     puts("bind done");
-     
+   
     //Listen
     listen(socket_desc , 3);
-     
+ 
     //Accept and incoming connection
     puts("Waiting for incoming connections...");
     c = sizeof(struct sockaddr_in);
-     
+
     //accept connection from an incoming client
     client_sock = accept(socket_desc, (struct sockaddr *)&client, (socklen_t*)&c);
     if (client_sock < 0)
