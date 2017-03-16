@@ -93,7 +93,7 @@ class Client:
             self.ui.redraw_ui(i)
         elif line == '/fileup':
             # upload files: start by requiring a random port to the peer
-            self.torchat.send_message(command='FILEALLOC', line=self.currId, currentId="localhost", wait=False)
+            self.torchat.send_message(command='FILEALLOC', line=self.currId, currentId=self.currId, wait=False)
 
     def send_file_info (self, port):
         fi = self.ui.wait_input ("Absolute path and filename separated by a space: ")
