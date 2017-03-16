@@ -36,7 +36,7 @@ class Torchat:
     def get_peers(self):        # returns a list
         # ask for a list of peers with pending messages
         j = self.create_json (cmd='GET_PEERS')
-        resp = self.send_to_mongoose (j)
+        resp = self.send_to_mongoose (j, wait=True)
         peerList = resp['msg'].split (',')
 
         return peerList
@@ -47,7 +47,7 @@ class Torchat:
 
     def close_server (self):
         j = self.create_json(cmd='EXIT', msg='')
-        self.send_to_mongoose(j)
+        self.send_to_mongoose(j, wait=True)
 
     def send_message (self, command, line, currentId, sendPort="", wait=False): # added cmd for fileup needs
         # portno is the one used by the other server, usually 80
@@ -68,7 +68,7 @@ class Torchat:
         msgs = list ()
         while True:
             j = self.create_json (cmd='UPDATE', msg=currId)
-            resp = self.send_to_mongoose (j)
+            resp = self.send_to_mongoose (j, wait=True)
             if resp['cmd'] == 'END':
                 if msgs:
                     return msgs
@@ -79,7 +79,7 @@ class Torchat:
 
     def check_new_messages_single (self, currId):
         j = self.create_json (cmd='UPDATE', msg=currId)
-        resp = self.send_to_mongoose (j)
+        resp = self.send_to_mongoose (j, wait=True)
         if resp['cmd'] == 'END':
                 return None
         else:
