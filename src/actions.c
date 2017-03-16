@@ -101,7 +101,6 @@ send_routine(void *d)
 		strcpy (id, data->msg); // save dest address
 		data->portno = 80;
 	} else {
-		if (data->cmd != FILEPORT){
 			data->cmd = RECV;
 		}
 		strcpy (id, data->id); // save dest address
@@ -205,7 +204,6 @@ send_fileport_to_client(struct data_wrapper *data, struct mg_connection *nc)
 	// the port is in the data->msg field
 
 	char *response = convert_datastruct_to_char (data);
-	printf("%s", response);
 	// if iface is not null the client is waiting for response
 	MONGOOSE_SEND (nc, response, strlen (response));
 	FREE (response);
