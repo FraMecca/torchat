@@ -100,8 +100,10 @@ send_routine(void *d)
 		strncpy (id, data->msg, strlen(data->msg)); // save dest address
 		/*id = STRDUP(data->msg);*/
 		data->portno = 80;
-	} else if (data->cmd != FILEPORT){
-		data->cmd = RECV;
+	} else {
+		if (data->cmd != FILEPORT){
+			data->cmd = RECV;
+		}
 		strcpy (id, data->id); // save dest address
 	}
 	strcpy (data->id, HOSTNAME);
