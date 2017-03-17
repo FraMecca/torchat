@@ -90,7 +90,9 @@ For a list of possible commands, check the [Development section](#Development)
 
 ## Building
 
-TORchat has no external dependencies and just requires a C++11 compatible compiler.
+<!--TORchat has no external dependencies and just requires a C++11 compatible compiler.-->
+TORchat requires a C++11 compatible compiler and at the moment depends on **libcurl** for file upload functionality. 
+The best way to obtain libcurl is probably through the package manager of your Linux distribution. Alternatively, the Github page of cUrl is avaiable [here](https://github.com/curl/curl).
 
 To build the standar version (without debug logging), simply run:
 
@@ -113,10 +115,10 @@ With the daemon mode option, it detaches from the shell and continues its execut
 
 #### Daemon
 
-The daemon aims to be as  small as possible. It has no external dependency and is written in less that 1000 loc. 
+The daemon aims to be as  small as possible. <!--It has no external dependency and is written in less that 1000 loc.--> 
 Currently it supports only Linux and aims to do so.
 
-The daemon uses [mongoose](https://github.com/cesanta/mongoose) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs and [json](https://github.com/nlohmann/json) for communication.
+The daemon uses [mongoose](https://github.com/cesanta/mongoose) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs, [json](https://github.com/nlohmann/json) for communication and [libcurl](https://github.com/curl/curl) to send files.
 
 The core of the daemon is written in C with bindings to embedded libraries in C++.
 
