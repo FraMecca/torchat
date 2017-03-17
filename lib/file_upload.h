@@ -8,7 +8,6 @@ struct fileAddr {
 	char *port;
 	char *path;
 	char *name;
-	struct fileAddr *next;
 };
 
 void initialize_fileupload_structs ();
