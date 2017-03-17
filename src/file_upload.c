@@ -13,7 +13,6 @@
 #include <fcntl.h>
 
 static int nosaveFlag = 0; // used to determine if tmpfile has to be removed or not
-static bool file_received = false;
 static char port[] = "43434";
 static pthread_mutex_t pollMut;
 extern void log_err (char *json); // from logger.cpp
@@ -40,7 +39,7 @@ destroy_fileupload_structs ()
 }
 
 struct fileAddr *
-load_info(struct data_wrapper *data, struct fileAddr *file)
+load_info(struct data_wrapper *data)
 {
 	// this function loads informations about files received by the client
 	// puts them in a data structure defined in file_upload.h
@@ -59,31 +58,20 @@ load_info(struct data_wrapper *data, struct fileAddr *file)
 	newFile->path = STRDUP(fPath);
 	newFile->name = STRDUP(fName);
 
-	if(!file){
-		file = newFile;
-		file->next = NULL;
-	} else {
-		newFile->next = file;
-		file = newFile;
-	}
-	return file;
+	return newFile;
 }
 
 struct fileAddr *
 next_file(struct fileAddr *fList)
 {
-	struct fileAddr *file;
 	if (fList){
-		file = fList->next;
 		FREE(fList->host);
 		FREE(fList->port);
 		FREE(fList->name);
 		FREE(fList->path);
 		FREE(fList);
-	} else {
-		return NULL;
 	}
-	return file;
+	return NULL;
 }
 
 char *
@@ -175,15 +163,15 @@ send_file_routine(void *fI)
 	// go on until no files are present
 	// retrieve the infos on the current files to send
 	struct fileAddr *file = (struct fileAddr *) fI;
-	while(file){
+	if (file){
 		post_curl_req(file);
-		file = next_file(file);
+		next_file(file);
 	}
 	pthread_exit (NULL);
 }
 
 void 
-send_file(struct fileAddr *file)
+send_file(struct data_wrapper *data)
 {
 	// multiple threads to avoid blocking on large files
 	// detached to prevent leaks
@@ -197,6 +185,7 @@ send_file(struct fileAddr *file)
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 		exit_error ("pthread_attr_setdetachstate");
 	}
+	struct fileAddr *file = load_info (data);
 	pthread_create(&t, &attr, &send_file_routine, (void*)file);
 }
 
@@ -258,7 +247,6 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
 			remove("tmpfile");
 			nosaveFlag = 0;
 		  }
-		  file_received = true;
 		  break;
 	}
   }
@@ -283,8 +271,7 @@ file_upload_poll ()
 	// Add http events management to the connection
 	mg_set_protocol_http_websocket(nc);
 
- 	file_received = false;
-	while (!file_received) {
+	while (true) {
         mg_mgr_poll(&mgr, 300);
     }
     // close connection 
