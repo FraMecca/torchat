@@ -256,8 +256,14 @@ file_upload_poll (void *rp)
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
     struct mg_connection *nc; 
-    nc = mg_bind(&mgr, port, handle_upload);  // Create listening connection and add it to the event manager
-	
+	// Create listening connection and add it to the event manager
+
+    if((nc = mg_bind(&mgr, port, handle_upload)) == NULL) {
+		log_err("Unable to bind to the given port. Is there another file transfer in progress?");
+		mg_mgr_free(&mgr); // terminate mongoose connection
+		FREE(port);
+		return;
+	}
 	// Add http events management to the connection
 	mg_set_protocol_http_websocket(nc);
 
@@ -268,7 +274,7 @@ file_upload_poll (void *rp)
     // close connection 
     mg_mgr_free(&mgr); // terminate mongoose connection
 	FREE(port);
-    return 0;
+    return;
 }
 
 static void
