@@ -13,6 +13,8 @@
 #include <fcntl.h>
 
 static int nosaveFlag = 0; // used to determine if tmpfile has to be removed or not
+static bool file_received = false;
+extern void log_err (char *json); // from logger.cpp
 
 struct file_writer_data {
   FILE *fp;
@@ -84,7 +86,7 @@ build_dest_addr(char *host, char *port)
 	return addr;
 }
 
-void
+static void
 post_curl_req(struct fileAddr *file)
 {
 	// this sends the files through a POST request (http)
@@ -92,8 +94,9 @@ post_curl_req(struct fileAddr *file)
 	// the filename is the name you would give to the file sent
 	// the filepath is the absolute path to the file
 	CURL *curl;
-	CURLcode res;
+	/*CURLcode res;*/
 	char *dest_addr;
+	char *err;
 	FILE *fd;
 	struct curl_httppost *formpost=NULL;
 	struct curl_httppost *lastptr=NULL;
@@ -102,7 +105,11 @@ post_curl_req(struct fileAddr *file)
 	dest_addr = build_dest_addr(file->host, file->port);
 
 	if(!(fd=fopen(file->path, "rb"))){
-		exit_error("file not found");
+		err = MALLOC((20+strlen(file->path))*sizeof(char));
+		sprintf(err, "File %s not found.", file->path);
+		log_err(err);
+		FREE(err);
+		return;
 	}
 
 	// Fill in the file upload field 
@@ -132,10 +139,9 @@ post_curl_req(struct fileAddr *file)
 		//enable verbose output
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 
-		// send request
-		if((res = curl_easy_perform(curl)) != CURLE_OK){
-			/*exit_error("unable to perform POST request");*/
-		}
+		// send request, does not check for return value
+		// at this point http delivers even if errors occour
+		curl_easy_perform(curl);
 		curl_easy_cleanup(curl);
 	}
 	fclose(fd);
@@ -155,9 +161,11 @@ send_file_routine(void *fI)
 		post_curl_req(file);
 		file = next_file(file);
 	}
+	return;
 }
 
-void send_file(struct fileAddr *file)
+void 
+send_file(struct fileAddr *file)
 {
 	// multiple threads to avoid blocking on large files
 	// detached to prevent leaks
@@ -232,6 +240,7 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
 			remove("tmpfile");
 			nosaveFlag = 0;
 		  }
+		  file_received = true;
 		  break;
 	}
   }
@@ -243,7 +252,6 @@ file_upload_poll (void *rp)
 	// create a new connection on the port advertised
 	// poll for the file to be transfered
 	char *port = (char*) rp;
- 	bool file_received = false;
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -253,6 +261,7 @@ file_upload_poll (void *rp)
 	// Add http events management to the connection
 	mg_set_protocol_http_websocket(nc);
 
+ 	file_received = false;
 	while (!file_received) {
         mg_mgr_poll(&mgr, 300);
     }
@@ -280,7 +289,7 @@ manage_file_upload (struct data_wrapper *data)
  	// wait for file with the http ev handler
 
 	// select random portrange
-	srand (time (NULL));
+	/*srand (time (NULL));*/
 	/*int p = rand () % (65535 - 2048) + 2048;*/
 	int p = 43434;
 	char *port = MALLOC(6*sizeof(char));
@@ -300,7 +309,6 @@ manage_file_upload (struct data_wrapper *data)
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 	    exit_error ("pthread_attr_setdetachstate");
 	}
-	printf("%s", port);
 	pthread_create(&t, &attr, &file_upload_poll, (void*)port);
 	return;
 }
