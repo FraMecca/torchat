@@ -14,7 +14,10 @@
 
 static int nosaveFlag = 0; // used to determine if tmpfile has to be removed or not
 static bool file_received = false;
+static char port[] = "43434";
+static pthread_mutex_t pollMut;
 extern void log_err (char *json); // from logger.cpp
+
 
 struct file_writer_data {
   FILE *fp;
@@ -22,6 +25,19 @@ struct file_writer_data {
 };
 
 // FILE UPLOAD FUNCTIONS
+void 
+initialize_fileupload_structs ()
+{
+	if (pthread_mutex_init (&pollMut, NULL) != 0) {
+		exit_error ("Can't initialize file_upload_poll_mutex");
+	}
+}
+
+void 
+destroy_fileupload_structs ()
+{
+	pthread_mutex_destroy (&pollMut);
+}
 
 struct fileAddr *
 load_info(struct data_wrapper *data, struct fileAddr *file)
@@ -71,17 +87,17 @@ next_file(struct fileAddr *fList)
 }
 
 char *
-build_dest_addr(char *host, char *port)
+build_dest_addr(char *host, char *portno)
 {
 	// build the curl destination address
 	char *addr;
-	if(!(addr = calloc(strlen(host) + strlen(port) + 10, sizeof(char)))){
+	if(!(addr = calloc(strlen(host) + strlen(portno) + 10, sizeof(char)))){
 		exit(1);
 	}
 
 	strncpy(addr, host, strlen(host));
 	strncat(addr, ":", 1);
-	strncat(addr, port, strlen(port));
+	strncat(addr, port, strlen(portno));
 	/*strncat(addr, "/upload", 7);*/
 	return addr;
 }
@@ -163,7 +179,7 @@ send_file_routine(void *fI)
 		post_curl_req(file);
 		file = next_file(file);
 	}
-	return;
+	pthread_exit (NULL);
 }
 
 void 
@@ -204,7 +220,7 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
 			if(mp->file_name != NULL && strcmp(mp->file_name, "") != 0){
 				data->fp = fopen(mp->file_name, "w+b");
 				nosaveFlag = 1;
-			}else {
+			} else {
 				// if a file is not given (should be) open a temporary one.
 				// note: this file is actually needed even if a file is given, 
 				// prevents SEGVs. If the file name is given, tmpfile is removed
@@ -249,11 +265,10 @@ handle_upload(struct mg_connection *nc, int ev, void *p) {
 }
 
 static void *
-file_upload_poll (void *rp)
+file_upload_poll ()
 {
 	// create a new connection on the port advertised
 	// poll for the file to be transfered
-	char *port = (char*) rp;
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
@@ -261,11 +276,10 @@ file_upload_poll (void *rp)
 	// Create listening connection and add it to the event manager
 
     if((nc = mg_bind(&mgr, port, handle_upload)) == NULL) {
-		log_err("Unable to bind to the given port. Is there another file transfer in progress?");
-		mg_mgr_free(&mgr); // terminate mongoose connection
-		FREE(port);
-		return;
-	}
+    	exit_error ("Unable to bind to the given port");
+    }
+
+
 	// Add http events management to the connection
 	mg_set_protocol_http_websocket(nc);
 
@@ -275,14 +289,13 @@ file_upload_poll (void *rp)
     }
     // close connection 
     mg_mgr_free(&mgr); // terminate mongoose connection
-	FREE(port);
-    return;
+    pthread_exit (NULL);
 }
 
 static void
-advertise_port (struct data_wrapper *data, char *port)
+advertise_port (struct data_wrapper *data)
 {
-	// puts the random port in the data field so that it can be sent to the other peer's server
+	// puts the port in the data field so that it can be sent to the other peer's server
 	data->cmd = FILEPORT;
 	FREE (data->msg);
 	data->msg = STRDUP (port);
@@ -291,21 +304,19 @@ advertise_port (struct data_wrapper *data, char *port)
 void
 manage_file_upload (struct data_wrapper *data)
 {
- 	// select a new random port
- 	// bind to it
+ 	// bind to torrc second port
  	// send a json confirming the acceptance and the selected port
  	// wait for file with the http ev handler
 
-	// select random portrange
-	/*srand (time (NULL));*/
-	/*int p = rand () % (65535 - 2048) + 2048;*/
-	int p = 43434;
-	char *port = MALLOC(6*sizeof(char));
-	snprintf (port, sizeof (port), "%d", p);
 
 	// advertise port
-	advertise_port (data, port); // just fill data_wrapper with information on port // main.c sends the msg
+	advertise_port (data); // just fill data_wrapper with information on port // main.c sends the msg
+	if (pthread_mutex_trylock (&pollMut) != 0) {	
+		// if mongoose is already polling do not start another thread
+		return;
+	} 
 
+	// else
 	// start polling on the new connection for the file (on a separate thread)
 	pthread_t t;
 	pthread_attr_t attr; // create an attribute to specify that thread is detached
@@ -317,6 +328,6 @@ manage_file_upload (struct data_wrapper *data)
 	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
 	    exit_error ("pthread_attr_setdetachstate");
 	}
-	pthread_create(&t, &attr, &file_upload_poll, (void*)port);
+	pthread_create(&t, &attr, &file_upload_poll, NULL);
 	return;
 }

@@ -221,8 +221,9 @@ main(int argc, char **argv)
     log_init ("file.log", "INFO");
     log_init ("error.log", "ERROR");
 
+	// initialization of datastructs
     HOSTNAME = read_tor_hostname ();
-
+	initialize_fileupload_structs ();
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 	
@@ -234,17 +235,16 @@ main(int argc, char **argv)
         mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
 
-
-
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
         // so mongoose halts and we can collect the threads
         mg_mgr_poll(&mgr, 300);
     }
 
+    destroy_fileupload_structs ();
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
- 	destroy_mut(); // free the mutex allocated in list.c
+ 	destroy_mut(); // free the mutex allocated in datastruct.c
     mg_mgr_free(&mgr); // terminate mongoose connection
     if (HOSTNAME != NULL) {
     	FREE (HOSTNAME);
