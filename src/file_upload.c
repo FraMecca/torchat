@@ -17,7 +17,6 @@ static char port[] = "43434";
 static pthread_mutex_t pollMut;
 extern void log_err (char *json); // from logger.cpp
 
-
 struct file_writer_data {
   FILE *fp;
   size_t bytes_written;

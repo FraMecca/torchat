@@ -163,7 +163,6 @@ event_routine (struct mg_connection *nc)
 			break;
 		case FILEINFO:
 			log_info(json);
-			/*file = load_info(data, file);*/
 			// send file here
 			send_file(data);
 			free_data_wrapper(data);
