@@ -10,6 +10,7 @@
 - [Development](#Development)
 	- [Daemon](#Daemon)
 	- [Client](#Client)
+	- [File Upload](#File-Upload)
 	- [JSON](#JSON)
 - [Disclaimer](#Disclaimer)
 - [Todo](#Todo)
@@ -151,7 +152,7 @@ It will ask for a peer (an onion address) to connect with, and then it will supp
 | 	**/exit**	| Close the client and the server.  |
 | 	**/quit**	| Close the client only.  			|
 
-#### FILE UPLOAD
+#### File Upload 
 
 The client provided and the daemon currently support a basic form of file upload. An upload can be requested from the client directly to the peer's server by using the /fileup command, with the following syntax:
 
