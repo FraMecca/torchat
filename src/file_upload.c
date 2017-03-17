@@ -101,9 +101,6 @@ post_curl_req(struct fileAddr *file)
 	struct curl_httppost *formpost=NULL;
 	struct curl_httppost *lastptr=NULL;
 
-	// format arguments
-	dest_addr = build_dest_addr(file->host, file->port);
-
 	if(!(fd=fopen(file->path, "rb"))){
 		err = MALLOC((20+strlen(file->path))*sizeof(char));
 		sprintf(err, "File %s not found.", file->path);
@@ -112,8 +109,10 @@ post_curl_req(struct fileAddr *file)
 		return;
 	}
 
+	// format arguments
+	dest_addr = build_dest_addr(file->host, file->port);
 	// Fill in the file upload field 
-	  curl_formadd(&formpost,
+	curl_formadd(&formpost,
 			   &lastptr,
 			   CURLFORM_COPYNAME, file->name,
 			   CURLFORM_FILE, file->path,
@@ -146,6 +145,9 @@ post_curl_req(struct fileAddr *file)
 	}
 	fclose(fd);
 	FREE(dest_addr);
+	/*curl_formfree(formpost);*/
+	/*curl_formfree(lastptr);*/
+	curl_global_cleanup();
 }
 
 void *
