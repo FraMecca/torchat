@@ -75,7 +75,7 @@ build_dest_addr(char *host, char *port)
 	strncpy(addr, host, strlen(host));
 	strncat(addr, ":", 1);
 	strncat(addr, port, strlen(port));
-	strncat(addr, "/upload", 7);
+	/*strncat(addr, "/upload", 7);*/
 	return addr;
 }
 
@@ -120,8 +120,7 @@ post_curl_req(struct fileAddr *file)
 		curl_easy_setopt(curl, CURLOPT_URL, dest_addr);
 		//set SOCKS5 proxy
 		curl_easy_setopt(curl, CURLOPT_PROXY, "127.0.0.1:9250");
-		curl_easy_setopt(curl, CURLOPT_PORT, 8000);
-		curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+		curl_easy_setopt(curl, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5_HOSTNAME);
 		//enable uploading to endpoint
 		curl_easy_setopt(curl, CURLOPT_HTTPPOST, formpost);
 
@@ -252,8 +251,9 @@ file_upload_poll (void *rp)
 	while (!file_received) {
         mg_mgr_poll(&mgr, 300);
     }
-    // close connection TODO
-    // and FREE resources TODO
+    // close connection 
+    mg_mgr_free(&mgr); // terminate mongoose connection
+	FREE(port);
     return 0;
 }
 
