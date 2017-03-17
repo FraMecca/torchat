@@ -54,13 +54,18 @@ load_info(struct data_wrapper *data, struct fileAddr *file)
 struct fileAddr *
 next_file(struct fileAddr *fList)
 {
-	struct fileAddr *file = fList;
-	FREE(file->host);
-	FREE(file->port);
-	FREE(file->name);
-	FREE(file->path);
-	FREE(file);
-	return file->next;
+	struct fileAddr *file;
+	if (fList){
+		file = fList->next;
+		FREE(fList->host);
+		FREE(fList->port);
+		FREE(fList->name);
+		FREE(fList->path);
+		FREE(fList);
+	} else {
+		return NULL;
+	}
+	return file;
 }
 
 char *
@@ -129,7 +134,7 @@ post_curl_req(struct fileAddr *file)
 
 		// send request
 		if((res = curl_easy_perform(curl)) != CURLE_OK){
-			exit_error("unable to perform POST request");
+			/*exit_error("unable to perform POST request");*/
 		}
 		curl_easy_cleanup(curl);
 	}
