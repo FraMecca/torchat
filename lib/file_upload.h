@@ -8,9 +8,9 @@ struct fileAddr {
 	char *port;
 	char *path;
 	char *name;
-	struct fileAddr *next;
 };
 
-struct fileAddr *load_info(struct data_wrapper *data, struct fileAddr *file);
-void send_file(struct fileAddr *file);
+void initialize_fileupload_structs ();
+void destroy_fileupload_structs ();
+void send_file(struct data_wrapper *data);
 void manage_file_upload (struct data_wrapper *data);

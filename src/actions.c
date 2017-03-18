@@ -97,15 +97,13 @@ send_routine(void *d)
 	// needed for file upload
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
-		strncpy (id, data->msg, strlen(data->msg)); // save dest address
-		/*id = STRDUP(data->msg);*/
 		data->portno = 80;
 	} else {
 		if (data->cmd != FILEPORT){
 			data->cmd = RECV;
 		}
-		strcpy (id, data->id); // save dest address
 	}
+	strncpy (id, data->id, strlen(data->id)); // save dest address
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);

@@ -2,5 +2,10 @@ SocksPort 9250
 #/*ControlPort 9251*/
 DataDirectory tor/
 HiddenServiceDir tor/
+<<<<<<< HEAD
 HiddenServicePort 80 127.0.0.1:8000 
 HiddenServicePort 8888 127.0.0.1:8888
+=======
+HiddenServicePort 80 127.0.0.1:8000
+HiddenServicePort 43434 127.0.0.1:43434
+>>>>>>> master

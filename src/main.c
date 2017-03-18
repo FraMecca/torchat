@@ -24,7 +24,6 @@ void log_clear_datastructs (); // from logger.cpp
 static bool exitFlag = false; // this flag is set to true when the program should exit
 
 char *HOSTNAME = NULL; // will be read from torrc
-struct fileAddr *file = NULL; // file information data structure (for file upload)
 
 static void
 start_daemon()
@@ -164,9 +163,8 @@ event_routine (struct mg_connection *nc)
 			break;
 		case FILEINFO:
 			log_info(json);
-			file = load_info(data, file);
 			// send file here
-			send_file(file);
+			send_file(data);
 			free_data_wrapper(data);
 			break;
 		case HOST :
@@ -221,8 +219,9 @@ main(int argc, char **argv)
     log_init ("file.log", "INFO");
     log_init ("error.log", "ERROR");
 
+	// initialization of datastructs
     HOSTNAME = read_tor_hostname ();
-
+	initialize_fileupload_structs ();
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 	
@@ -234,17 +233,16 @@ main(int argc, char **argv)
         mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
     }
 
-
-
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
         // so mongoose halts and we can collect the threads
         mg_mgr_poll(&mgr, 300);
     }
 
+    destroy_fileupload_structs ();
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
- 	destroy_mut(); // free the mutex allocated in list.c
+ 	destroy_mut(); // free the mutex allocated in datastruct.c
     mg_mgr_free(&mgr); // terminate mongoose connection
     if (HOSTNAME != NULL) {
     	FREE (HOSTNAME);
