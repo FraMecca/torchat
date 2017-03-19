@@ -1,6 +1,6 @@
 ALL = $(SRC) $(INCLUDE)  
-SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/file_upload.c
-INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c
+SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/file_upload.c src/fileactions.c
+INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c include/base64.c
 LDIR := $(PWD)
 DEBUG = -Wall -Wextra -g -UNDEBUG
 CF = -DMG_ENABLE_THREADS -DMG_ENABLE_HTTP_WEBSOCKET=0 -DMG_ENABLE_HTTP_STREAMING_MULTIPART
@@ -57,6 +57,14 @@ etrace:
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o $(DEBUG) $I
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   $(DEBUG) $I
 	gcc -L$(LDIR)/build $(ALL) utils/ptrace.c $I   -ljsonhelper -o build/main -lpthread -llogger -lcurl -ldl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF) -finstrument-functions
+
+clang:
+	mkdir -p build
+	clang -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o  $(DEBUG) $I
+	clang -shared -o build/liblogger.so build/logger.o   $(DEBUG) $I
+	clang -c -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o $(DEBUG) $I
+	clang -shared -o build/libjsonhelper.so build/jsonhelper.o   $(DEBUG) $I
+	clang -L$(LDIR)/build $(ALL) $I   -ljsonhelper -o build/main -lpthread -llogger -ldl -lcurl -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF)
 
 clean:
 	rm -rf build/
