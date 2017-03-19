@@ -21,3 +21,5 @@ void
 write_to_file ( struct data_wrapper *data);
 void
 create_file ( struct data_wrapper *data);
+void
+unlock_sending () ;

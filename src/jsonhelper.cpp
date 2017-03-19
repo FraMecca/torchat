@@ -66,6 +66,8 @@ convert_to_enum (const std::string cmd)
 			return FILEBEGIN;
 	} else if (cmd == "FILEDATA"){
 			return FILEDATA;
+	} else if (cmd == "FILEOK"){
+			return FILEOK;
 	} else /* if (cmd == "ERR") */ {
 		// it is the default case
 		return ERR;
@@ -118,6 +120,9 @@ convert_from_enum (const enum command c)
 			break;
 		case FILEDATA :
 			st = "FILEDATA";
+			break;
+		case FILEOK :
+			st = "FILEOK";
 			break;
 		case ERR :
 			st = "ERR";

@@ -17,6 +17,8 @@ extern void log_info (char *json); // from logger.cpp
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
 
+pthread_mutex_t ackMutex; // TODO: static on other file
+
 
 /*static char *uploadDir = "uploads/"; // TODO: read it from configs*/
 char *
@@ -31,6 +33,9 @@ initialize_fileupload_structs ()
 {
 	if (pthread_mutex_init (&pollMut, NULL) != 0) {
 		exit_error ("Can't initialize file_upload_poll_mutex");
+	}
+	if (pthread_mutex_init (&ackMutex, NULL) != 0) {
+		exit_error ("Can't initialize ackMutex");
 	}
 }
 
@@ -96,6 +101,8 @@ handle_upload(struct mg_connection *nc)
 
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
+	char *id = NULL;
+	int sock = -1;
 	// fill data and json if the connection was valid
 	if (parse_mongoose_connection (nc, &data, &json) == false) {
 		// if false, log has already been taken care of
@@ -110,6 +117,21 @@ handle_upload(struct mg_connection *nc)
     	case FILEDATA :
 			log_info (json); // not really needed
             write_to_file (data);
+			// ack that the piece has been recvd
+			id = STRDUP (data->id); // the id of the sender
+			data->cmd = FILEOK;
+			data->msg = STRDUP ("");
+			data->portno = 80;
+			/*send_over_tor (data->id, 80, convert_datastruct_to_char (data), 9250);*/
+			sock = get_socket_related_to_host (id, 80); 
+			json = convert_datastruct_to_char (data);
+    		if (send(sock, json, strlen (json), 0) < 0) {
+    			// TODO: gestione errori e retry
+    			exit_error ("Can't send over socket, send_file_routine");
+    			// shouldn't
+    			//
+    		}
+
             break;
         case FILEEND :
     		log_info (json);

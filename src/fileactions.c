@@ -11,6 +11,9 @@
 
 extern char * convert_filestruct_to_char (const struct fileAddr *file, const enum command cmd, const char *buf);
 extern void log_err (char *json); // from logger.cpp
+extern pthread_mutex_t ackMutex; // TODO: static on other file
+
+#define BUFSIZE 512
 
 static char *
 get_filename (char *data_fname)
@@ -40,7 +43,7 @@ static unsigned char *
 encode_base64 (const unsigned char *bstr, size_t *outLen)
 {
 	// decode using http://web.mit.edu/freebsd/head/contrib/wpa/src/utils/base64.c
-	unsigned char *st = base64_encode ((const unsigned char *) bstr, 296, outLen);
+	unsigned char *st = base64_encode ((const unsigned char *) bstr, BUFSIZE, outLen);
 	return st;
 } 
 
@@ -72,6 +75,19 @@ write_to_file (struct data_wrapper *data)
 	// TODO: Error checking
 	FREE (fdata);
 	fclose (fp);
+}
+
+void
+unlock_sending ()
+{
+	pthread_mutex_unlock (&ackMutex);
+}
+
+static void 
+block_till_ack ()
+{
+	printf ("Ora aspetto ack\n");
+	pthread_mutex_lock (&ackMutex);
 }
 
 void *
@@ -106,14 +122,27 @@ send_file_routine (void *fI)
 		// fread returns zero even if it read less than requested size
 		// for this reason reset buf at every iteration
 		// and stop if both fread == 0 and buf not changed
-		unsigned char buf[296] = "";
-		while (fread (buf, 296, sizeof (unsigned char), fp) || buf[0] != '\0') {
+		unsigned char buf[BUFSIZE] = "";
+		// send over tor is too slow
+		// leave a tcp socket open and send using that
+    	int sock = handshake_with_tor (file->host, atoi (file->port), 9250);
+    	// now use the socket normally
+		while (fread (buf, BUFSIZE, sizeof (unsigned char), fp) || buf[0] != '\0') {
 			char *jbuf = (char *) encode_base64 (buf, NULL); // here the encoded binary data
 			char *json = convert_filestruct_to_char (file, FILEDATA, jbuf);
-			send_over_tor (file->host, atoi (file->port), json, 9250); // slow
+			/*send_over_tor (file->host, atoi (file->port), json, 9250); // slow*/
+			/*printf ("\n\n==========+\n\nSto inviando %s\n\n=======\n\n", json);*/
+    		block_till_ack (); // uses a mutex to wait for FILEOK from peer
+    		if (send(sock, json, strlen (json), 0) < 0) {
+    			// TODO: gestione errori e retry
+    			exit_error ("Can't send over socket, send_file_routine");
+    			// shouldn't
+    			//
+    		}
 			buf[0] = '\0';
 		}
 		fclose (fp);
+		close (sock);
 	}
 
 	// PART 3, FILEEND, ACK end of file

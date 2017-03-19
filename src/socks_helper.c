@@ -147,14 +147,14 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
 { 
 	// buf is the json parsed char to be sent over a socket
 
-    int sock = handshake_with_tor (domain, portno, torPort);
-    // Here you can normally use send and recv
-    // buf is the message I want to send to peer
-    if (send(sock, buf, strlen (buf), 0) < 0) {
-    	return -1;
-    	// shouldn't
-    }
+	int sock = handshake_with_tor (domain, portno, torPort);
+	// Here you can normally use send and recv
+	// buf is the message I want to send to peer
+	if (send(sock, buf, strlen (buf), 0) < 0) {
+		return -1;
+		// shouldn't
+	}
 
 	close (sock);
-    return 0;
+	return 0;
 }

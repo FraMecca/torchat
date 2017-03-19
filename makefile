@@ -1,5 +1,5 @@
 ALL = $(SRC) $(INCLUDE)  
-SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/file_upload.c src/fileactions.c
+SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/file_upload.c src/fileactions.c src/fileupload_datastructs.c
 INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c include/base64.c
 LDIR := $(PWD)
 DEBUG = -Wall -Wextra -g -UNDEBUG

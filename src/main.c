@@ -152,6 +152,12 @@ event_routine (struct mg_connection *nc)
 			send_file(data);
 			free_data_wrapper(data);
 			break;
+		case FILEOK:
+			log_info(json);
+			// free the mutex, send the second piece
+			unlock_sending ();
+			free_data_wrapper(data);
+			break;
 		case HOST :
 			// the client required the hostname of the server
 			// send as a formatted json
