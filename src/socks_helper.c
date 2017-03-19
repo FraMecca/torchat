@@ -78,10 +78,12 @@ send_message_to_socket(struct message *msgStruct, char *peerId)
 	return true;
 }
 
-char
-send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)
-{ 
-	// buf is the json parsed char to be sent over a socket
+int
+handshake_with_tor (const char *domain, const int portno, const int torPort)
+{
+	// do an handshake with the TOR daemon
+	// return an fd that can be used like a normal socket
+	// TODO: too many hardcoded values
     int sock;
     struct sockaddr_in socketAddr;
 
@@ -136,7 +138,16 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
 	if(resp2[1] != 0){
 		return resp2[1];
 	}
+	
+	return sock;
+}
 
+char
+send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)
+{ 
+	// buf is the json parsed char to be sent over a socket
+
+    int sock = handshake_with_tor (domain, portno, torPort);
     // Here you can normally use send and recv
     // buf is the message I want to send to peer
     if (send(sock, buf, strlen (buf), 0) < 0) {
