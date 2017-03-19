@@ -23,19 +23,20 @@ enum command {
 	FILEUP,
 	FILEPORT,
 	FILEINFO,
+	FILEBEGIN, // used to announce the name of the file
+	FILEDATA, // all the packets containing binary data
+	FILEEND, // last json when the transmission of the file is over
 	EXIT
 };
 
 struct data_wrapper {
 	// contains the content of the message passed
 	enum command cmd;
-	char id[30];
+	char *id; // host
 	int portno;
 	char *msg;
 	char *date;
-	// message will be like:
-	// IP PORTNO CMD CONTENT...
-	// space is the delimiter
+	char *fname; // used only for fileupload
 };
 
 struct message {
@@ -53,9 +54,6 @@ struct peer {
 	struct message *msg;
 	UT_hash_handle hh; // hash table handler
 };
-
-//bool
-//check_peers_for_messages(const char *id);
 
 struct message *
 get_unread_message(const char *peerId);

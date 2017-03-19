@@ -104,7 +104,7 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     };
     send(sock, handShake, 3, 0);
 
-    char resp1[2];
+    char resp1[2] = {0};
     recv(sock, resp1, 2, 0);
     if(resp1[1] != 0x00)    {
         return 9; // Error, handshake failed ?
@@ -130,7 +130,7 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
     send(sock, (char*)req2, 4 + 1 + domainLen + 2, 0);
     free (req2);
 
-    char resp2[10];
+    char resp2[10] = {0};
     recv(sock, resp2, 10, 0);
     // if resp2 is ok, tor opened a socket to domain (.onion)
 	if(resp2[1] != 0){

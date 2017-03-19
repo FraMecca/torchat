@@ -96,30 +96,15 @@ read_tor_hostname (void)
 void
 event_routine (struct mg_connection *nc)
 {
-    /*struct mg_connection *nc = ncV; // nc was casted to void as pthread prototype*/
-    struct mbuf *io = &nc->recv_mbuf;
-    struct data_wrapper *data;
-    char *json; // used to log
+	struct data_wrapper *data = NULL;
+	char *json = NULL;
+	// fill data and json if the connection was valid
+	if (parse_mongoose_connection (nc, &data, &json) == false) {
+		// if false, log has already been taken care of
+		return;
+	}
 
-    if (io->buf != NULL && io->size > 0) {
-        json = CALLOC (io->size + 1, sizeof (char));
-        strncpy (json, io->buf, io->size * sizeof (char));
-		json[io->size] = '\0';
-        data = convert_string_to_datastruct (json); // parse a datastruct from the message received
-        mbuf_remove(io, io->size);      // Discard data from recv buffer
-    } else {
-        return;
-    }
-    if (data == NULL) {
-        // the json was invalid
-        if (json != NULL) {
-        	log_err (json);
-			free (json);
-        // and logged to errlog
-        }
-        return ;
-    }
-
+	// else switch on various cases
     switch (data->cmd) {
     	case EXIT :
         	exitFlag = true;
@@ -178,10 +163,7 @@ event_routine (struct mg_connection *nc)
         	break;
     }
 
-	if (json != NULL) {
-		// should alway be not null
-		FREE (json);
-	}
+	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
     return;
 }

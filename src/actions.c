@@ -7,8 +7,10 @@
 #include "lib/socks_helper.h"
 #include "lib/util.h"
 #include <pthread.h>
-#include "actions.h"
-extern struct data_wrapper convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
+#include "lib/actions.h"
+#include "lib/file_upload.h"
+
+extern struct data_wrapper * convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
 extern void log_info (char *json); // from logger.cpp
 extern void log_err (char *json); // from logger.cpp
@@ -23,6 +25,43 @@ struct data_conn {
 	struct mg_connection *conn;
 };
 
+bool
+parse_mongoose_connection (struct mg_connection *nc, struct data_wrapper **retData, char **retJson)
+{
+	// this function is used to parse a nc connection received by mongoose
+	// if the connection contains a valid json it can be parsed by our helperfunction and put in
+	// the right structurs
+	// else
+	// log the errors
+	// and return false
+    struct mbuf *io = &nc->recv_mbuf;
+    struct data_wrapper *data = NULL;
+    char *json = NULL; // used to log
+
+    if (io->buf != NULL && io->size > 0) {
+        json = CALLOC (io->size + 1, sizeof (char));
+        strncpy (json, io->buf, io->size * sizeof (char));
+		json[io->size] = '\0';
+        data = convert_string_to_datastruct (json); // parse a datastruct from the message received
+        mbuf_remove(io, io->size);      // Discard data from recv buffer
+    } else {
+        return false;
+    }
+    if (data == NULL) {
+        // the json was invalid
+        if (json != NULL) {
+        	log_err (json);
+			free (json);
+        // and logged to errlog
+        }
+        return false;
+    }
+
+    // at this point nc contained valid data, put them in the structures and return
+    *retJson = json; *retData = data;
+    return true; // returns a struct containing both data_wrapper struct and json char
+    // the bool is used to check wheter they were allocated successfully
+}
 
 void
 free_data_wrapper (struct data_wrapper *data)
@@ -89,7 +128,7 @@ send_routine(void *d)
 	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
 	// there is no need to call pthread_join, but thread resources need to be terminated
 	//
-	char id[30];
+	char *id;
 	struct data_conn *dc = (struct data_conn*) d;
 	struct data_wrapper *data = dc->dataw;
 	struct mg_connection *nc = dc->conn;
@@ -98,12 +137,14 @@ send_routine(void *d)
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
 		data->portno = 80;
-	} else {
-		if (data->cmd != FILEPORT){
+	} else if (data->cmd == FILEUP) {
+		data->cmd = FILEPORT;
+		FREE (data->msg);
+		data->msg = get_upload_port ();
+	} else if (data->cmd != FILEPORT){
 			data->cmd = RECV;
-		}
 	}
-	strncpy (id, data->id, strlen(data->id)); // save dest address
+	id = STRDUP (data->id);
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
@@ -143,14 +184,7 @@ relay_msg (struct data_wrapper *data, struct mg_connection *nc)
 
 	pthread_t t;
 	pthread_attr_t attr; // create an attribute to specify that thread is detached
-	if (pthread_attr_init(&attr) != 0) {
-		// initialize pthread attr and check if error
-		exit_error ("pthread_attr_init");
-	}
-	// set detached state
-	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
-	    exit_error ("pthread_attr_setdetachstate");
-	}
+	set_thread_detached (&attr);
 	pthread_create(&t, &attr, &send_routine,(void*) dc);
 	return;
 }
@@ -175,7 +209,7 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 	// get the OLDEST, send as a json
 	// this is supposed to be executed periodically
 	// by the client
-	strncpy(data->id, data->msg,29*sizeof(char));
+	data->id = STRDUP (data->msg);
 	data->id[strlen(data->id)] = '\0';
 	// if no msg, get_unread_message should return NULL
 	struct message *msg = NULL;
@@ -197,18 +231,6 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 	}
 }
 
-void
-send_fileport_to_client(struct data_wrapper *data, struct mg_connection *nc)
-{
-	// the port is sent as a json 
-	// the port is in the data->msg field
-
-	char *response = convert_datastruct_to_char (data);
-	// if iface is not null the client is waiting for response
-	MONGOOSE_SEND (nc, response, strlen (response));
-	FREE (response);
-
-}
 void
 send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, char *hostname)
 {
