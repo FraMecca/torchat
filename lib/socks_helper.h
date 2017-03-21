@@ -1,10 +1,7 @@
 #pragma once
 
-bool
-send_message_to_socket (struct message *msgStruct, char *peerId);
-
-bool
-send_over_tor (const char *domain, const int portno, const char *buf, const int torPort);
-
+char *get_tor_error ();
+bool send_over_tor (int torSock, const char *domain, const int portno, const char *buf);
+int handshake_with_tor (const char *domain, const int portno, const int torPort);
 int
-handshake_with_tor (const char *domain, const int portno, const int torPort);
+open_socket_to_domain(int sock, const char *domain, const int portno);

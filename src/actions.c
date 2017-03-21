@@ -86,54 +86,18 @@ announce_exit (struct data_wrapper *data, int sock)
 	data->msg = STRDUP ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
-	MONGOOSE_SEND(sock, jOk, strlen(jOk), -1);
+	SOCK_SEND(sock, jOk, strlen(jOk), -1);
 	FREE (jOk);
 }
 
-static char *
-explain_sock_error (const char e)
-{
-	/*
-	 * in case of error the message returned to the client has in the msg field
-	 * an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
-	 */
-	switch (e) {
-		case  9 :
-			// not in RFC,
-			// used when handshake fails, so probably TOR has not been started
-			return STRDUP ("Could not send message. Is TOR running?");
-		case 1 :
-			return STRDUP ("general SOCKS server failure");
-		case 2 :
-			return STRDUP ("connection not allowed by ruleset");
-		case 3 :
-			return STRDUP ("Network unreachable");
-		case 4 :
-			return STRDUP ("Host unreachable");
-		case 5 :
-			return STRDUP ("Connection refused");
-		case 6 : 
-			return STRDUP ("TTL expired");
-		case 7 :
-			return STRDUP ("Command not supported");
-		case 8 :
-			return STRDUP ("Address type not supported");
-		default :
-			return STRDUP ("TOR couldn't send the message"); // shouldn't go here
-	}
-}
 
-static void *
-send_routine(void *d)
+coroutine static void
+send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 {
 	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
 	// there is no need to call pthread_join, but thread resources need to be terminated
 	//
 	char *id;
-	struct data_conn *dc = (struct data_conn*) d;
-	struct data_wrapper *data = dc->dataw;
-	int sock = dc->sock;
-	int64_t deadline = dc->deadline;
 	
 	// needed for file upload
 	if (data->cmd == FILEALLOC){
@@ -150,32 +114,31 @@ send_routine(void *d)
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
-	char ret = send_over_tor (id, data->portno, msg, 9250);
+	int ret = send_over_tor (torSock, id, data->portno, msg);
 
 	if (ret != 0) {
 		// this informs the client that an error has happened
 		// substitute cmd with ERR and msg with RFC error
 		data->cmd = ERR;
-		data->msg = explain_sock_error (ret);
+		data->msg = get_tor_error(); // gets the global variable that corresponds to the error (socks_helper.c)
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
-		MONGOOSE_SEND(sock, jError, strlen(jError), deadline);
+		SOCK_SEND(sock, jError, strlen(jError), deadline);
 		FREE(jError);
 	} else if (data->cmd != FILEPORT && data->cmd != FILEUP){ // fileport and fileup do not require jOk to be sent
 		data->cmd = END;
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
-		MONGOOSE_SEND (sock, jOk, strlen(jOk), deadline);
+		SOCK_SEND (sock, jOk, strlen(jOk), deadline);
 		FREE (jOk);
 	}
 	FREE (msg);
 	free_data_wrapper (data);
-	pthread_exit(0); // implicit
 }
 
 void
-relay_msg (struct data_wrapper *data, int sock, int64_t deadline)
+relay_msg (struct data_wrapper *data, int sock, int torSock, int64_t deadline)
 {
 	if(data == NULL){
 		exit_error("Invalid data structure.");
@@ -184,11 +147,8 @@ relay_msg (struct data_wrapper *data, int sock, int64_t deadline)
 	dc->sock = sock;
 	dc->dataw = data;
 	dc->deadline = deadline;
-
-	pthread_t t;
-	pthread_attr_t attr; // create an attribute to specify that thread is detached
-	set_thread_detached (&attr);
-	pthread_create(&t, &attr, &send_routine,(void*) dc);
+	
+	go(send_routine(sock, torSock, data, deadline));
 	return;
 }
 
@@ -227,7 +187,7 @@ client_update (struct data_wrapper *data, int sock, int64_t deadline)
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
-	MONGOOSE_SEND (sock, unreadMsg, strlen(unreadMsg), deadline);
+	SOCK_SEND (sock, unreadMsg, strlen(unreadMsg), deadline);
 	FREE (unreadMsg);
 	if(msg){
 		FREE (msg->date); FREE (msg->content); FREE (msg);	
@@ -249,7 +209,7 @@ send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int
 
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	MONGOOSE_SEND (sock, response, strlen (response), deadline);
+	SOCK_SEND (sock, response, strlen (response), deadline);
 	FREE (response);
 }
 
@@ -268,6 +228,6 @@ send_peer_list_to_client (struct data_wrapper *data, int sock, int64_t deadline)
 	}
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	MONGOOSE_SEND (sock, response, strlen (response), deadline);
+	SOCK_SEND (sock, response, strlen (response), deadline);
 	FREE (response);
 }

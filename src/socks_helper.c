@@ -8,7 +8,51 @@
 #include <errno.h> // perror
 #include <stdio.h> // perror
 #include "lib/datastructs.h" // for message to socket
+#include "lib/util.h"
+#include "include/mem.h"
 #include <unistd.h> // close
+
+static char torError;
+
+static void
+set_tor_error(const char e)
+{
+	torError = e;
+}
+
+char *
+get_tor_error ()
+{
+	 // in case of error the message returned to the client has in the msg field
+	 // an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
+	switch (torError) {
+		case 1 :
+			return STRDUP ("general SOCKS server failure");
+		case 2 :
+			return STRDUP ("connection not allowed by ruleset");
+		case 3 :
+			return STRDUP ("Network unreachable");
+		case 4 :
+			return STRDUP ("Host unreachable");
+		case 5 :
+			return STRDUP ("Connection refused");
+		case 6 : 
+			return STRDUP ("TTL expired");
+		case 7 :
+			return STRDUP ("Command not supported");
+		case 8 :
+			return STRDUP ("Address type not supported");
+		case 9 :
+			// not in RFC,
+			// used when handshake fails, so probably TOR has not been started
+			return STRDUP ("Could not send message. Is TOR running?");
+		case 10 :
+			return STRDUP("Failed handshake with TOR.");
+		default :
+			return STRDUP ("TOR couldn't send the message"); // shouldn't go here
+	}
+}
+
 
 
 static bool 
@@ -32,65 +76,16 @@ set_socket_timeout (const int sockfd)
 	    return true;
 }
 
-bool
-send_message_to_socket(struct message *msgStruct, char *peerId)
-{
-	// the daemon uses a socket
-	// to send unread messages to the client
-	int sock;
-	struct sockaddr_in socketAddr;
-	char *msgBuf;
-	int msgSize;
-	
-	
-	sock = socket(AF_INET, SOCK_STREAM, 0);
-	socketAddr.sin_family = AF_INET;
-	socketAddr.sin_port = 42000; // yeah that was random
-	socketAddr.sin_addr.s_addr = inet_addr("127.0.0.1");
-
-	if(connect(sock, (struct sockaddr*)&socketAddr, sizeof(struct sockaddr_in)) < 0){
-		perror("socket connect");
-		return false;
-	}
-
-	// message of the form: [ID] time: message
-	// real programmers don't care about formatting
-	msgSize = strlen(peerId)+strlen(msgStruct->content)+strlen(msgStruct->date)+7;
-	// everything is better if the buffer is zeroed
-	msgBuf = calloc(msgSize, sizeof(char));
-
-	// ops! C strings did it again
-	msgBuf[0] = '[';
-	strncat(msgBuf, peerId, strlen (peerId));
-	strncat(msgBuf, "]", 1);
-	strncat(msgBuf, msgStruct->date, strlen (msgStruct->date));
-	strncat(msgBuf, ":", 1);
-	strncat(msgBuf, msgStruct->content, strlen (msgStruct->content));
-
-	// sending the message to the socket
-	if(send(sock, msgBuf, strlen(msgBuf), 0) < 0){
-		perror("send");
-		return false;
-	}
-	
-	free(msgBuf);
-	free(peerId);
-	return true;
-}
-
 int
-handshake_with_tor (const char *domain, const int portno, const int torPort)
+handshake_with_tor (const int torPort)
 {
 	// do an handshake with the TOR daemon
-	// return an fd that can be used like a normal socket
-	// TODO: too many hardcoded values
     int sock;
     struct sockaddr_in socketAddr;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (!set_socket_timeout (sock)) {
-    	perror ("setsockopt");
-    	exit (1);
+    	exit_error("setsockopt");
     }
     socketAddr.sin_family       = AF_INET;
     socketAddr.sin_port         = htons(torPort);
@@ -104,14 +99,19 @@ handshake_with_tor (const char *domain, const int portno, const int torPort)
         0x01, // One Authentication Method
         0x00  // No AUthentication
     };
-    send(sock, handShake, 3, 0);
+    if(send(sock, handShake, 3, 0) >= 0){
+		return sock;
+	} else {
+		set_tor_error(10);
+		return -1; // check errno
+	}
+}
 
-    char resp1[2] = {0};
-    recv(sock, resp1, 2, 0);
-    if(resp1[1] != 0x00)    {
-        return 9; // Error, handshake failed ?
-    }
-
+int
+open_socket_to_domain(int sock, const char *domain, const int portno)
+{
+	// connect to an .onion domain
+	// the second part of the handshake
     char  domainLen = (char)strlen(domain);
     short port = htons(portno);
 
@@ -136,15 +136,17 @@ handshake_with_tor (const char *domain, const int portno, const int torPort)
     recv(sock, resp2, 10, 0);
     // if resp2 is ok, tor opened a socket to domain (.onion)
 	if(resp2[1] != 0){
-		return resp2[1];
+		// set a global to the error value
+		set_tor_error(resp2[1]);
+		return -1; 
 	}
-	
-	return sock;
+	return 0;
 }
 
 static int 
 send_crlf (int sock, const char *buf, size_t len, int f)
 {
+
 	char tmpB[len + 2];
 	strncpy (tmpB, buf, len);
 	if (buf[len - 1] == '}') { // implying everything is a json
@@ -154,21 +156,20 @@ send_crlf (int sock, const char *buf, size_t len, int f)
 	}
 	return send (sock, tmpB, len, f);
 }
-		
 
-char
-send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)
-{ 
+int
+send_over_tor (const int torSock, const char *domain, const int portno, const char *buf)
+{
 	// buf is the json parsed char to be sent over a socket
-
-	int sock = handshake_with_tor (domain, portno, torPort);
-	// Here you can normally use send and recv
 	// buf is the message I want to send to peer
-	if (send_crlf(sock, buf, strlen (buf), 0) < 0) {
-		return -1;
-		// shouldn't
+	// torSock is obtained by the handshake in main.c, event_routine
+	// here we connect to the domain
+	if (open_socket_to_domain(torSock, domain, portno) != 0){
+		return -1;	
 	}
-
-	close (sock);
+	// here we send
+	if (send_crlf(torSock, buf, strlen (buf), 0) < 0) {
+		return -1;
+	}
 	return 0;
 }

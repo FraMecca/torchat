@@ -98,11 +98,16 @@ event_routine (const int sock)
 {
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
-    int64_t deadline = now() + 300000; // deadiline in ms, 5min
+    int64_t deadline = now() + 120000; // deadline in ms, 2min
 	// fill data and json if the connection was valid
+	int torSock = 0;
+
 	while (parse_connection (sock, &data, &json, deadline) > 0) {
 			// keep connection open with client till deadline
 			// then exit coroutine
+			if (torSock == 0){
+				torSock = handshake_with_tor (data->id, data->portno, 9250);
+			}
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -117,7 +122,7 @@ event_routine (const int sock)
     		case SEND :
         		// mongoose is told that you want to send a message to a peer
         		log_info (json);
-        		relay_msg (data, sock, deadline);
+        		relay_msg (data, sock, torSock, deadline);
 				// data wrapper is free'd in thread
         		break;
     		case UPDATE:
@@ -131,13 +136,13 @@ event_routine (const int sock)
 			case FILEALLOC :
 				// relay FILEUP to the peer's server
 				log_info (json);
-				relay_msg(data, sock, deadline);
+        		relay_msg (data, sock, torSock, deadline);
 				break;
 			case FILEUP :
 				// manage file uploading
 				log_info(json);
 				manage_file_upload (data);
-				relay_msg (data, sock, deadline);
+        		relay_msg (data, sock, torSock, deadline);
 				break;
 			case FILEPORT:
 				log_info(json);
@@ -148,12 +153,6 @@ event_routine (const int sock)
 				log_info(json);
 				// send file here
 				send_file(data);
-				free_data_wrapper(data);
-				break;
-			case FILEOK:
-				log_info(json);
-				// free the mutex, send the second piece
-				unlock_sending ();
 				free_data_wrapper(data);
 				break;
 			case HOST :

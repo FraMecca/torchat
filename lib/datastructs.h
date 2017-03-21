@@ -25,7 +25,6 @@ enum command {
 	FILEINFO,
 	FILEBEGIN, // used to announce the name of the file
 	FILEDATA, // all the packets containing binary data
-	FILEOK, // when FILEDATA correctly received
 	FILEEND, // last json when the transmission of the file is over
 	EXIT
 };
