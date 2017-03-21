@@ -132,7 +132,7 @@ send_file_routine (void *fI)
 			char *json = convert_filestruct_to_char (file, FILEDATA, jbuf);
 			/*send_over_tor (file->host, atoi (file->port), json, 9250); // slow*/
 			/*printf ("\n\n==========+\n\nSto inviando %s\n\n=======\n\n", json);*/
-    		block_till_ack (); // uses a mutex to wait for FILEOK from peer
+            /*block_till_ack (); // uses a mutex to wait for FILEOK from peer*/ // TODO remove ack (not needed with crlf)
     		if (send(sock, json, strlen (json), 0) < 0) {
     			// TODO: gestione errori e retry
     			exit_error ("Can't send over socket, send_file_routine");

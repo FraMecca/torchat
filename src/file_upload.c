@@ -117,21 +117,7 @@ handle_upload(struct mg_connection* nc)
     	case FILEDATA :
 			log_info (json); // not really needed
             write_to_file (data);
-			// ack that the piece has been recvd
-			id = STRDUP (data->id); // the id of the sender
-			data->cmd = FILEOK;
-			data->msg = STRDUP ("");
-			data->portno = 80;
-			/*send_over_tor (data->id, 80, convert_datastruct_to_char (data), 9250);*/
-			sock = get_socket_related_to_host (id, 80); 
-			json = convert_datastruct_to_char (data);
-    		if (send(sock, json, strlen (json), 0) < 0) {
-    			// TODO: gestione errori e retry
-    			exit_error ("Can't send over socket, send_file_routine");
-    			// shouldn't
-    			//
-    		}
-
+			// doesn't send any ack (no guaranteed delivery)
             break;
         case FILEEND :
     		log_info (json);
@@ -187,26 +173,14 @@ file_upload_poll ()
 void
 manage_file_upload (struct data_wrapper *data)
 {
- 	// bind to torrc second port
- 	// send a json confirming the acceptance and the selected port
 
-	if (pthread_mutex_trylock (&pollMut) != 0) {	
-		// if mongoose is already polling do not start another thread
-		return;
-	} 
-
-	// else start and bind mongoose for first time
-	// start polling on the new connection for the file (on a separate thread)
-	pthread_t t;
-	pthread_attr_t attr; // create an attribute to specify that thread is detached
-	if (pthread_attr_init(&attr) != 0) {
-		// initialize pthread attr and check if error
-		exit_error ("pthread_attr_init");
+	// fork to start polling on port 43434
+	// this way the main coroutine is free to deal with the client
+	// while a file upload is being processed 
+	if(fork() == 0){
+		// returns if port is already binded by a child
+		// which is already dealing with the file upload
+		file_upload_poll();
 	}
-	// set detached state
-	if (pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
-	    exit_error ("pthread_attr_setdetachstate");
-	}
-	pthread_create(&t, &attr, &file_upload_poll, NULL);
 	return;
 }
