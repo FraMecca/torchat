@@ -142,6 +142,20 @@ handshake_with_tor (const char *domain, const int portno, const int torPort)
 	return sock;
 }
 
+static int 
+send_crlf (int sock, const char *buf, size_t len, int f)
+{
+	char tmpB[len + 2];
+	strncpy (tmpB, buf, len);
+	if (buf[len - 1] == '}') { // implying everything is a json
+		// buf is not crlf terminated
+		tmpB[len] = '\r'; tmpB[len + 1] = '\n'; tmpB[len + 2] = '\0';
+		len += 2;
+	}
+	return send (sock, tmpB, len, f);
+}
+		
+
 char
 send_over_tor (const char *domain, const int portno, const char *buf, const int torPort)
 { 
@@ -150,7 +164,7 @@ send_over_tor (const char *domain, const int portno, const char *buf, const int 
 	int sock = handshake_with_tor (domain, portno, torPort);
 	// Here you can normally use send and recv
 	// buf is the message I want to send to peer
-	if (send(sock, buf, strlen (buf), 0) < 0) {
+	if (send_crlf(sock, buf, strlen (buf), 0) < 0) {
 		return -1;
 		// shouldn't
 	}
