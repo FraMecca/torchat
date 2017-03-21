@@ -1,4 +1,3 @@
-#include "include/mongoose.h"  // Include Mongoose API definitions
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -9,6 +8,7 @@
 #include <pthread.h>
 #include "lib/actions.h"
 #include "lib/file_upload.h"
+#include "include/libdill.h"
 
 extern struct data_wrapper * convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data);  // from json.cpp
@@ -22,11 +22,12 @@ extern char * HOSTNAME;
 struct data_conn { 
 	// used to wrap dataW and nc for pthread
 	struct data_wrapper *dataw;
-	struct mg_connection *conn;
+	int sock;
+	int64_t deadline;
 };
 
 bool
-parse_mongoose_connection (struct mg_connection *nc, struct data_wrapper **retData, char **retJson)
+parse_connection (const int sock, struct data_wrapper **retData, char **retJson, int64_t deadline)
 {
 	// this function is used to parse a nc connection received by mongoose
 	// if the connection contains a valid json it can be parsed by our helperfunction and put in
@@ -34,16 +35,16 @@ parse_mongoose_connection (struct mg_connection *nc, struct data_wrapper **retDa
 	// else
 	// log the errors
 	// and return false
-    struct mbuf *io = &nc->recv_mbuf;
     struct data_wrapper *data = NULL;
     char *json = NULL; // used to log
+    char inbuf[512]; // TODO determine size
+    ssize_t sz = mrecv(sock, inbuf, sizeof(inbuf), deadline);
 
-    if (io->buf != NULL && io->size > 0) {
-        json = CALLOC (io->size + 1, sizeof (char));
-        strncpy (json, io->buf, io->size * sizeof (char));
-		json[io->size] = '\0';
+    if (sz > 0) {
+        json = CALLOC (sz + 1, sizeof (char));
+        strncpy (json, inbuf, sz * sizeof (char));
+		json[sz] = '\0';
         data = convert_string_to_datastruct (json); // parse a datastruct from the message received
-        mbuf_remove(io, io->size);      // Discard data from recv buffer
     } else {
         return false;
     }
@@ -76,7 +77,7 @@ free_data_wrapper (struct data_wrapper *data)
 }
 
 void
-announce_exit (struct data_wrapper *data, struct mg_connection *nc)
+announce_exit (struct data_wrapper *data, int sock)
 {
 	// reply to client saying that you ACK the exit request and
 	// the server is exiting
@@ -85,7 +86,7 @@ announce_exit (struct data_wrapper *data, struct mg_connection *nc)
 	data->msg = STRDUP ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
-	MONGOOSE_SEND(nc, jOk, strlen(jOk));
+	MONGOOSE_SEND(sock, jOk, strlen(jOk), -1);
 	FREE (jOk);
 }
 
@@ -131,7 +132,8 @@ send_routine(void *d)
 	char *id;
 	struct data_conn *dc = (struct data_conn*) d;
 	struct data_wrapper *data = dc->dataw;
-	struct mg_connection *nc = dc->conn;
+	int sock = dc->sock;
+	int64_t deadline = dc->deadline;
 	
 	// needed for file upload
 	if (data->cmd == FILEALLOC){
@@ -157,14 +159,14 @@ send_routine(void *d)
 		data->msg = explain_sock_error (ret);
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
-		MONGOOSE_SEND(nc, jError, strlen(jError));
+		MONGOOSE_SEND(sock, jError, strlen(jError), deadline);
 		FREE(jError);
 	} else if (data->cmd != FILEPORT && data->cmd != FILEUP){ // fileport and fileup do not require jOk to be sent
 		data->cmd = END;
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
-		MONGOOSE_SEND (nc, jOk, strlen(jOk));
+		MONGOOSE_SEND (sock, jOk, strlen(jOk), deadline);
 		FREE (jOk);
 	}
 	FREE (msg);
@@ -173,14 +175,15 @@ send_routine(void *d)
 }
 
 void
-relay_msg (struct data_wrapper *data, struct mg_connection *nc)
+relay_msg (struct data_wrapper *data, int sock, int64_t deadline)
 {
 	if(data == NULL){
 		exit_error("Invalid data structure.");
 	}
 	struct data_conn *dc = calloc(1, sizeof(struct data_conn));
-	dc->conn = nc;
+	dc->sock = sock;
 	dc->dataw = data;
+	dc->deadline = deadline;
 
 	pthread_t t;
 	pthread_attr_t attr; // create an attribute to specify that thread is detached
@@ -203,7 +206,7 @@ store_msg (struct data_wrapper *data)
 }
 
 void
-client_update (struct data_wrapper *data, struct mg_connection *nc)
+client_update (struct data_wrapper *data, int sock, int64_t deadline)
 {
 	// the client asks for unread messages from data->id peer
 	// get the OLDEST, send as a json
@@ -224,7 +227,7 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
-	MONGOOSE_SEND (nc, unreadMsg, strlen(unreadMsg));
+	MONGOOSE_SEND (sock, unreadMsg, strlen(unreadMsg), deadline);
 	FREE (unreadMsg);
 	if(msg){
 		FREE (msg->date); FREE (msg->content); FREE (msg);	
@@ -232,7 +235,7 @@ client_update (struct data_wrapper *data, struct mg_connection *nc)
 }
 
 void
-send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, char *hostname)
+send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int64_t deadline)
 {
 	// the hostname is sent as a json (similarly to the peer list function below)
 	// the hostname is in the data->msg field, this is an explicit request from the client
@@ -246,12 +249,12 @@ send_hostname_to_client(struct data_wrapper *data, struct mg_connection *nc, cha
 
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	MONGOOSE_SEND (nc, response, strlen (response));
+	MONGOOSE_SEND (sock, response, strlen (response), deadline);
 	FREE (response);
 }
 
 void
-send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
+send_peer_list_to_client (struct data_wrapper *data, int sock, int64_t deadline)
 {
 	// the client asked to receive the list of all the peers that send the server a message (not read yet)
 	// send the list as a parsed json, with peer field comma divided
@@ -265,6 +268,6 @@ send_peer_list_to_client (struct data_wrapper *data, struct mg_connection *nc)
 	}
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	MONGOOSE_SEND (nc, response, strlen (response));
+	MONGOOSE_SEND (sock, response, strlen (response), deadline);
 	FREE (response);
 }

@@ -6,13 +6,13 @@
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
-#include "include/mongoose.h"  // Include Mongoose API definitions
 #include "include/mem.h" // CALLOC and MALLOC
 #include "lib/datastructs.h"
 #include "lib/socks_helper.h"
 #include "lib/util.h"
 #include "lib/file_upload.h" //file upload support
 #include "lib/actions.h" // event_routine functions
+#include "include/libdill.h"
 
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
@@ -93,13 +93,14 @@ read_tor_hostname (void)
     return STRDUP (buf);
 }
 
-void
-event_routine (struct mg_connection *nc)
+coroutine void
+event_routine (const int sock) 
 {
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
+    int64_t deadline = now() + 300000; // deadiline in ms, 5min
 	// fill data and json if the connection was valid
-	if (parse_mongoose_connection (nc, &data, &json) == false) {
+	if (parse_connection (sock, &data, &json, deadline) == false) {
 		// if false, log has already been taken care of
 		return;
 	}
@@ -119,27 +120,27 @@ event_routine (struct mg_connection *nc)
     	case SEND :
         	// mongoose is told that you want to send a message to a peer
         	log_info (json);
-        	relay_msg (data, nc);
+        	relay_msg (data, sock, deadline);
 			// data wrapper is free'd in thread
         	break;
     	case UPDATE:
-        	client_update (data, nc);
+        	client_update (data, sock, deadline);
 			free_data_wrapper (data);
         	break;
     	case GET_PEERS :
-        	send_peer_list_to_client (data, nc);
+        	send_peer_list_to_client (data, sock, deadline);
 			free_data_wrapper (data);
         	break;
 		case FILEALLOC :
 			// relay FILEUP to the peer's server
 			log_info (json);
-			relay_msg(data, nc);
+			relay_msg(data, sock, deadline);
 			break;
 		case FILEUP :
 			// manage file uploading
 			log_info(json);
 			manage_file_upload (data);
-			relay_msg (data, nc);
+			relay_msg (data, sock, deadline);
 			break;
 		case FILEPORT:
 			log_info(json);
@@ -161,7 +162,7 @@ event_routine (struct mg_connection *nc)
 		case HOST :
 			// the client required the hostname of the server
 			// send as a formatted json
-			send_hostname_to_client(data, nc, HOSTNAME);
+			send_hostname_to_client(data, sock, HOSTNAME, deadline);
 			free_data_wrapper (data);
 			break;
     	default:
@@ -172,17 +173,6 @@ event_routine (struct mg_connection *nc)
 	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
     return;
-}
-
-static void
-ev_handler(struct mg_connection *nc, int ev, void *ev_data)
-{
-    if (nc->recv_mbuf.size == 0) {
-        // can trash
-    } else if (ev == MG_EV_RECV) {
-	// now we just utilize MG_EV_RECV because the response must be send over TOR
-		event_routine (nc);
-	}
 }
 
 int
@@ -210,28 +200,32 @@ main(int argc, char **argv)
 	// initialization of datastructs
     HOSTNAME = read_tor_hostname ();
 	initialize_fileupload_structs ();
-    struct mg_mgr mgr;
-    mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 	
-    // Note that many connections can be added to a single event manager
-    // Connections can be created at any point, e.g. in event handler function
-    if(argc == 2) {
-        mg_bind(&mgr, argv[1], ev_handler);  // Create listening connection and add it to the event manager
-    } else if (argc == 3) {	// daemon
-        mg_bind(&mgr, argv[2], ev_handler);  // Create listening connection and add it to the event manager
+    struct ipaddr addr;
+    int port = atoi (argv[1]);
+    int rc = ipaddr_local(&addr, NULL, port, 0);
+    assert(rc == 0);
+    int ls = tcp_listen(&addr, 10);
+    if(ls < 0) {
+        perror("Can't open listening socket");
+        return 1;
     }
+
 
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
-        // so mongoose halts and we can collect the threads
-        mg_mgr_poll(&mgr, 300);
+        int sock = tcp_accept(ls, NULL, -1);
+        assert(sock >= 0);
+        sock  = crlf_attach(sock); // clrf means that lines must be \r\n terminated
+        assert(sock >= 0);
+        int cr = go(event_routine(sock));
+        assert(cr >= 0);
     }
 
     destroy_fileupload_structs ();
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
  	destroy_mut(); // free the mutex allocated in datastruct.c
-    mg_mgr_free(&mgr); // terminate mongoose connection
     if (HOSTNAME != NULL) {
     	FREE (HOSTNAME);
     }

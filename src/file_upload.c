@@ -94,7 +94,7 @@ send_file(struct data_wrapper *data)
 
 // FROM HERE DOWNWARDS: ONLY FILE RECV FUNCTION
 static void
-handle_upload(struct mg_connection *nc)
+handle_upload(struct mg_connection* nc)
 {
 	// It is used to save a file to a local directory as soon as
 	// a json with the content encoded in base64 is received
@@ -104,7 +104,7 @@ handle_upload(struct mg_connection *nc)
 	char *id = NULL;
 	int sock = -1;
 	// fill data and json if the connection was valid
-	if (parse_mongoose_connection (nc, &data, &json) == false) {
+	if (parse_connection (nc, &data, &json, -1) == false) {
 		// if false, log has already been taken care of
 		return;
 	}
@@ -166,7 +166,8 @@ file_upload_poll ()
     struct mg_mgr mgr;
     mg_mgr_init(&mgr, NULL);  // Initialize event manager object
 
-    struct mg_connection *nc; 
+    /*int sock; */
+    struct mg_connection *nc = NULL;
 	// Create listening connection and add it to the event manager
 
     if((nc = mg_bind(&mgr, port, ev_handler)) == NULL) {
