@@ -29,7 +29,7 @@ new_file_and_socket (const char *host, const int port)
 		exit_error ("CALLOC");
 	}
 	/*newF->sockfd = -1;*/
-	newF->sockfd =	handshake_with_tor (host, port, 9250);
+	newF->sockfd =	handshake_with_tor (9250);
 	newF->host = STRDUP (host);
 	newF->port = port;
 	return newF;

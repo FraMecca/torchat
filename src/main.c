@@ -99,14 +99,15 @@ event_routine (const int sock)
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
     int64_t deadline = now() + 120000; // deadline in ms, 2min
-	// fill data and json if the connection was valid
+	// sock is between the daemon and the client
+	// torSock is between the daemon and TOR (other peer)
 	int torSock = 0;
 
 	while (parse_connection (sock, &data, &json, deadline) > 0) {
 			// keep connection open with client till deadline
 			// then exit coroutine
 			if (torSock == 0){
-				torSock = handshake_with_tor (data->id, data->portno, 9250);
+				torSock = handshake_with_tor (9250);
 			}
     	switch (data->cmd) {
     		case EXIT :

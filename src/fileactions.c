@@ -125,7 +125,7 @@ send_file_routine (void *fI)
 		unsigned char buf[BUFSIZE] = "";
 		// send over tor is too slow
 		// leave a tcp socket open and send using that
-    	int sock = handshake_with_tor (file->host, atoi (file->port), 9250);
+    	int sock = handshake_with_tor (9250);
     	// now use the socket normally
 		while (fread (buf, BUFSIZE, sizeof (unsigned char), fp) || buf[0] != '\0') {
 			char *jbuf = (char *) encode_base64 (buf, NULL); // here the encoded binary data
