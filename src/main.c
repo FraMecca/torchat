@@ -100,78 +100,78 @@ event_routine (const int sock)
 	char *json = NULL;
     int64_t deadline = now() + 300000; // deadiline in ms, 5min
 	// fill data and json if the connection was valid
-	if (parse_connection (sock, &data, &json, deadline) == false) {
-		// if false, log has already been taken care of
-		return;
-	}
+	while (parse_connection (sock, &data, &json, deadline) > 0) {
+			// keep connection open with client till deadline
+			// then exit coroutine
 
-	// else switch on various cases
-    switch (data->cmd) {
-    	case EXIT :
-        	exitFlag = true;
-        	log_info (json);
-			free_data_wrapper (data);
-        	break;
-    	case RECV :
-        	log_info (json); // first log
-        	store_msg (data);
-			free_data_wrapper (data);
-        	break;
-    	case SEND :
-        	// mongoose is told that you want to send a message to a peer
-        	log_info (json);
-        	relay_msg (data, sock, deadline);
-			// data wrapper is free'd in thread
-        	break;
-    	case UPDATE:
-        	client_update (data, sock, deadline);
-			free_data_wrapper (data);
-        	break;
-    	case GET_PEERS :
-        	send_peer_list_to_client (data, sock, deadline);
-			free_data_wrapper (data);
-        	break;
-		case FILEALLOC :
-			// relay FILEUP to the peer's server
-			log_info (json);
-			relay_msg(data, sock, deadline);
-			break;
-		case FILEUP :
-			// manage file uploading
-			log_info(json);
-			manage_file_upload (data);
-			relay_msg (data, sock, deadline);
-			break;
-		case FILEPORT:
-			log_info(json);
-			store_msg(data);
-			free_data_wrapper(data);
-			break;
-		case FILEINFO:
-			log_info(json);
-			// send file here
-			send_file(data);
-			free_data_wrapper(data);
-			break;
-		case FILEOK:
-			log_info(json);
-			// free the mutex, send the second piece
-			unlock_sending ();
-			free_data_wrapper(data);
-			break;
-		case HOST :
-			// the client required the hostname of the server
-			// send as a formatted json
-			send_hostname_to_client(data, sock, HOSTNAME, deadline);
-			free_data_wrapper (data);
-			break;
-    	default:
-			free_data_wrapper (data);
-        	break;
-    }
+		// else switch on various cases
+    	switch (data->cmd) {
+    		case EXIT :
+        		exitFlag = true;
+        		log_info (json);
+				free_data_wrapper (data);
+        		break;
+    		case RECV :
+        		log_info (json); // first log
+        		store_msg (data);
+				free_data_wrapper (data);
+        		break;
+    		case SEND :
+        		// mongoose is told that you want to send a message to a peer
+        		log_info (json);
+        		relay_msg (data, sock, deadline);
+				// data wrapper is free'd in thread
+        		break;
+    		case UPDATE:
+        		client_update (data, sock, deadline);
+				free_data_wrapper (data);
+        		break;
+    		case GET_PEERS :
+        		send_peer_list_to_client (data, sock, deadline);
+				free_data_wrapper (data);
+        		break;
+			case FILEALLOC :
+				// relay FILEUP to the peer's server
+				log_info (json);
+				relay_msg(data, sock, deadline);
+				break;
+			case FILEUP :
+				// manage file uploading
+				log_info(json);
+				manage_file_upload (data);
+				relay_msg (data, sock, deadline);
+				break;
+			case FILEPORT:
+				log_info(json);
+				store_msg(data);
+				free_data_wrapper(data);
+				break;
+			case FILEINFO:
+				log_info(json);
+				// send file here
+				send_file(data);
+				free_data_wrapper(data);
+				break;
+			case FILEOK:
+				log_info(json);
+				// free the mutex, send the second piece
+				unlock_sending ();
+				free_data_wrapper(data);
+				break;
+			case HOST :
+				// the client required the hostname of the server
+				// send as a formatted json
+				send_hostname_to_client(data, sock, HOSTNAME, deadline);
+				free_data_wrapper (data);
+				break;
+    		default:
+				free_data_wrapper (data);
+        		break;
+    	}
 
-	FREE (json);
+		FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
+	}
     return;
 }
 
@@ -215,6 +215,7 @@ main(int argc, char **argv)
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
         int sock = tcp_accept(ls, NULL, -1);
+        // check errno for tcp_accept
         assert(sock >= 0);
         sock  = crlf_attach(sock); // clrf means that lines must be \r\n terminated
         assert(sock >= 0);
