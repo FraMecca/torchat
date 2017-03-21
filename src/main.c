@@ -103,8 +103,6 @@ event_routine (const int sock)
 	while (parse_connection (sock, &data, &json, deadline) > 0) {
 			// keep connection open with client till deadline
 			// then exit coroutine
-
-		// else switch on various cases
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -172,6 +170,9 @@ event_routine (const int sock)
 		FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
 	}
+	// cleanup
+    int rc = hclose(sock);
+    assert(rc == 0);
     return;
 }
 
