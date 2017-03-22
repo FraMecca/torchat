@@ -52,7 +52,6 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
         // the json was invalid
         if (json != NULL) {
         	log_err (json);
-			free (json);
         // and logged to errlog
         }
         return false;
@@ -100,6 +99,7 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 	char *id;
 	
 	// needed for file upload
+	// this sets data->cmd to a proper value 
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
 		data->portno = 80;

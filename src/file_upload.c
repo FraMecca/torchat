@@ -2,6 +2,7 @@
 #include "lib/datastructs.h"
 #include "lib/actions.h"
 #include "include/mem.h"
+#include "lib/socks_helper.h" // handshake_with_tor
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
@@ -45,7 +46,7 @@ destroy_fileupload_structs ()
 	pthread_mutex_destroy (&pollMut);
 }
 
-struct fileAddr *
+static struct fileAddr *
 load_info(struct data_wrapper *data)
 {
 	// this function loads informations about files received by the client
@@ -78,100 +79,83 @@ free_file (struct fileAddr *fList)
 	FREE(fList);
 }
 
-void 
+void
 send_file(struct data_wrapper *data)
 {
-	// multiple threads to avoid blocking on large files
-	// detached to prevent leaks
-	pthread_t t;
-	pthread_attr_t attr; // create an attribute to specify that thread is detached
-	set_thread_detached (&attr);
+	// send_file_routine is a coroutine (fileactions.h)
 	struct fileAddr *file = load_info (data);
-	if (file) {
-		pthread_create(&t, &attr, &send_file_routine, (void*)file);
-	}
+   	int sock = handshake_with_tor (9250);
+	go(send_file_routine(sock, file));
 }
 
 // FROM HERE DOWNWARDS: ONLY FILE RECV FUNCTION
-static void
-handle_upload(struct mg_connection* nc)
+
+coroutine static void
+handle_upload(const int sock)
 {
 	// It is used to save a file to a local directory as soon as
 	// a json with the content encoded in base64 is received
 
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
-	char *id = NULL;
-	int sock = -1;
+	int64_t deadline = now() + 12000;
 	// fill data and json if the connection was valid
-	if (parse_connection (nc, &data, &json, -1) == false) {
-		// if false, log has already been taken care of
-		return;
+	while (parse_connection (sock, &data, &json, deadline) > 0) {
+		// the json is valid, switch on cases
+		switch (data->cmd) {
+			case FILEBEGIN :
+				log_info (json);
+				create_file (data); 
+				// actually just resets file content
+				break;
+			case FILEDATA :
+				log_info (json); // not really needed
+				write_to_file (data);
+				// doesn't send any ack (no guaranteed delivery)
+				break;
+			case FILEEND :
+				log_info (json);
+				// file is being closed after every read
+				break;
+			default :
+				break;
+		}
 	}
-	// the json is valid, switch on cases
-    switch (data->cmd) {
-    	case FILEBEGIN :
-    		log_info (json);
-    		create_file (data); // actually just resets file content
-    		break;
-    	case FILEDATA :
-			log_info (json); // not really needed
-            write_to_file (data);
-			// doesn't send any ack (no guaranteed delivery)
-            break;
-        case FILEEND :
-    		log_info (json);
-            /*close_file (data);*/ 
-  			// file is being closed after every read
-			break;
-        default :
-			break;
-    }
-
 	/*FREE (json);*/
 	/*free_data_wrapper (data);*/
 	return;
 }
 
-static void
-ev_handler(struct mg_connection *nc, int ev, void *ev_data)
-{
-    if (nc->recv_mbuf.size == 0) {
-        // can trash
-    } else if (ev == MG_EV_RECV) {
-	// now we just utilize MG_EV_RECV because the response must be send over TOR
-		handle_upload (nc);
-	}
-}
-
 static void *
 file_upload_poll ()
 {
-	// create a new connection on the port advertised
+	// bind to the port advertised
 	// poll for the file to be transfered
-    struct mg_mgr mgr;
-    mg_mgr_init(&mgr, NULL);  // Initialize event manager object
-
-    /*int sock; */
-    struct mg_connection *nc = NULL;
-	// Create listening connection and add it to the event manager
-
-    if((nc = mg_bind(&mgr, port, ev_handler)) == NULL) {
-    	exit_error ("Unable to bind to the given port");
+	// start coroutine 
+    struct ipaddr addr;
+    int port = 43434;
+    int rc = ipaddr_local(&addr, NULL, port, 0);
+    assert(rc == 0);
+    int ls = tcp_listen(&addr, 10);
+    if(ls < 0) {
+        exit_error("Can't open listening socket");
     }
-    // poll for connections
-    // TODO add timer
-	while (true) {
-        mg_mgr_poll(&mgr, 300);
+
+    while (true) {  // start poll loop
+        // stop when the exitFlag is set to false,
+        int sock = tcp_accept(ls, NULL, -1);
+        // check errno for tcp_accept
+        assert(sock >= 0);
+		// clrf means that lines must be \r\n terminated
+        sock  = crlf_attach(sock);
+		assert(sock >= 0);
+        int cr = go(handle_upload(sock));
+        assert(cr >= 0);
     }
-    // close connection 
-    mg_mgr_free(&mgr); // terminate mongoose connection
-    pthread_mutex_unlock (&pollMut);
-    pthread_exit (NULL);
 }
 
 void
-manage_file_upload (struct data_wrapper *data)
+manage_file_upload ()
 {
 
 	// fork to start polling on port 43434
@@ -180,6 +164,8 @@ manage_file_upload (struct data_wrapper *data)
 	if(fork() == 0){
 		// returns if port is already binded by a child
 		// which is already dealing with the file upload
+		// TODO set timer for child to live
+		// (child should die after a period of inactivity)
 		file_upload_poll();
 	}
 	return;

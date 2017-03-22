@@ -208,10 +208,8 @@ main(int argc, char **argv)
     assert(rc == 0);
     int ls = tcp_listen(&addr, 10);
     if(ls < 0) {
-        perror("Can't open listening socket");
-        return 1;
+        exit_error("Can't open listening socket");
     }
-
 
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
