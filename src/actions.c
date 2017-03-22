@@ -103,11 +103,11 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
 		data->portno = 80;
-	} else if (data->cmd == FILEUP) {
-		data->cmd = FILEPORT;
-		FREE (data->msg);
-		data->msg = get_upload_port ();
-	} else if (data->cmd != FILEPORT){
+	/*} else if (data->cmd == FILEUP) {*/
+		/*data->cmd = FILEPORT;*/
+		/*FREE (data->msg);*/
+		/*data->msg = get_upload_port ();*/
+	} else /*if (data->cmd != FILEPORT)*/{
 			data->cmd = RECV;
 	}
 	id = STRDUP (data->id);
@@ -125,7 +125,7 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 		log_err (jError);
 		SOCK_SEND(sock, jError, strlen(jError), deadline);
 		FREE(jError);
-	} else if (data->cmd != FILEPORT && data->cmd != FILEUP){ // fileport and fileup do not require jOk to be sent
+	} else if (/*data->cmd != FILEPORT && */data->cmd != FILEUP){ // fileport and fileup do not require jOk to be sent
 		data->cmd = END;
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);

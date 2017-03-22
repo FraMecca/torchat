@@ -11,7 +11,6 @@
 
 extern char * convert_filestruct_to_char (const struct fileAddr *file, const enum command cmd, const char *buf);
 extern void log_err (char *json); // from logger.cpp
-extern pthread_mutex_t ackMutex; // TODO: static on other file
 
 #define BUFSIZE 512
 

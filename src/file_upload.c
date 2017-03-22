@@ -12,13 +12,10 @@
 #include <errno.h> // perror
 
 static char port[] = "43434";
-static pthread_mutex_t pollMut;
 extern void log_err (char *json); // from logger.cpp
 extern void log_info (char *json); // from logger.cpp
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
-
-pthread_mutex_t ackMutex; // TODO: static on other file
 
 
 /*static char *uploadDir = "uploads/"; // TODO: read it from configs*/
@@ -29,23 +26,6 @@ get_upload_port ()
 }
 
 // FILE UPLOAD FUNCTIONS
-void 
-initialize_fileupload_structs ()
-{
-	if (pthread_mutex_init (&pollMut, NULL) != 0) {
-		exit_error ("Can't initialize file_upload_poll_mutex");
-	}
-	if (pthread_mutex_init (&ackMutex, NULL) != 0) {
-		exit_error ("Can't initialize ackMutex");
-	}
-}
-
-void 
-destroy_fileupload_structs ()
-{
-	pthread_mutex_destroy (&pollMut);
-}
-
 static struct fileAddr *
 load_info(struct data_wrapper *data)
 {
@@ -133,8 +113,7 @@ file_upload_poll ()
 	// poll for the file to be transfered
 	// start coroutine 
     struct ipaddr addr;
-    int port = 43434;
-    int rc = ipaddr_local(&addr, NULL, port, 0);
+    int rc = ipaddr_local(&addr, NULL, atoi(port), 0);
     assert(rc == 0);
     int ls = tcp_listen(&addr, 10);
     if(ls < 0) {

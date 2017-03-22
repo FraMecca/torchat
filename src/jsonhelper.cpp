@@ -54,10 +54,10 @@ convert_to_enum (const std::string cmd)
 		return FILEUP;
 	} else if (cmd == "FILEALLOC")	{
 		return FILEALLOC;
-	} else if (cmd == "FILEPORT")	{
-		return FILEPORT;
-	} else if (cmd == "FILEINFO")	{
-		return FILEINFO;
+	//} else if (cmd == "FILEPORT")	{
+		//return FILEPORT;
+	//} else if (cmd == "FILEINFO")	{
+		//return FILEINFO;
 	} else if (cmd == "HOST") {
 		return HOST;
 	} else if (cmd == "FILEEND") {
@@ -101,15 +101,15 @@ convert_from_enum (const enum command c)
 		case FILEUP :
 			st = "FILEUP";
 			break;
-		case FILEPORT :
-			st = "FILEPORT";
-			break;
+		//case FILEPORT :
+			//st = "FILEPORT";
+			//break;
 		case FILEALLOC :
 			st = "FILEALLOC";
 			break;
-		case FILEINFO :
-			st = "FILEINFO";
-			break;
+		//case FILEINFO :
+			//st = "FILEINFO";
+			//break;
 		case FILEEND :
 			st = "FILEEND";
 			break;

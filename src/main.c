@@ -136,8 +136,11 @@ event_routine (const int sock)
         		break;
 			case FILEALLOC :
 				// relay FILEUP to the peer's server
+				// this is used to start the file_upload_poll procedure
+				// this server start the sending procedure instead
 				log_info (json);
         		relay_msg (data, sock, torSock, deadline);
+				send_file(data);
 				break;
 			case FILEUP :
 				// manage file uploading
@@ -145,17 +148,17 @@ event_routine (const int sock)
 				manage_file_upload (data);
         		relay_msg (data, sock, torSock, deadline);
 				break;
-			case FILEPORT:
-				log_info(json);
-				store_msg(data);
-				free_data_wrapper(data);
-				break;
-			case FILEINFO:
-				log_info(json);
-				// send file here
-				send_file(data);
-				free_data_wrapper(data);
-				break;
+			/*case FILEPORT:*/
+				/*log_info(json);*/
+				/*store_msg(data);*/
+				/*free_data_wrapper(data);*/
+				/*break;*/
+			/*case FILEINFO:*/
+				/*log_info(json);*/
+				/*// send file here*/
+				/*send_file(data);*/
+				/*free_data_wrapper(data);*/
+				/*break;*/
 			case HOST :
 				// the client required the hostname of the server
 				// send as a formatted json
@@ -200,7 +203,7 @@ main(int argc, char **argv)
 
 	// initialization of datastructs
     HOSTNAME = read_tor_hostname ();
-	initialize_fileupload_structs ();
+	/*initialize_fileupload_structs ();*/
 	
     struct ipaddr addr;
     int port = atoi (argv[1]);
@@ -222,7 +225,7 @@ main(int argc, char **argv)
         assert(cr >= 0);
     }
 
-    destroy_fileupload_structs ();
+    /*destroy_fileupload_structs ();*/
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
  	destroy_mut(); // free the mutex allocated in datastruct.c
