@@ -23,7 +23,7 @@ get_filename (char *data_fname)
 	char uploadDir[15];
 	strncpy(uploadDir, "Files_Received/", 14);
 	char *buf = calloc (sizeof (char), strlen (uploadDir) + strlen (data_fname) + 1);
-	strcat (buf, uploadDir); strcat (buf, data_fname); // uploadDir + fname + \n
+	strncpy (buf, uploadDir, strlen(uploadDir)); strncat (buf, data_fname, strlen(data_fname)); // uploadDir + fname + \n
 	return STRDUP (buf);
 }
 
