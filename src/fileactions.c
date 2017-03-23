@@ -21,7 +21,7 @@ get_filename (char *data_fname)
 	// upload dir is harcoded until a config file is provided
 	// TODO config file
 	char uploadDir[15];
-	strncpy(uploadDir, "Files_Received", 14);
+	strncpy(uploadDir, "Files_Received/", 14);
 	char *buf = calloc (sizeof (char), strlen (uploadDir) + strlen (data_fname) + 1);
 	strcat (buf, uploadDir); strcat (buf, data_fname); // uploadDir + fname + \n
 	return STRDUP (buf);
