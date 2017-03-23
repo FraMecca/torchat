@@ -21,7 +21,7 @@ enum command {
 	ERR,
 	FILEALLOC,
 	FILEUP,
-	//FILEPORT,
+	FILEPORT,
 	//FILEINFO,
 	FILEBEGIN, // used to announce the name of the file
 	FILEDATA, // all the packets containing binary data
