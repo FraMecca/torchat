@@ -163,6 +163,7 @@ send_over_tor (const int torSock, const char *domain, const int portno, const ch
 	// buf is the json parsed char to be sent over a socket
 	// buf is the message I want to send to peer
 	// torSock is obtained by the handshake in main.c, event_routine
+	// or by the handshake in file_upload.c, send_file
 	// here we connect to the domain
 	if (open_socket_to_domain(torSock, domain, portno) != 0){
 		return -1;	

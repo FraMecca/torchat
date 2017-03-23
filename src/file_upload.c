@@ -109,8 +109,8 @@ file_upload_poll ()
 {
 	// bind to the port advertised
 	// poll for the file to be transfered
-	// start coroutine 
-    struct ipaddr addr;
+	// start coroutine
+	struct ipaddr addr;
     int rc = ipaddr_local(&addr, NULL, atoi(port), 0);
     assert(rc == 0);
     int ls = tcp_listen(&addr, 10);
@@ -119,7 +119,6 @@ file_upload_poll ()
     }
 
     while (true) {  // start poll loop
-        // stop when the exitFlag is set to false,
         int sock = tcp_accept(ls, NULL, -1);
         // check errno for tcp_accept
         assert(sock >= 0);
