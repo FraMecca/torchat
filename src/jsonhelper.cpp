@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "lib/datastructs.h"
-#include "lib/file_upload.h"
+
 using json = nlohmann::json;
 
 #ifndef NDEBUG
@@ -50,22 +50,8 @@ convert_to_enum (const std::string cmd)
 		return UPDATE;
 	} else if (cmd == "END") {
 		return END;
-	} else if (cmd == "FILEUP")	{
-		return FILEUP;
-	} else if (cmd == "FILEALLOC")	{
-		return FILEALLOC;
-	} else if (cmd == "FILEPORT")	{
-		return FILEPORT;
-	//} else if (cmd == "FILEINFO")	{
-		//return FILEINFO;
 	} else if (cmd == "HOST") {
 		return HOST;
-	} else if (cmd == "FILEEND") {
-			return FILEEND;
-	} else if (cmd == "FILEBEGIN"){
-			return FILEBEGIN;
-	} else if (cmd == "FILEDATA"){
-			return FILEDATA;
 	} else /* if (cmd == "ERR") */ {
 		// it is the default case
 		return ERR;
@@ -97,27 +83,6 @@ convert_from_enum (const enum command c)
 			break;
 		case HOST :
 			st = "HOST";
-			break;
-		case FILEUP :
-			st = "FILEUP";
-			break;
-		case FILEPORT :
-			st = "FILEPORT";
-			break;
-		case FILEALLOC :
-			st = "FILEALLOC";
-			break;
-		//case FILEINFO :
-			//st = "FILEINFO";
-			//break;
-		case FILEEND :
-			st = "FILEEND";
-			break;
-		case FILEBEGIN :
-			st = "FILEBEGIN";
-			break;
-		case FILEDATA :
-			st = "FILEDATA";
 			break;
 		case ERR :
 			st = "ERR";
@@ -177,14 +142,6 @@ convert_string_to_datastruct (const char *jsonCh)
 	} else {
 		data->date = get_date ();
 	}
-	if (j.find("fname") != j.end()) {
-		// filename is used only for fileupload, it is not alway filled in
-		// needed only by functions in fileupload.c
-		std::string jfname = j["fname"];
-		data->fname = strdup (jfname.c_str ());
-	} else {
-		data->fname = NULL;
-	}
 
 	return data;
 }
@@ -208,30 +165,6 @@ convert_datastruct_to_char (const struct data_wrapper *data)
 		// the time of arrival of a message
 		// it is not used in server to server communication
 		j["date"] = data->date;
-	}
-	if (data->cmd == FILEEND || data->cmd == FILEBEGIN || data->cmd == FILEDATA) {
-		// the file field is used only in data transfer mode
-		j["fname"] = data->fname;
-	}
-
-	std::string st =  j.dump ();
-	return strdup  (st.c_str ());
-};
-
-extern "C" char *
-convert_filestruct_to_char (const struct fileAddr *file, const enum command cmd, const char *buf)
-{
-	// this function generates a json from a fileAddr struct
-	// do not pass through datawrapper
-	json j;
-	j["cmd"] = convert_from_enum (cmd);
-	j["id"] = file->host;
-	j["portno"] = atoi (file->port); // file->port should be an int ---> TODO?
-	j["fname"] = file->name;
-	if (buf) {
-		j["msg"] = buf; // here the encoded buffer
-	} else {
-		j["msg"] = "";
 	}
 
 	std::string st =  j.dump ();

@@ -1,9 +1,0 @@
-
-
-
-
-
-File verbosity level: 0
-date       time         ( uptime  ) [ thread name/id ]                   file:line     v| 
-2017-03-18 11:53:21.398 (   0.000s) [        80F49740]             loguru.hpp:1907     0| Logging to 'file.log', mode: 'a', verbosity: 0
-2017-03-18 11:53:21.398 (   0.000s) [        80F49740]             loguru.hpp:1907     0| Logging to 'error.log', mode: 'a', verbosity: -2

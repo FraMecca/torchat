@@ -1,9 +1,9 @@
 ALL = $(SRC) $(INCLUDE)  
-SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/file_upload.c src/fileactions.c src/fileupload_datastructs.c
-INCLUDE = include/mongoose.c include/mem.c include/ut_assert.c include/except.c include/base64.c 
+SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c 
+INCLUDE = include/mem.c include/ut_assert.c include/except.c include/base64.c 
 LDIR := $(PWD)
 DEBUG = -Wall -Wextra -g -UNDEBUG
-CF = -DMG_ENABLE_THREADS -DMG_ENABLE_HTTP_WEBSOCKET=0 -DMG_ENABLE_HTTP_STREAMING_MULTIPART
+CF =  -Wall
 I = -I. -Iinclude -Ilib 
 
 
@@ -28,11 +28,6 @@ build/main: build/logger.o build/jsonhelper.o $(ALL)
 
 build/jsonhelper.o: src/jsonhelper.cpp
 	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o  $I 
-
-build/main: build/logger.o build/jsonhelper.o $(ALL)
-	g++ -shared -o build/liblogger.so build/logger.o 
-	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o $I
-	gcc -L$(LDIR)/build $(ALL) $I -ljsonhelper  -lpthread -llogger -ldl -o build/main -Wl,-R$(LDIR)/build $(CF)
 
 asan:
 	mkdir -p build

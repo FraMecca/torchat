@@ -6,11 +6,12 @@
 #include <time.h>
 #include <signal.h>
 #include <errno.h>
+#include <sys/stat.h> //umask
+#include <assert.h> // assert
 #include "include/mem.h" // CALLOC and MALLOC
 #include "lib/datastructs.h"
 #include "lib/socks_helper.h"
 #include "lib/util.h"
-#include "lib/file_upload.h" //file upload support
 #include "lib/actions.h" // event_routine functions
 #include "include/libdill.h"
 
@@ -106,9 +107,9 @@ event_routine (const int sock)
 	while (parse_connection (sock, &data, &json, deadline) > 0) {
 			// keep connection open with client till deadline
 			// then exit coroutine
-			if (torSock == 0){
-				torSock = handshake_with_tor (9250);
-			}
+		if (torSock == 0){
+			torSock = handshake_with_tor (9250);
+		}
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -134,32 +135,6 @@ event_routine (const int sock)
         		send_peer_list_to_client (data, sock, deadline);
 				free_data_wrapper (data);
         		break;
-			case FILEALLOC :
-				// relay FILEUP to the peer's server
-				// this is used to start the file_upload_poll procedure
-				// this server start the sending procedure instead
-				log_info (json);
-				struct fileAddr *file = load_info (data);
-        		relay_msg (data, sock, torSock, deadline);
-				break;
-			case FILEUP :
-				// manage file uploading
-				log_info(json);
-				manage_file_upload (data);
-				relay_msg (data, sock, torSock, deadline);
-				break;
-			case FILEPORT:
-				log_info(json);
-				/*store_msg(data);*/
-				send_file(file);
-				free_data_wrapper(data);
-				break;
-			/*case FILEINFO:*/
-				/*log_info(json);*/
-				/*// send file here*/
-				/*send_file(data);*/
-				/*free_data_wrapper(data);*/
-				/*break;*/
 			case HOST :
 				// the client required the hostname of the server
 				// send as a formatted json
