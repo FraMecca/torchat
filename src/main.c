@@ -141,19 +141,19 @@ event_routine (const int sock)
 				log_info (json);
 				struct fileAddr *file = load_info (data);
         		relay_msg (data, sock, torSock, deadline);
-				send_file(file);
 				break;
 			case FILEUP :
 				// manage file uploading
 				log_info(json);
 				manage_file_upload (data);
-                /*relay_msg (data, sock, torSock, deadline);*/
+				relay_msg (data, sock, torSock, deadline);
 				break;
-			/*case FILEPORT:*/
-				/*log_info(json);*/
+			case FILEPORT:
+				log_info(json);
 				/*store_msg(data);*/
-				/*free_data_wrapper(data);*/
-				/*break;*/
+				send_file(file);
+				free_data_wrapper(data);
+				break;
 			/*case FILEINFO:*/
 				/*log_info(json);*/
 				/*// send file here*/

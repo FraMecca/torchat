@@ -103,10 +103,10 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 	if (data->cmd == FILEALLOC){
 		data->cmd = FILEUP;
 		data->portno = 80;
-	/*} else if (data->cmd == FILEUP) {*/
-		/*data->cmd = FILEPORT;*/
-		/*FREE (data->msg);*/
-		/*data->msg = get_upload_port ();*/
+	} else if (data->cmd == FILEUP) {
+		data->cmd = FILEPORT;
+		FREE (data->msg);
+		data->msg = get_upload_port ();
 	} else /*if (data->cmd != FILEPORT)*/{
 			data->cmd = RECV;
 	}
