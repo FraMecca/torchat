@@ -14,10 +14,12 @@ struct fileAddr {
 char * get_upload_port ();
 void initialize_fileupload_structs ();
 void destroy_fileupload_structs ();
-void send_file(struct data_wrapper *data);
+void send_file(struct fileAddr *file);
 void manage_file_upload ();
 coroutine void send_file_routine (const int sock, struct fileAddr *file);
 
+struct fileAddr *load_info(struct data_wrapper *data);
+void free_file(struct fileAddr *file);
 void
 write_to_file (struct data_wrapper *data);
 void

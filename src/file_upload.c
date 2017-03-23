@@ -26,7 +26,7 @@ get_upload_port ()
 }
 
 // FILE UPLOAD FUNCTIONS
-static struct fileAddr *
+struct fileAddr *
 load_info(struct data_wrapper *data)
 {
 	// this function loads informations about files received by the client
@@ -34,11 +34,10 @@ load_info(struct data_wrapper *data)
 	// the handler to the ds is in main.c
 	struct fileAddr *newFile;
 	char host[30];
-	char port[6];
 	char fPath[200];
 	char fName[100];
 
-	sscanf(data->msg, "%s %s %s %s", fPath, fName, port, host);
+	sscanf(data->msg, "%s %s %s", fPath, fName, host);
 
 	newFile = MALLOC(sizeof(struct fileAddr));
 	newFile->host = STRDUP(host);
@@ -60,10 +59,9 @@ free_file (struct fileAddr *fList)
 }
 
 void
-send_file(struct data_wrapper *data)
+send_file(struct fileAddr *file)
 {
 	// send_file_routine is a coroutine (fileactions.h)
-	struct fileAddr *file = load_info (data);
    	int sock = handshake_with_tor (9250);
 	go(send_file_routine(sock, file));
 }

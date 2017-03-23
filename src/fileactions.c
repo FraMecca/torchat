@@ -130,4 +130,5 @@ send_file_routine (const int sock, struct fileAddr *file)
 		char *json = convert_filestruct_to_char (file, FILEEND, NULL);
 		send_over_tor (sock, file->host, atoi (file->port), json);
 	}
+	free_file(file);
 }

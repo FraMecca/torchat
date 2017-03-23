@@ -139,8 +139,9 @@ event_routine (const int sock)
 				// this is used to start the file_upload_poll procedure
 				// this server start the sending procedure instead
 				log_info (json);
+				struct fileAddr *file = load_info (data);
         		relay_msg (data, sock, torSock, deadline);
-				send_file(data);
+				send_file(file);
 				break;
 			case FILEUP :
 				// manage file uploading
