@@ -147,7 +147,7 @@ event_routine (const int sock)
 				// manage file uploading
 				log_info(json);
 				manage_file_upload (data);
-        		relay_msg (data, sock, torSock, deadline);
+                /*relay_msg (data, sock, torSock, deadline);*/
 				break;
 			/*case FILEPORT:*/
 				/*log_info(json);*/
