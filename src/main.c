@@ -64,7 +64,6 @@ start_daemon()
 
     /* Set new file permissions */
     umask(0);
-	printf("ho settato i permessi\n");
 
 	/* Change the working directory to the current one*/
     dir = CALLOC (200, sizeof(char));
@@ -165,7 +164,6 @@ main(int argc, char **argv)
 	}
 	int port;
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
-        fprintf(stdout, "Starting in daemon mode.\n");
         start_daemon();
     	port = atoi (argv[2]);
     } else {

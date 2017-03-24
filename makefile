@@ -23,11 +23,8 @@ build/jsonhelper.o: src/jsonhelper.cpp
 build/main: build/logger.o build/jsonhelper.o $(ALL)
 	g++ -shared -o build/liblogger.so build/logger.o
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o
-	gcc -L$(LDIR)/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldl -o build/main -Wl,-R$(LDIR)/build  -NDEBUG
-	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -ldill -o build/logger.o $I
-
-build/jsonhelper.o: src/jsonhelper.cpp
-	g++ -c -fPIC src/jsonhelper.cpp -std=c++11 -o build/jsonhelper.o  $I 
+	gcc -L$(LDIR)/build $(ALL) -I. -ljsonhelper  -lpthread -llogger -ldill -ldl -o build/main -Wl,-R$(LDIR)/build  #-NDEBUG
+	g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl  -o build/logger.o $I
 
 asan:
 	mkdir -p build
