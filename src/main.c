@@ -64,6 +64,7 @@ start_daemon()
 
     /* Set new file permissions */
     umask(0);
+	printf("ho settato i permessi\n");
 
 	/* Change the working directory to the current one*/
     dir = CALLOC (200, sizeof(char));
@@ -71,12 +72,12 @@ start_daemon()
 	chdir(dir);
 	free(dir);
 
-	/* close all open file descriptors
-	 * this is needed in order to stop in/out to/from stdin, stdout, stderr
-	 */
+	/*close all open file descriptors*/
+	/*this is needed in order to stop in/out to/from stdin, stdout, stderr*/
 	for (x = sysconf(_SC_OPEN_MAX); x>=0; x--) {
 		close (x);
 	}
+
 }
 
 char *
@@ -162,11 +163,14 @@ main(int argc, char **argv)
 		fprintf (stdout, "USAGE...\n");
 		exit (EXIT_FAILURE);
 	}
-
+	int port;
 	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
         fprintf(stdout, "Starting in daemon mode.\n");
         start_daemon();
-    }
+    	port = atoi (argv[2]);
+    } else {
+    	port = atoi (argv[1]);
+	}
 
 #ifndef NDEBUG
     signal (SIGSEGV, dumpstack);
@@ -182,7 +186,6 @@ main(int argc, char **argv)
 	/*initialize_fileupload_structs ();*/
 	
     struct ipaddr addr;
-    int port = atoi (argv[1]);
     int rc = ipaddr_local(&addr, NULL, port, 0);
     assert(rc == 0);
     int ls = tcp_listen(&addr, 10);
