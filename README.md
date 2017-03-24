@@ -10,7 +10,6 @@
 - [Development](#Development)
 	- [Daemon](#Daemon)
 	- [Client](#Client)
-	- [File Upload](#File-Upload)
 	- [JSON](#JSON)
 - [Disclaimer](#Disclaimer)
 - [Todo](#Todo)
@@ -91,9 +90,7 @@ For a list of possible commands, check the [Development section](#Development)
 ## Building
 
 <!--TORchat has no external dependencies and just requires a C++11 compatible compiler.-->
-TORchat requires a C++11 compatible compiler and at the moment depends on **libcurl** for file upload functionality. 
-The best way to obtain libcurl is probably through the package manager of your Linux distribution. Alternatively, the Github page of cUrl is avaiable [here](https://github.com/curl/curl).
-
+TORchat requires a C++11 compatible compiler.
 To build the standar version (without debug logging), simply run:
 
 ` make `
@@ -118,7 +115,7 @@ With the daemon mode option, it detaches from the shell and continues its execut
 The daemon aims to be as  small as possible. <!--It has no external dependency and is written in less that 1000 loc.--> 
 Currently it supports only Linux and aims to do so.
 
-The daemon uses [mongoose](https://github.com/cesanta/mongoose) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs, [json](https://github.com/nlohmann/json) for communication and [libcurl](https://github.com/curl/curl) to send files.
+The daemon uses [mongoose](https://github.com/cesanta/mongoose) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs, [json](https://github.com/nlohmann/json) for communication and [libdill](http://libdill.org) to manage concurrencies.
 
 The core of the daemon is written in C with bindings to embedded libraries in C++.
 
@@ -137,12 +134,15 @@ Clients are independent of the daemon. To work properly, a "basic" client must b
  * Capable of sending messages though sockets
  * Capable of parsing a JSON structure
 
-Currently a small python client is provided. It is based on curses, specifically on the ui from: [calzoneman/python-chatui](https://github.com/calzoneman/python-chatui.git).
+Currently a small python client is provided [here](https://github.com/GallaFrancesco/Torchat_Client.git).
+It is based on curses, specifically on the ui from: [calzoneman/python-chatui](https://github.com/calzoneman/python-chatui.git).
 To use it, move to the repository main directory and:
 
 ```
-python3 src/client2.py 8000
+python3 client.py localhost 8000
 ```
+*localhost can be replaced with any other host on which the TORchat daemon is running.*
+
 It will ask for a peer (an onion address) to connect with, and then it will support the following actions:
  * To write a message to the peer selected, simply write and press enter;
  * To send a command to the client/server and perform specific actions, head to the command table provided below. Commands are all preceded by a '/' sign.
@@ -150,18 +150,8 @@ It will ask for a peer (an onion address) to connect with, and then it will supp
 | 	Command		| 	Action							|
 | ------------- | ----------------------------------|
 | 	**/peer**	| Change the current peer.  		|
-| 	**/fileup** | Upload a file to the peer.		|
 | 	**/exit**	| Close the client and the server.  |
 | 	**/quit**	| Close the client only.  			|
-
-#### File Upload 
-
-The client provided and the daemon currently support a basic form of file upload. An upload can be requested from the client directly to the peer's server by using the /fileup command, with the following syntax:
-
-```
-/fileup [absolute-path-to-file] [file-name]
-```
-This will produce a request to the peer's server, which will listen for upcoming requests until the file is completely transfered.
 
 #### JSON
 
