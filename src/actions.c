@@ -18,12 +18,6 @@ extern char * HOSTNAME;
 // related to the various commands
 //
 //
-struct data_conn { 
-	// used to wrap dataW and nc for pthread
-	struct data_wrapper *dataw;
-	int sock;
-	int64_t deadline;
-};
 
 bool
 parse_connection (const int sock, struct data_wrapper **retData, char **retJson, int64_t deadline)
@@ -37,7 +31,7 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
     struct data_wrapper *data = NULL;
     char *json = NULL; // used to log
     char inbuf[512]; // TODO determine size
-    ssize_t sz = mrecv(sock, inbuf, sizeof(inbuf), deadline);
+	ssize_t sz = mrecv(sock, inbuf, sizeof(inbuf), deadline);
 
     if (sz > 0) {
         json = CALLOC (sz + 1, sizeof (char));
@@ -47,16 +41,15 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
     } else {
         return false;
     }
-    if (data == NULL) {
+
+    if (data == NULL && json != NULL ){
         // the json was invalid
-        if (json != NULL) {
-        	log_err (json);
         // and logged to errlog
-        }
+        log_err (json);
         return false;
     }
 
-    // at this point nc contained valid data, put them in the structures and return
+    // at this point the inbuf contained valid data, put them in the structures and return
     *retJson = json; *retData = data;
     return true; // returns a struct containing both data_wrapper struct and json char
     // the bool is used to check wheter they were allocated successfully
@@ -70,6 +63,9 @@ free_data_wrapper (struct data_wrapper *data)
 	}
 	if (data->date != NULL) {
 		FREE (data->date);
+	}
+	if (data->id != NULL) {
+		FREE (data->id);
 	}
 	FREE (data);
 }
@@ -92,11 +88,11 @@ announce_exit (struct data_wrapper *data, int sock)
 coroutine static void
 send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 {
-	/*pthread_detach(pthread_self()); // needed to avoid memory leaks*/
-	// there is no need to call pthread_join, but thread resources need to be terminated
-	//
+	// sends the message from the client to tor (other peer)
+	// also sends an ack to the client if the send was successful
 	char *id;
 	
+	// set the data wrapper for sending
 	data->cmd = RECV;
 	id = STRDUP (data->id);
 	strcpy (data->id, HOSTNAME);
@@ -108,6 +104,7 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 		// this informs the client that an error has happened
 		// substitute cmd with ERR and msg with RFC error
 		data->cmd = ERR;
+		FREE(data->msg);
 		data->msg = get_tor_error(); // gets the global variable that corresponds to the error (socks_helper.c)
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
@@ -115,6 +112,7 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 		FREE(jError);
 	} else {
 		data->cmd = END;
+		FREE(data->msg);
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
@@ -122,7 +120,8 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 		FREE (jOk);
 	}
 	FREE (msg);
-	free_data_wrapper (data);
+	FREE (id);
+	/*free_data_wrapper (data);*/
 }
 
 void
@@ -131,11 +130,6 @@ relay_msg (struct data_wrapper *data, int sock, int torSock, int64_t deadline)
 	if(data == NULL){
 		exit_error("Invalid data structure.");
 	}
-	struct data_conn *dc = calloc(1, sizeof(struct data_conn));
-	dc->sock = sock;
-	dc->dataw = data;
-	dc->deadline = deadline;
-	
 	go(send_routine(sock, torSock, data, deadline));
 	return;
 }
@@ -160,6 +154,7 @@ client_update (struct data_wrapper *data, int sock, int64_t deadline)
 	// get the OLDEST, send as a json
 	// this is supposed to be executed periodically
 	// by the client
+	FREE(data->id);
 	data->id = STRDUP (data->msg);
 	data->id[strlen(data->id)] = '\0';
 	// if no msg, get_unread_message should return NULL
@@ -167,6 +162,7 @@ client_update (struct data_wrapper *data, int sock, int64_t deadline)
 	if((msg = get_unread_message(data->msg)) != NULL){
 		// now we convert the message in a json and send it
 		FREE (data->msg);
+		FREE (data->date);
 		// store the field of struct message in datawrapper
 		data->msg = STRDUP (msg->content); //content is the message received by the server from another peer
 		data->cmd = msg->cmd;

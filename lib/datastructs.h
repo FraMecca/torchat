@@ -29,7 +29,6 @@ struct data_wrapper {
 	int portno;
 	char *msg;
 	char *date;
-	char *fname; // used only for fileupload
 };
 
 struct message {

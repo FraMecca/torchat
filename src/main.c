@@ -97,6 +97,7 @@ read_tor_hostname (void)
 coroutine void
 event_routine (const int sock) 
 {
+	// manage server RECV events
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
     int64_t deadline = now() + 120000; // deadline in ms, 2min
@@ -125,7 +126,8 @@ event_routine (const int sock)
         		// mongoose is told that you want to send a message to a peer
         		log_info (json);
         		relay_msg (data, sock, torSock, deadline);
-				// data wrapper is free'd in thread
+				free_data_wrapper (data);
+				// data wrapper is free'd in routine 
         		break;
     		case UPDATE:
         		client_update (data, sock, deadline);
@@ -145,12 +147,12 @@ event_routine (const int sock)
 				free_data_wrapper (data);
         		break;
     	}
-
 		FREE (json);
-	// data should be freed inside the jump table because it can be used in threads
+		// data should be freed inside the jump table because it can be used in threads
 	}
 	// cleanup
     int rc = hclose(sock);
+	fdclean(torSock);
     assert(rc == 0);
     return;
 }
