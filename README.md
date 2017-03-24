@@ -15,7 +15,7 @@
 - [Todo](#Todo)
 
 A simple chat client for the TOR network.
-Inspired by [TorChat](https://github.com/prof7bit/TorChat)
+Inspired by [TorChat](https://github.com/prof7bit/TorChat).
 It is written in C with bindings for C++ libraries.
 
 
