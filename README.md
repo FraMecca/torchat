@@ -14,7 +14,7 @@
 - [Disclaimer](#Disclaimer)
 - [Todo](#Todo)
 
-A simple chat client for the TOR network using [mongoose](https://github.com/cesanta/mongoose).
+A simple chat client for the TOR network.
 Inspired by [TorChat](https://github.com/prof7bit/TorChat)
 It is written in C with bindings for C++ libraries.
 
