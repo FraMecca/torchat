@@ -18,6 +18,7 @@ extern char * HOSTNAME;
 // related to the various commands
 //
 //
+#define SOCK_SEND(sock, json, len, deadline) crlf_send(sock, json, len)
 
 bool
 parse_connection (const int sock, struct data_wrapper **retData, char **retJson, int64_t deadline)
@@ -31,7 +32,7 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
     struct data_wrapper *data = NULL;
     char *json = NULL; // used to log
     char inbuf[512]; // TODO determine size
-	ssize_t sz = mrecv(sock, inbuf, sizeof(inbuf), deadline);
+	ssize_t sz = crlf_recv (sock, inbuf, sizeof(inbuf));
 
     if (sz > 0) {
         json = CALLOC (sz + 1, sizeof (char));
@@ -86,7 +87,7 @@ announce_exit (struct data_wrapper *data, int sock)
 
 
 coroutine static void
-send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
+send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 {
 	// sends the message from the client to tor (other peer)
 	// also sends an ack to the client if the send was successful
@@ -98,17 +99,17 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
-	int ret = send_over_tor (torSock, id, data->portno, msg);
+	int ret = send_over_tor (id, data->portno, msg);
 
 	if (ret != 0) {
 		// this informs the client that an error has happened
 		// substitute cmd with ERR and msg with RFC error
 		data->cmd = ERR;
 		FREE(data->msg);
-		data->msg = get_tor_error(); // gets the global variable that corresponds to the error (socks_helper.c)
+		data->msg = get_tor_error(); // gets the global variable that corresponds to the error (clientSocks_helper.c)
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
-		SOCK_SEND(sock, jError, strlen(jError), deadline);
+		SOCK_SEND(clientSock, jError, strlen(jError), deadline);
 		FREE(jError);
 	} else {
 		data->cmd = END;
@@ -116,7 +117,7 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
-		SOCK_SEND (sock, jOk, strlen(jOk), deadline);
+		SOCK_SEND (clientSock, jOk, strlen(jOk), deadline);
 		FREE (jOk);
 	}
 	FREE (msg);
@@ -125,12 +126,12 @@ send_routine(int sock, int torSock, struct data_wrapper *data, int64_t deadline)
 }
 
 void
-relay_msg (struct data_wrapper *data, int sock, int torSock, int64_t deadline)
+relay_msg (const int clientSock, struct data_wrapper *data, int64_t deadline)
 {
 	if(data == NULL){
 		exit_error("Invalid data structure.");
 	}
-	go(send_routine(sock, torSock, data, deadline));
+	go(send_routine(clientSock, data, deadline));
 	return;
 }
 
@@ -193,7 +194,7 @@ send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int
 
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	SOCK_SEND (sock, response, strlen (response), deadline);
+	int cr = SOCK_SEND (sock, response, strlen (response), deadline);
 	FREE (response);
 }
 

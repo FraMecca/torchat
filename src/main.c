@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <sys/types.h> 
+#include <sys/socket.h>
+#include <netinet/in.h>
 #include <stdbool.h>
 #include <time.h>
 #include <signal.h>
@@ -103,14 +106,10 @@ event_routine (const int sock)
     int64_t deadline = now() + 120000; // deadline in ms, 2min
 	// sock is between the daemon and the client
 	// torSock is between the daemon and TOR (other peer)
-	int torSock = 0;
 
 	while (parse_connection (sock, &data, &json, deadline) > 0) {
 			// keep connection open with client till deadline
 			// then exit coroutine
-		if (torSock == 0){
-			torSock = handshake_with_tor (9250);
-		}
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -125,7 +124,7 @@ event_routine (const int sock)
     		case SEND :
         		// mongoose is told that you want to send a message to a peer
         		log_info (json);
-        		relay_msg (data, sock, torSock, deadline);
+        		relay_msg (sock, data, deadline);
 				free_data_wrapper (data);
 				// data wrapper is free'd in routine 
         		break;
@@ -150,10 +149,6 @@ event_routine (const int sock)
 		FREE (json);
 		// data should be freed inside the jump table because it can be used in threads
 	}
-	// cleanup
-    int rc = hclose(sock);
-	fdclean(torSock);
-    assert(rc == 0);
     return;
 }
 
@@ -183,25 +178,18 @@ main(int argc, char **argv)
 
 	// initialization of datastructs
     HOSTNAME = read_tor_hostname ();
-	/*initialize_fileupload_structs ();*/
-	
-    struct ipaddr addr;
-    int rc = ipaddr_local(&addr, NULL, port, 0);
-    assert(rc == 0);
-    int ls = tcp_listen(&addr, 10);
-    if(ls < 0) {
-        exit_error("Can't open listening socket");
-    }
+	// initialize struct needed to connect with SOCKS5 TOR
+	initialize_proxy_connection ("localhost", 9250);
 
+
+	int listenSock = bind_and_listen (8000);
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
-        int sock = tcp_accept(ls, NULL, -1);
+    	struct sockaddr_in clientAddr; // structures for TCP sockets
+    	socklen_t clilen = 0;
+     	int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);
         // check errno for tcp_accept
-        assert(sock >= 0);
-        sock  = crlf_attach(sock); // clrf means that lines must be \r\n terminated
-        assert(sock >= 0);
         int cr = go(event_routine(sock));
-        assert(cr >= 0);
     }
 
     /*destroy_fileupload_structs ();*/
@@ -211,5 +199,7 @@ main(int argc, char **argv)
     if (HOSTNAME != NULL) {
     	FREE (HOSTNAME);
     }
+    // terminate SOCKS5 structs
+    destroy_proxy_connection ();
     exit (EXIT_SUCCESS);
 }

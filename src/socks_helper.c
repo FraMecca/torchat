@@ -1,18 +1,119 @@
-#include <arpa/inet.h> // inet
 #include <string.h> // strdup
-#include <stdlib.h> // calloc
-#include <netinet/in.h> // socket types
 #include <strings.h> // bcopy
 #include <stdbool.h> // bool
-#include <time.h> // timestructs
 #include <errno.h> // perror
 #include <stdio.h> // perror
 #include "lib/datastructs.h" // for message to socket
 #include "lib/util.h"
 #include "include/mem.h"
 #include <unistd.h> // close
+#include "include/proxysocket.h"
 
 static char torError;
+static proxysocketconfig proxy = NULL;
+
+// wrapper for sockets
+// ****************** //
+
+int 
+crlf_send (int sock, const char *buf, size_t len)
+{
+
+	char tmpB[len + 2];
+	strncpy (tmpB, buf, len);
+	if (buf[len - 1] == '}') { // implying everything is a json
+		// buf is not crlf terminated
+		tmpB[len] = '\r'; tmpB[len + 1] = '\n'; tmpB[len + 2] = '\0';
+		len += 2;
+	}
+	return send (sock, tmpB, len, 0);
+}
+
+static bool
+line_is_terminated (char *b, size_t len)
+{
+	// just check if \r\n at b[len]	
+	if (b[len - 1] == '\n' && b[len - 2] == '\r') {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+size_t
+crlf_recv (const int sock, char *retBuf, const size_t maxSz)
+{
+	// it is the same as (3) recv
+	// but it receives a buffer that is \r\n terminated only
+	// it reads until size sz or \r\n and return -1 if the buffer read is not valid (not correctly terminated)
+	// IT IS BLOCKING
+	// requires retBuf to be allocated already 
+	retBuf[0] = '\0'; // strncat now starts from the beginning of retBuf
+	char buf[maxSz];
+	size_t sz = maxSz, finalSize = 0, rsz = 0;
+
+	while ((rsz = recv (sock, buf, sz, 0)) != -1) {
+		strncat (retBuf, buf, rsz); // store received chars in buf because tmp will be overwritten
+		// should use a more efficent datastruct
+		finalSize += rsz;
+		sz -= rsz;
+		if (line_is_terminated (buf, finalSize)) {
+			return finalSize - 2;
+		}
+	}
+	return -1; // recv failed
+}
+
+int
+bind_and_listen (const int portno)
+{
+    struct sockaddr_in servAddr;
+    int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0) { 
+        exit_error("ERROR opening socket");
+    }
+    bzero((char *) &servAddr, sizeof(servAddr));
+    servAddr.sin_family = AF_INET;
+    servAddr.sin_addr.s_addr = INADDR_ANY; // TODO: bind to a selected interface
+    servAddr.sin_port = htons(portno);
+    if (bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
+        exit_error("ERROR on binding");
+    }
+    if (listen(sockfd, 8) != -1) {
+    	return sockfd;
+    } else {
+    	// error on listen, check errno
+    	return -1;
+    }
+}
+
+// ************* //
+
+void
+initialize_proxy_connection (const char *host, const int port)
+{
+	// call destroy for freeing memory
+	// initialize proxysocket lib handlers
+	proxysocket_initialize();
+	proxy = proxysocketconfig_create_direct();
+	/*int verbose = PROXYSOCKET_LOG_DEBUG; // can be removed*/
+	/*proxysocketconfig_set_logging(proxy, logger, (int*)&verbose);*/
+	proxysocketconfig_use_proxy_dns(proxy, 1); // use TOR for name resolution
+	proxysocketconfig_add_proxy(proxy, PROXYSOCKET_TYPE_SOCKS5, host, port, NULL, NULL);
+}
+
+void
+terminate_connection_with_domain (const int sock)
+{
+	// disconnect from a domain
+    proxysocket_disconnect(proxy, sock);
+}
+
+void 
+destroy_proxy_connection ()
+{
+  	proxysocketconfig_free(proxy);
+}
 
 static void
 set_tor_error(const char e)
@@ -53,124 +154,26 @@ get_tor_error ()
 	}
 }
 
-
-
-static bool 
-set_socket_timeout (const int sockfd)
-{
-	// this function sets the socket timeout
-	// 120s
-	    struct timeval timeout;      
-	    timeout.tv_sec = 120;
-	    timeout.tv_usec = 0;
-
-	    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-	        perror("setsockopt failed\n");
-	        return false;
-	    }
-
-	    if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-	        perror("setsockopt failed\n");
-	        return false;
-	    }
-	    return true;
-}
-
 int
-handshake_with_tor (const int torPort)
-{
-	// do an handshake with the TOR daemon
-    int sock;
-    struct sockaddr_in socketAddr;
-
-    sock = socket(AF_INET, SOCK_STREAM, 0);
-    if (!set_socket_timeout (sock)) {
-    	exit_error("setsockopt");
-    }
-    socketAddr.sin_family       = AF_INET;
-    socketAddr.sin_port         = htons(torPort);
-    socketAddr.sin_addr.s_addr  = inet_addr("127.0.0.1");
-
-    connect(sock, (struct sockaddr*)&socketAddr, sizeof(struct sockaddr_in));
-
-    char handShake[3] =
-    {
-        0x05, // SOCKS 5
-        0x01, // One Authentication Method
-        0x00  // No AUthentication
-    };
-    if(send(sock, handShake, 3, 0) >= 0){
-		return sock;
-	} else {
-		set_tor_error(10);
-		return -1; // check errno
-	}
-}
-
-int
-open_socket_to_domain(int sock, const char *domain, const int portno)
+open_socket_to_domain(const char *domain, const int portno)
 {
 	// connect to an .onion domain
-	// the second part of the handshake
-    char  domainLen = (char)strlen(domain);
-    short port = htons(portno);
+	// return socket
+	//connect
+  	char* errmsg;
+	return proxysocket_connect(proxy, domain, portno, &errmsg);
 
-    char TmpReq[4] = {
-          0x05, // SOCKS5
-          0x01, // CONNECT
-          0x00, // RESERVED
-          0x03, // domain
-        };
-
-    char* req2 = malloc ((4+1+domainLen + 2) *sizeof (char));
-
-    memcpy(req2, TmpReq, 4);                // 5, 1, 0, 3
-    memcpy(req2 + 4, &domainLen, 1);        // Domain Length
-    memcpy(req2 + 5, domain, domainLen);    // Domain
-    memcpy(req2 + 5 + domainLen, &port, 2); // Port
-
-    send(sock, (char*)req2, 4 + 1 + domainLen + 2, 0);
-    free (req2);
-
-    char resp2[10] = {0};
-    recv(sock, resp2, 10, 0);
-    // if resp2 is ok, tor opened a socket to domain (.onion)
-	if(resp2[1] != 0){
-		// set a global to the error value
-		set_tor_error(resp2[1]);
-		return -1; 
-	}
-	return 0;
-}
-
-static int 
-send_crlf (int sock, const char *buf, size_t len, int f)
-{
-
-	char tmpB[len + 2];
-	strncpy (tmpB, buf, len);
-	if (buf[len - 1] == '}') { // implying everything is a json
-		// buf is not crlf terminated
-		tmpB[len] = '\r'; tmpB[len + 1] = '\n'; tmpB[len + 2] = '\0';
-		len += 2;
-	}
-	return send (sock, tmpB, len, f);
 }
 
 int
-send_over_tor (const int torSock, const char *domain, const int portno, const char *buf)
+send_over_tor (const char *domain, const int port, char *buf)
 {
-	// buf is the json parsed char to be sent over a socket
-	// buf is the message I want to send to peer
-	// torSock is obtained by the handshake in main.c, event_routine
-	// or by the handshake in file_upload.c, send_file
-	// here we connect to the domain
-	if (open_socket_to_domain(torSock, domain, portno) != 0){
-		return -1;	
+	// wraps functions above, 
+	// assumes that buf is null terminated
+	int sock = open_socket_to_domain (domain, port);
+	if (sock != -1) {
+		return crlf_send (sock, buf, strlen (buf));
 	}
-	// here we send
-	if (send_crlf(torSock, buf, strlen (buf), 0) < 0) {
-		return -1;
-	}
-	return 0;
+	return -1; // error opening socket
 }
+
