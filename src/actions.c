@@ -100,7 +100,15 @@ send_routine(const int clientSock, struct data_wrapper *data)
 	char *msg = convert_datastruct_to_char (data);
 	int ret = send_over_tor (id, data->portno, msg);
 
-	if (ret != 0) {
+	if (ret > 0) {
+		data->cmd = END;
+		FREE(data->msg);
+		data->msg = STRDUP (""); // is just an ACK, message can be empty
+		char *jOk = convert_datastruct_to_char (data);
+		log_info (jOk);
+		crlf_send (clientSock, jOk, strlen(jOk));
+		FREE (jOk);
+	} else {
 		// this informs the client that an error has happened
 		// substitute cmd with ERR and msg with RFC error
 		data->cmd = ERR;
@@ -110,14 +118,6 @@ send_routine(const int clientSock, struct data_wrapper *data)
 		log_err (jError);
 		crlf_send(clientSock, jError, strlen(jError));
 		FREE(jError);
-	} else {
-		data->cmd = END;
-		FREE(data->msg);
-		data->msg = STRDUP (""); // is just an ACK, message can be empty
-		char *jOk = convert_datastruct_to_char (data);
-		log_info (jOk);
-		crlf_send (clientSock, jOk, strlen(jOk));
-		FREE (jOk);
 	}
 	FREE (msg);
 	FREE (id);
