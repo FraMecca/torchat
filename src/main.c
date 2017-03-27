@@ -103,12 +103,10 @@ event_routine (const int sock)
 	// manage server RECV events
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
-    int64_t deadline = now() + 120000; // deadline in ms, 2min
 	// sock is between the daemon and the client
 	// torSock is between the daemon and TOR (other peer)
 
-	while (parse_connection (sock, &data, &json, deadline) > 0) {
-			// keep connection open with client till deadline
+	while (parse_connection (sock, &data, &json) > 0) {
 			// then exit coroutine
     	switch (data->cmd) {
     		case EXIT :
@@ -124,22 +122,22 @@ event_routine (const int sock)
     		case SEND :
         		// mongoose is told that you want to send a message to a peer
         		log_info (json);
-        		relay_msg (sock, data, deadline);
+        		relay_msg (sock, data);
 				free_data_wrapper (data);
 				// data wrapper is free'd in routine 
         		break;
     		case UPDATE:
-        		client_update (data, sock, deadline);
+        		client_update (data, sock);
 				free_data_wrapper (data);
         		break;
     		case GET_PEERS :
-        		send_peer_list_to_client (data, sock, deadline);
+        		send_peer_list_to_client (data, sock);
 				free_data_wrapper (data);
         		break;
 			case HOST :
 				// the client required the hostname of the server
 				// send as a formatted json
-				send_hostname_to_client(data, sock, HOSTNAME, deadline);
+				send_hostname_to_client(data, sock, HOSTNAME);
 				free_data_wrapper (data);
 				break;
     		default:
@@ -149,6 +147,8 @@ event_routine (const int sock)
 		FREE (json);
 		// data should be freed inside the jump table because it can be used in threads
 	}
+	close(sock);
+	/*printf("exiting coroutine\n");*/
     return;
 }
 
@@ -188,11 +188,14 @@ main(int argc, char **argv)
     	struct sockaddr_in clientAddr; // structures for TCP sockets
     	socklen_t clilen = 0;
      	int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);
+		set_socket_timeout(sock); // set the socket timeout to 2 min, close connection afterwards
         // check errno for tcp_accept
+		/*printf("opening coroutine\n");*/
         int cr = go(event_routine(sock));
     }
 
     /*destroy_fileupload_structs ();*/
+	close(listenSock);
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
  	destroy_mut(); // free the mutex allocated in datastruct.c

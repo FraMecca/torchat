@@ -18,10 +18,9 @@ extern char * HOSTNAME;
 // related to the various commands
 //
 //
-#define SOCK_SEND(sock, json, len, deadline) crlf_send(sock, json, len)
 
 bool
-parse_connection (const int sock, struct data_wrapper **retData, char **retJson, int64_t deadline)
+parse_connection (const int sock, struct data_wrapper **retData, char **retJson)
 {
 	// this function is used to parse a nc connection received by mongoose
 	// if the connection contains a valid json it can be parsed by our helperfunction and put in
@@ -81,13 +80,13 @@ announce_exit (struct data_wrapper *data, int sock)
 	data->msg = STRDUP ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
-	SOCK_SEND(sock, jOk, strlen(jOk), -1);
+	crlf_send(sock, jOk, strlen(jOk));
 	FREE (jOk);
 }
 
 
 coroutine static void
-send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
+send_routine(const int clientSock, struct data_wrapper *data)
 {
 	// sends the message from the client to tor (other peer)
 	// also sends an ack to the client if the send was successful
@@ -109,7 +108,7 @@ send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 		data->msg = get_tor_error(); // gets the global variable that corresponds to the error (clientSocks_helper.c)
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
-		SOCK_SEND(clientSock, jError, strlen(jError), deadline);
+		crlf_send(clientSock, jError, strlen(jError));
 		FREE(jError);
 	} else {
 		data->cmd = END;
@@ -117,7 +116,7 @@ send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
-		SOCK_SEND (clientSock, jOk, strlen(jOk), deadline);
+		crlf_send (clientSock, jOk, strlen(jOk));
 		FREE (jOk);
 	}
 	FREE (msg);
@@ -126,12 +125,12 @@ send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 }
 
 void
-relay_msg (const int clientSock, struct data_wrapper *data, int64_t deadline)
+relay_msg (const int clientSock, struct data_wrapper *data )
 {
 	if(data == NULL){
 		exit_error("Invalid data structure.");
 	}
-	go(send_routine(clientSock, data, deadline));
+	go(send_routine(clientSock, data));
 	return;
 }
 
@@ -149,7 +148,7 @@ store_msg (struct data_wrapper *data)
 }
 
 void
-client_update (struct data_wrapper *data, int sock, int64_t deadline)
+client_update (struct data_wrapper *data, int sock)
 {
 	// the client asks for unread messages from data->id peer
 	// get the OLDEST, send as a json
@@ -172,7 +171,7 @@ client_update (struct data_wrapper *data, int sock, int64_t deadline)
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
-	SOCK_SEND (sock, unreadMsg, strlen(unreadMsg), deadline);
+	crlf_send (sock, unreadMsg, strlen(unreadMsg));
 	FREE (unreadMsg);
 	if(msg){
 		FREE (msg->date); FREE (msg->content); FREE (msg);	
@@ -180,7 +179,7 @@ client_update (struct data_wrapper *data, int sock, int64_t deadline)
 }
 
 void
-send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int64_t deadline)
+send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname)
 {
 	// the hostname is sent as a json (similarly to the peer list function below)
 	// the hostname is in the data->msg field, this is an explicit request from the client
@@ -194,12 +193,12 @@ send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int
 
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	int cr = SOCK_SEND (sock, response, strlen (response), deadline);
+	int cr = crlf_send (sock, response, strlen (response));
 	FREE (response);
 }
 
 void
-send_peer_list_to_client (struct data_wrapper *data, int sock, int64_t deadline)
+send_peer_list_to_client (struct data_wrapper *data, int sock)
 {
 	// the client asked to receive the list of all the peers that send the server a message (not read yet)
 	// send the list as a parsed json, with peer field comma divided
@@ -213,6 +212,6 @@ send_peer_list_to_client (struct data_wrapper *data, int sock, int64_t deadline)
 	}
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	SOCK_SEND (sock, response, strlen (response), deadline);
+	crlf_send (sock, response, strlen (response));
 	FREE (response);
 }

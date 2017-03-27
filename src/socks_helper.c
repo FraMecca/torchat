@@ -2,6 +2,7 @@
 #include <strings.h> // bcopy
 #include <stdbool.h> // bool
 #include <errno.h> // perror
+#include "include/libdill.h" // yield
 #include <stdio.h> // perror
 #include "lib/datastructs.h" // for message to socket
 #include "lib/util.h"
@@ -15,11 +16,33 @@ static proxysocketconfig proxy = NULL;
 // wrapper for sockets
 // ****************** //
 
-int 
+bool 
+set_socket_timeout (const int sockfd)
+{
+	// this function sets the socket timeout
+	// 120s
+	    struct timeval timeout;      
+	    timeout.tv_sec = 120;
+	    timeout.tv_usec = 0;
+
+	    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	        perror("setsockopt failed\n");
+	        return false;
+	    }
+
+	    if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+	        perror("setsockopt failed\n");
+	        return false;
+	    }
+	    return true;
+}
+
+ssize_t 
 crlf_send (int sock, const char *buf, size_t len)
 {
 
 	char tmpB[len + 2];
+
 	strncpy (tmpB, buf, len);
 	if (buf[len - 1] == '}') { // implying everything is a json
 		// buf is not crlf terminated
@@ -40,7 +63,7 @@ line_is_terminated (char *b, size_t len)
 	}
 }
 
-size_t
+ssize_t
 crlf_recv (const int sock, char *retBuf, const size_t maxSz)
 {
 	// it is the same as (3) recv
@@ -50,9 +73,9 @@ crlf_recv (const int sock, char *retBuf, const size_t maxSz)
 	// requires retBuf to be allocated already 
 	retBuf[0] = '\0'; // strncat now starts from the beginning of retBuf
 	char buf[maxSz];
-	size_t sz = maxSz, finalSize = 0, rsz = 0;
-
-	while ((rsz = recv (sock, buf, sz, 0)) != -1) {
+	ssize_t sz = maxSz, finalSize = 0, rsz = 0;
+	
+	while ((rsz = recv (sock, buf, sz, 0)) > 0) {
 		strncat (retBuf, buf, rsz); // store received chars in buf because tmp will be overwritten
 		// should use a more efficent datastruct
 		finalSize += rsz;
@@ -60,8 +83,9 @@ crlf_recv (const int sock, char *retBuf, const size_t maxSz)
 		if (line_is_terminated (buf, finalSize)) {
 			return finalSize - 2;
 		}
+		yield();
 	}
-	return -1; // recv failed
+	return rsz; // recv failed (-1) or closed connection (0)
 }
 
 int
@@ -165,7 +189,7 @@ open_socket_to_domain(const char *domain, const int portno)
 
 }
 
-int
+ssize_t
 send_over_tor (const char *domain, const int port, char *buf)
 {
 	// wraps functions above, 
