@@ -1,4 +1,6 @@
 #include <string.h> // strdup
+#include <sys/types.h> // types and socket
+#include <sys/socket.h>
 #include <strings.h> // bcopy
 #include <stdbool.h> // bool
 #include <errno.h> // perror
@@ -49,7 +51,7 @@ crlf_send (int sock, const char *buf, size_t len)
 		tmpB[len] = '\r'; tmpB[len + 1] = '\n'; tmpB[len + 2] = '\0';
 		len += 2;
 	}
-	return send (sock, tmpB, len, 0);
+	return send (sock, tmpB, len, MSG_DONTWAIT);
 }
 
 static bool

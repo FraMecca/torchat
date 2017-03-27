@@ -106,7 +106,7 @@ event_routine (const int sock)
 	// sock is between the daemon and the client
 	// torSock is between the daemon and TOR (other peer)
 
-	while (parse_connection (sock, &data, &json) > 0) {
+	while (parse_connection (sock, &data, &json)) {
 			// then exit coroutine
     	switch (data->cmd) {
     		case EXIT :
@@ -147,8 +147,8 @@ event_routine (const int sock)
 		FREE (json);
 		// data should be freed inside the jump table because it can be used in threads
 	}
-	close(sock);
-	/*printf("exiting coroutine\n");*/
+	shutdown(sock, SHUT_RDWR);
+	printf("exiting coroutine\n");
     return;
 }
 
@@ -195,7 +195,7 @@ main(int argc, char **argv)
     }
 
     /*destroy_fileupload_structs ();*/
-	close(listenSock);
+	shutdown(listenSock, SHUT_RDWR);
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
  	destroy_mut(); // free the mutex allocated in datastruct.c

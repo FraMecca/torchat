@@ -38,7 +38,7 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson)
         strncpy (json, inbuf, sz * sizeof (char));
 		json[sz] = '\0';
         data = convert_string_to_datastruct (json); // parse a datastruct from the message received
-    } else {
+    } else { // sz = 0 means connection closed, sz = -1 means error
         return false;
     }
 
