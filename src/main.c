@@ -106,8 +106,8 @@ event_routine (const int sock)
 	// sock is between the daemon and the client
 	// torSock is between the daemon and TOR (other peer)
 
-	/*while (parse_connection (sock, &data, &json)) {*/
-			// then exit coroutine
+	// the client opens a new socket every message, and closes the previous
+	// this means that the server must perform only one recv then close thne coroutine
 	if(parse_connection(sock, &data, &json)){
     	switch (data->cmd) {
     		case EXIT :
@@ -145,11 +145,10 @@ event_routine (const int sock)
 				free_data_wrapper (data);
         		break;
     	}
-		FREE (json);
-		// data should be freed inside the jump table because it can be used in threads
 	}
+	FREE (json);
+	// data should be freed inside the jump table because it can be used in threads
 	shutdown(sock, SHUT_RDWR);
-	printf("exiting coroutine\n");
     return;
 }
 
