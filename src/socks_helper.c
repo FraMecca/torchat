@@ -1,6 +1,7 @@
 #include <string.h> // strdup
 #include <sys/types.h> // types and socket
 #include <sys/socket.h>
+#include <sys/select.h> // select is used on crlf send / recv 
 #include <strings.h> // bcopy
 #include <stdbool.h> // bool
 #include <errno.h> // perror
@@ -57,11 +58,13 @@ crlf_send (int sock, const char *buf, size_t len)
 static bool
 line_is_terminated (char *b, size_t len)
 {
-	// just check if \r\n at b[len]	
-	if (b[len - 1] == '\n' && b[len - 2] == '\r') {
-		return true;
-	} else {
-		return false;
+	// check the whole line for \r\n sequence 
+	// we check the whole line, not just the end, to avoid taking more than it should
+	int i;
+	for(i=0; i<len-1; i++){
+		if(b[i] == '\r' && b[i+1] == '\n'){
+			return true;
+		}
 	}
 }
 
@@ -72,12 +75,12 @@ crlf_recv (const int sock, char *retBuf, const size_t maxSz)
 	// but it receives a buffer that is \r\n terminated only
 	// it reads until size sz or \r\n and return -1 if the buffer read is not valid (not correctly terminated)
 	// IT IS BLOCKING
-	// requires retBuf to be allocated already 
+	// requires retBuf to be allocated already
+	//
 	retBuf[0] = '\0'; // strncat now starts from the beginning of retBuf
 	char buf[maxSz];
 	ssize_t sz = maxSz, finalSize = 0, rsz = 0;
-	
-	while ((rsz = recv (sock, buf, sz, 0)) > 0) {
+	while((rsz = recv(sock, buf, sz, 0)) > 0){
 		strncat (retBuf, buf, rsz); // store received chars in buf because tmp will be overwritten
 		// should use a more efficent datastruct
 		finalSize += rsz;
@@ -87,6 +90,7 @@ crlf_recv (const int sock, char *retBuf, const size_t maxSz)
 		}
 		yield();
 	}
+
 	return rsz; // recv failed (-1) or closed connection (0)
 }
 
@@ -185,7 +189,7 @@ open_socket_to_domain(const char *domain, const int portno)
 {
 	// connect to an .onion domain
 	// return socket
-	//connect
+	// connect
   	char* errmsg;
 	return proxysocket_connect(proxy, domain, portno, &errmsg);
 

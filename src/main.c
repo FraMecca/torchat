@@ -106,8 +106,9 @@ event_routine (const int sock)
 	// sock is between the daemon and the client
 	// torSock is between the daemon and TOR (other peer)
 
-	while (parse_connection (sock, &data, &json)) {
+	/*while (parse_connection (sock, &data, &json)) {*/
 			// then exit coroutine
+	if(parse_connection(sock, &data, &json)){
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
