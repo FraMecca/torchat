@@ -12,6 +12,7 @@
 #include "include/mem.h"
 #include <unistd.h> // close
 #include "include/proxysocket.h"
+#include "lib/torchatproto.h"
 
 static char torError;
 static proxysocketconfig proxy = NULL;
@@ -19,80 +20,27 @@ static proxysocketconfig proxy = NULL;
 // wrapper for sockets
 // ****************** //
 
-bool 
-set_socket_timeout (const int sockfd)
-{
-	// this function sets the socket timeout
-	// 120s
-	    struct timeval timeout;      
-	    timeout.tv_sec = 120;
-	    timeout.tv_usec = 0;
+/*bool */
+/*set_socket_timeout (const int sockfd)*/
+/*{*/
+	/*// this function sets the socket timeout*/
+	/*// 120s*/
+		/*struct timeval timeout;      */
+		/*timeout.tv_sec = 120;*/
+		/*timeout.tv_usec = 0;*/
 
-	    if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-	        perror("setsockopt failed\n");
-	        return false;
-	    }
+		/*if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {*/
+			/*perror("setsockopt failed\n");*/
+			/*return false;*/
+		/*}*/
 
-	    if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
-	        perror("setsockopt failed\n");
-	        return false;
-	    }
-	    return true;
-}
+		/*if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {*/
+			/*perror("setsockopt failed\n");*/
+			/*return false;*/
+		/*}*/
+		/*return true;*/
+/*}*/
 
-ssize_t 
-crlf_send (int sock, const char *buf, size_t len)
-{
-
-	char tmpB[len + 2];
-
-	strncpy (tmpB, buf, len);
-	if (buf[len - 1] == '}') { // implying everything is a json
-		// buf is not crlf terminated
-		tmpB[len] = '\r'; tmpB[len + 1] = '\n'; tmpB[len + 2] = '\0';
-		len += 2;
-	}
-	return send (sock, tmpB, len, MSG_DONTWAIT);
-}
-
-static bool
-line_is_terminated (char *b, size_t len)
-{
-	// check the whole line for \r\n sequence 
-	// we check the whole line, not just the end, to avoid taking more than it should
-	int i;
-	for(i=0; i<len-1; i++){
-		if(b[i] == '\r' && b[i+1] == '\n'){
-			return true;
-		}
-	}
-}
-
-ssize_t
-crlf_recv (const int sock, char *retBuf, const size_t maxSz)
-{
-	// it is the same as (3) recv
-	// but it receives a buffer that is \r\n terminated only
-	// it reads until size sz or \r\n and return -1 if the buffer read is not valid (not correctly terminated)
-	// IT IS BLOCKING
-	// requires retBuf to be allocated already
-	//
-	retBuf[0] = '\0'; // strncat now starts from the beginning of retBuf
-	char buf[maxSz];
-	ssize_t sz = maxSz, finalSize = 0, rsz = 0;
-	while((rsz = recv(sock, buf, sz, 0)) > 0){
-		strncat (retBuf, buf, rsz); // store received chars in buf because tmp will be overwritten
-		// should use a more efficent datastruct
-		finalSize += rsz;
-		sz -= rsz;
-		if (line_is_terminated (buf, finalSize)) {
-			return finalSize - 2;
-		}
-		yield();
-	}
-
-	return rsz; // recv failed (-1) or closed connection (0)
-}
 
 int
 bind_and_listen (const int portno)
@@ -196,13 +144,15 @@ open_socket_to_domain(const char *domain, const int portno)
 }
 
 ssize_t
-send_over_tor (const char *domain, const int port, char *buf)
+send_over_tor (const char *domain, const int port, char *buf, int64_t deadline)
 {
 	// wraps functions above, 
 	// assumes that buf is null terminated
-	int sock = open_socket_to_domain (domain, port);
+	int rawsock = open_socket_to_domain (domain, port);
+	int sock = torchatproto_attach (rawsock);
+
 	if (sock != -1) {
-		return crlf_send (sock, buf, strlen (buf));
+		return torchatproto_msend (sock, buf, strlen (buf), deadline);
 	}
 	return -1; // error opening socket
 }

@@ -1,6 +1,6 @@
 ALL = $(SRC) $(INCLUDE)  
-SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c 
-INCLUDE = include/mem.c include/ut_assert.c include/except.c include/base64.c  include/proxysocket.c
+SRC = src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/torchatproto.c
+INCLUDE = include/mem.c include/ut_assert.c include/except.c include/base64.c  include/proxysocket.c include/fd.c include/iol.c include/utils.c
 LDIR := $(PWD)
 DEBUG = -Wall -Wextra -g -UNDEBUG
 CF =  -Wall

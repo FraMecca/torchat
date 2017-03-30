@@ -17,6 +17,8 @@
 #include "lib/util.h"
 #include "lib/actions.h" // event_routine functions
 #include "include/libdill.h"
+#include "include/fd.h" // libdill fd
+#include "lib/torchatproto.h"
 
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
@@ -108,7 +110,9 @@ event_routine (const int sock)
 
 	// the client opens a new socket every message, and closes the previous
 	// this means that the server must perform only one recv then close thne coroutine
-	if(parse_connection(sock, &data, &json)){
+	/*int64_t deadline = now() + TOR_TIMEOUT; // two minutes deadline*/
+	int64_t deadline = 0;
+	while (parse_connection(sock, &data, &json, deadline)) { 
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -128,7 +132,7 @@ event_routine (const int sock)
 				// data wrapper is free'd in routine 
         		break;
     		case UPDATE:
-        		client_update (data, sock);
+        		client_update (data, sock, deadline);
 				free_data_wrapper (data);
         		break;
     		case GET_PEERS :
@@ -187,9 +191,9 @@ main(int argc, char **argv)
         // stop when the exitFlag is set to false,
     	struct sockaddr_in clientAddr; // structures for TCP sockets
     	socklen_t clilen = 0;
-     	int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);
-		set_socket_timeout(sock); // set the socket timeout to 2 min, close connection afterwards
-        // check errno for tcp_accept
+         /*int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);*/
+     	int rawsock = fd_accept (listenSock, (struct sockaddr *) &clientAddr, &clilen, 0);   // it makes zero difference to use fd_accept or raw sockets
+     	int	sock = torchatproto_attach (rawsock); // from now on communicate using torchat protocol
 		/*printf("opening coroutine\n");*/
         int cr = go(event_routine(sock));
     }

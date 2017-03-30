@@ -11,6 +11,8 @@
 //
 // 4. peer: the list of peers with messages that has to be read by a client
 
+#define TOR_TIMEOUT 120000
+
 enum command {
 	SEND,
 	RECV,

@@ -7,6 +7,7 @@
 #include "lib/util.h"
 #include <pthread.h>
 #include "lib/actions.h"
+#include "lib/torchatproto.h"
 #include "include/libdill.h"
 
 extern struct data_wrapper * convert_string_to_datastruct (const char *jsonCh);  // from json.cpp
@@ -20,7 +21,7 @@ extern char * HOSTNAME;
 //
 
 bool
-parse_connection (const int sock, struct data_wrapper **retData, char **retJson)
+parse_connection (const int sock, struct data_wrapper **retData, char **retJson, int64_t deadline)
 {
 	// this function is used to parse a nc connection received by mongoose
 	// if the connection contains a valid json it can be parsed by our helperfunction and put in
@@ -30,29 +31,33 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson)
 	// and return false
     struct data_wrapper *data = NULL;
     char *json = NULL; // used to log
-    char inbuf[512]; // TODO determine size
-	ssize_t sz = crlf_recv (sock, inbuf, sizeof(inbuf));
-
-    if (sz > 0) {
+    char inbuf[512] = {0}; // TODO determine size
+	size_t rc = torchatproto_mrecv (sock, inbuf, 512, deadline);
+	if (rc > 0) {	
+		size_t sz = strlen (inbuf);
         json = CALLOC (sz + 1, sizeof (char));
         strncpy (json, inbuf, sz * sizeof (char));
 		json[sz] = '\0';
         data = convert_string_to_datastruct (json); // parse a datastruct from the message received
+
+		// check data and json validity
+    	if (data == NULL && json != NULL ){
+        	// the json was invalid
+        	// and logged to errlog
+        	log_err (json);
+        	return false;
+    	}
+
+    	// at this point the inbuf contained valid data, put them in the structures and return
+    	*retJson = json; *retData = data;
+    	return true; // returns a struct containing both data_wrapper struct and json char
+    	// the bool is used to check wheter they were allocated successfully
+    	//
+    	//
     } else { // sz = 0 means connection closed, sz = -1 means error
+    	// sz == -1, errno set
         return false;
     }
-
-    if (data == NULL && json != NULL ){
-        // the json was invalid
-        // and logged to errlog
-        log_err (json);
-        return false;
-    }
-
-    // at this point the inbuf contained valid data, put them in the structures and return
-    *retJson = json; *retData = data;
-    return true; // returns a struct containing both data_wrapper struct and json char
-    // the bool is used to check wheter they were allocated successfully
 }
 
 void
@@ -80,7 +85,6 @@ announce_exit (struct data_wrapper *data, int sock)
 	data->msg = STRDUP ("");
 	char *jOk = convert_datastruct_to_char (data);
 	/*log_info (msg);*/
-	crlf_send(sock, jOk, strlen(jOk));
 	FREE (jOk);
 }
 
@@ -98,7 +102,7 @@ send_routine(const int clientSock, struct data_wrapper *data)
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
-	int ret = send_over_tor (id, data->portno, msg);
+	int ret = send_over_tor (id, data->portno, msg, now () + TOR_TIMEOUT);
 
 	if (ret > 0) {
 		data->cmd = END;
@@ -106,7 +110,7 @@ send_routine(const int clientSock, struct data_wrapper *data)
 		data->msg = STRDUP (""); // is just an ACK, message can be empty
 		char *jOk = convert_datastruct_to_char (data);
 		log_info (jOk);
-		crlf_send (clientSock, jOk, strlen(jOk));
+		torchatproto_msend (clientSock, jOk, strlen(jOk), 0); // TODO: is sendnow (0) correct?
 		FREE (jOk);
 	} else {
 		// this informs the client that an error has happened
@@ -116,7 +120,7 @@ send_routine(const int clientSock, struct data_wrapper *data)
 		data->msg = get_tor_error(); // gets the global variable that corresponds to the error (clientSocks_helper.c)
 		char *jError = convert_datastruct_to_char (data);
 		log_err (jError);
-		crlf_send(clientSock, jError, strlen(jError));
+		torchatproto_msend (clientSock, jError, strlen(jError), 0);
 		FREE(jError);
 	}
 	FREE (msg);
@@ -148,7 +152,7 @@ store_msg (struct data_wrapper *data)
 }
 
 void
-client_update (struct data_wrapper *data, int sock)
+client_update (struct data_wrapper *data, int sock, int64_t deadline)
 {
 	// the client asks for unread messages from data->id peer
 	// get the OLDEST, send as a json
@@ -171,7 +175,7 @@ client_update (struct data_wrapper *data, int sock)
 		data->cmd = END;
 	}
 	char *unreadMsg = convert_datastruct_to_char(data);
-	crlf_send (sock, unreadMsg, strlen(unreadMsg));
+	torchatproto_msend (sock, unreadMsg, strlen(unreadMsg), deadline);
 	FREE (unreadMsg);
 	if(msg){
 		FREE (msg->date); FREE (msg->content); FREE (msg);	
@@ -193,7 +197,7 @@ send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname)
 
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	int cr = crlf_send (sock, response, strlen (response));
+	torchatproto_msend (sock, response, strlen (response), 0);
 	FREE (response);
 }
 
@@ -212,6 +216,6 @@ send_peer_list_to_client (struct data_wrapper *data, int sock)
 	}
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	crlf_send (sock, response, strlen (response));
+	torchatproto_msend (sock, response, strlen (response), 0);
 	FREE (response);
 }
