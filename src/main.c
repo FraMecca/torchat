@@ -152,7 +152,8 @@ event_routine (const int sock)
 	}
 	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
-	shutdown(sock, SHUT_RDWR);
+/*[>shutdown(sock, SHUT_RDWR);<] TODO: close torchatprotosock*/
+	printf ("exiting coroutine\n");
     return;
 }
 
@@ -194,7 +195,7 @@ main(int argc, char **argv)
          /*int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);*/
      	int rawsock = fd_accept (listenSock, (struct sockaddr *) &clientAddr, &clilen, 0);   // it makes zero difference to use fd_accept or raw sockets
      	int	sock = torchatproto_attach (rawsock); // from now on communicate using torchat protocol
-		/*printf("opening coroutine\n");*/
+		printf("opening coroutine\n");
         int cr = go(event_routine(sock));
     }
 

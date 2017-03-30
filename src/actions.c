@@ -32,8 +32,8 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
     struct data_wrapper *data = NULL;
     char *json = NULL; // used to log
     char inbuf[512] = {0}; // TODO determine size
-	size_t rc = torchatproto_mrecv (sock, inbuf, 512, deadline);
-	if (rc > 0) {	
+	int rc = torchatproto_mrecv (sock, inbuf, 512, deadline);
+	if ( rc > 0) {	
 		size_t sz = strlen (inbuf);
         json = CALLOC (sz + 1, sizeof (char));
         strncpy (json, inbuf, sz * sizeof (char));
@@ -104,7 +104,7 @@ send_routine(const int clientSock, struct data_wrapper *data)
 	char *msg = convert_datastruct_to_char (data);
 	int ret = send_over_tor (id, data->portno, msg, now () + TOR_TIMEOUT);
 
-	if (ret > 0) {
+	if (ret >= 0) {
 		data->cmd = END;
 		FREE(data->msg);
 		data->msg = STRDUP (""); // is just an ACK, message can be empty

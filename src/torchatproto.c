@@ -1,25 +1,19 @@
 #include "libdill.h"
-#include <stdio.h>
 #include "libdillimpl.h"
-#include <assert.h>
-#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h> // close
 #include <arpa/inet.h> 
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdbool.h>
-#include <signal.h>
 #include <stddef.h>// offsetof
-#include <errno.h>
-#include <assert.h> // assert
+#include "include/mem.h" // FREE
 
 #include "include/fd.h"
+#include "include/utils.h"
 #include "lib/torchatproto.h"
 
 #define CONT(ptr, type, member) ((type*)(((char*) ptr) - offsetof(type, member)))
@@ -36,11 +30,9 @@ static const int torchatprotoTypePlaceholder = 0;
 static const void *torchatprotoType = &torchatprotoTypePlaceholder;
 
 // prototypes inside function table handler
-void *torchatproto_hquery (struct hvfs *hvfs, const void *id);
-void torchatproto_hclose (struct hvfs *hvfs);
-int torchatproto_hdone (struct hvfs *hvfs, int64_t deadline);
 static int torchatproto_msendl(struct msock_vfs *mvfs, struct iolist *first, struct iolist *last, int64_t deadline);
 static ssize_t torchatproto_mrecvl(struct msock_vfs *mvfs, struct iolist *first, struct iolist *last, int64_t deadline);
+
 
 static int 
 torchatproto_msendl(struct msock_vfs *mvfs, struct iolist *first, struct iolist *last, int64_t deadline)
@@ -86,7 +78,7 @@ torchatproto_attach (int s)
 	// allocates functions inside table
 	// returns an handle to the FT
 	int err;
-	struct torchatproto *self = malloc (sizeof (struct torchatproto));
+	struct torchatproto *self = MALLOC (sizeof (struct torchatproto));
 	if (!self) {err = ENOMEM; goto error1;}
 
 	self->hvfs.query = torchatproto_hquery;
@@ -100,7 +92,7 @@ torchatproto_attach (int s)
 	if (h < 0) {err = errno; goto error2;}
  	return h;
 error2:
-	free (self);
+	FREE (self);
 error1:
 	errno = err;
 	return -1;
@@ -109,9 +101,9 @@ error1:
 void
 torchatproto_hclose (struct hvfs *hvfs)
 {
-	// close and free
+	// close and FREE
 	struct torchatproto *self = (struct torchatproto *) hvfs;
-	free (self);
+	FREE (self);
 }
 
 void *
@@ -135,7 +127,7 @@ torchatproto_detach(int h)
 	if(!self) return -1;
 	int sock = self->sock;
 	/*self->hvfs.close(self->hvfs);*/
-	free(self);
+	FREE(self);
 	return sock;
 }
 
@@ -164,8 +156,8 @@ allocate_iol_struct (size_t sz)
 {
 	// allocate one iolist on heap
 	// TODO: use the stack
-	struct iolist *it = (struct iolist *) malloc (sizeof (struct iolist));
-	char *buf = calloc (sz, sizeof (char));
+	struct iolist *it = (struct iolist *) MALLOC (sizeof (struct iolist));
+	char *buf = CALLOC (sz, sizeof (char));
 	it->iol_base = (void *) buf;
 	it->iol_len = sz;
 	it->iol_next = NULL;
@@ -193,14 +185,38 @@ put_iol_in_buf (struct iolist *iol, void *buf)
 	// assuming buf is preallocated
 	// put all the content of the various buffer of the iolists
 	// in buf 
-	// then free the lists
+	// then FREE the lists
 	while (iol) {
 		memcpy (buf, iol->iol_base, iol->iol_len);
 		buf = buf + iol->iol_len;
 		struct iolist *t = iol;
 		iol = iol->iol_next;
-		free (t->iol_base); free (t);
+		FREE (t->iol_base); FREE (t);
 	}
+}
+
+static int 
+fd_recv_dimensionhead (struct msock_vfs *mvfs, int64_t deadline)
+{
+	// this function is used to get the dimension from the first 4 bites of the packet
+    struct torchatproto *self = CONT(mvfs, struct torchatproto, mvfs);
+    char buf[4] = {0};
+    ssize_t sz = recv(self->sock, buf, 4, 0);
+    if(dill_slow(sz == 0)) {errno = EPIPE; return -1;}
+    if(sz < 0) {
+        if(dill_slow(errno != EWOULDBLOCK && errno != EAGAIN)) {
+            if(errno == EPIPE) errno = ECONNRESET;
+            return -1;
+        }
+            sz = 0;
+    }
+    for (size_t i = 0; i < 4; ++i) {
+    	// check that buf is not garbage else atoi undefined behaviour
+    	if (!isdigit (buf[i])) return -1;
+    }
+    return atoi (buf); // success
+   	
+    // atoi returns 0 on fail
 }
 
 ssize_t 
@@ -213,11 +229,8 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
     if(!m) return -1;
 
 	// receive dimension of the buffer 
-    char blen[4] = {'\0'}; // always pad the blen
-    struct iolist tiol = {(void*)blen, 4, NULL, 0};
-    int rc = m->mrecvl (m, &tiol, &tiol, deadline);
-    if (rc < 0) return -1; // can't recv, errno already set
-    size_t len = atoi (blen);
+    int len = fd_recv_dimensionhead (m, deadline);
+    if (len <= 0) return -1; // not an integer
     // check if supplied buffer too small
     if (len > maxLen) {errno = EMSGSIZE; return -1;}
 
@@ -239,7 +252,19 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
     int rsz = m->mrecvl(m, first, last, deadline);
 	
 	put_iol_in_buf (first, buf); // concatenate iolist buffers it in buf
-    return rsz;
+    return len;
+}
+
+
+static void
+generate_dimension_head (char *buf, size_t len)
+{
+	// fill buffer with the dimension of the packet to be sent
+	// zeroes at beginning
+	for (size_t i = 0; i < 4; ++i) {
+		buf[3 - i] = len % 10 + '0';
+		len = len / 10;
+	}
 }
 
 ssize_t 
@@ -253,7 +278,7 @@ torchatproto_msend (int h, void *buf, size_t len, int64_t deadline)
 
     // first send dimensions
     char blen[4] = {'\0'};
-    snprintf (blen, 4, "%lu", len); // store dimension in blen
+    generate_dimension_head (blen, len);
     struct iolist tiol = {(void*)blen, 4, NULL, 0};
     int rc = m->msendl (m, &tiol, &tiol, deadline);
 
