@@ -68,16 +68,7 @@ char *
 get_peer_list ();
 
 void
-keep_track_of_threads (pthread_t *newT);
-
-void
-wait_all_threads ();
-
-void
 clear_datastructs ();
-
-void
-destroy_mut();
 
 void
 free_data_wrapper (struct data_wrapper *data);

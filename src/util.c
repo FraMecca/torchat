@@ -4,7 +4,6 @@
 #include <errno.h> // perror
 #include <time.h> // localtime
 #include <string.h>
-#include <pthread.h> // detached threads
 #include <stdio.h> // perror
 #include <signal.h> // sigsegv sigabrt
 #include <unistd.h> // getpid
@@ -37,19 +36,6 @@ get_short_date ()
 	char date[50] = {0};
 	strftime(date, 8, "%H:%M", tm);
 	return STRDUP ((char*)date);
-}
-
-void
-set_thread_detached (pthread_attr_t *attr)
-{
-	if (pthread_attr_init(attr) != 0) {
-		// initialize pthread attr and check if error
-		exit_error ("pthread_attr_init");
-	}
-	// set detached state
-	if (pthread_attr_setdetachstate(attr, PTHREAD_CREATE_DETACHED) != 0) {
-		exit_error ("pthread_attr_setdetachstate");
-	}
 }
 
 void 

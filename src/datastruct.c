@@ -6,19 +6,9 @@
 #include <stdbool.h>
 #include "lib/socks_helper.h" // send_message_to_socket
 #include "include/uthash.h"
-#include <pthread.h> // mutexes
-
-static pthread_mutex_t *mut = NULL;
 
 static struct peer *head = NULL;
 // a pointer to the head of peer list
-
-struct threadList {
-	// not used
-	// see main.c
-	pthread_t *tid;
-	struct threadList *next;
-};
 
 static struct peer *
 new_peer (const char *id)
@@ -40,15 +30,7 @@ insert_peer (const char *onion)
 	// then push it to the existing list
 	// returns the head
 	struct peer *new = new_peer (onion);
-	if (mut == NULL) {
-		mut = MALLOC (sizeof (pthread_mutex_t));
-		pthread_mutex_init (mut, NULL);
-	}
-	if (pthread_mutex_lock (mut) != 0) {
-		exit_error ("pthread mutex: ");
-	}
 	HASH_ADD_STR (head, id, new);
-	pthread_mutex_unlock (mut);
 // uthash modifies *p, so it can't be used again in other functions
 	return true;
 }
@@ -57,15 +39,7 @@ static struct peer *
 get_peer (const char *id)
 {
 	struct peer *p;
-	if (mut == NULL) {
-		mut = MALLOC (sizeof (pthread_mutex_t));
-		pthread_mutex_init (mut, NULL);
-	}
-	if (pthread_mutex_lock (mut) != 0) {
-		exit_error ("pthread mutex: ");
-	}
 	HASH_FIND_STR (head, id, p); // returs null if doesn't exist
-	pthread_mutex_unlock (mut);
 	return p;
 }
 
@@ -147,18 +121,10 @@ delete_peer(struct peer *currentPeer)
 	// FREEs the peer given and deletes its id
 	// note: here we suppose that the msg list
 	// of the peer has already been FREEd (see delete_message)
-	if (mut == NULL) {
-		mut = MALLOC (sizeof (pthread_mutex_t));
-		pthread_mutex_init (mut, NULL);
-	}
-	if (pthread_mutex_lock (mut) != 0) {
-		exit_error ("pthread mutex: ");
-	}
 	HASH_DEL (head, currentPeer);
 	if (currentPeer->msg != NULL) {
 		FREE (currentPeer->msg);
 	}
-	pthread_mutex_unlock (mut);
 }
 
 struct message *
@@ -200,29 +166,20 @@ get_peer_list ()
 	// this should be parsed as a json after
 	struct peer *ptr, *tmp; // used to iterate
 	size_t size = 0; // size = sum of strlen of all peer id
-	if (head == NULL) {
-		return NULL;
-	} else {
-		if (mut == NULL) {
-			mut = MALLOC (sizeof (pthread_mutex_t));
-			pthread_mutex_init (mut, NULL);
-		}
-		if (pthread_mutex_lock (mut) != 0) {
-			exit_error ("pthread mutex: ");
-		}
-		HASH_ITER (hh, head, ptr, tmp) {
-			size += strlen (ptr->id) + 1; // +1 is for the comma
-		}
-		char *peerList = CALLOC (size + 1, sizeof (char));
-		HASH_ITER (hh, head, ptr, tmp) {
-			// iterate again and concatenate the char*
-			strncat (peerList, ptr->id, strlen (ptr->id));
-			strncat (peerList, ",", sizeof (char));
-		}
-		peerList[strlen (peerList) - 1] = '\0';
-		pthread_mutex_unlock (mut);
-		return peerList; // already in heap
+	if (head == NULL) return NULL;
+
+	// else
+	HASH_ITER (hh, head, ptr, tmp) {
+		size += strlen (ptr->id) + 1; // +1 is for the comma
 	}
+	char *peerList = CALLOC (size + 1, sizeof (char));
+	HASH_ITER (hh, head, ptr, tmp) {
+		// iterate again and concatenate the char*
+		strncat (peerList, ptr->id, strlen (ptr->id));
+		strncat (peerList, ",", sizeof (char));
+	}
+	peerList[strlen (peerList) - 1] = '\0';
+	return peerList; // already in heap
 }
 
 void
@@ -234,11 +191,3 @@ clear_datastructs ()
 	}
 }
 
-void
-destroy_mut()
-{
-	// avoid closing without FREEing the mutex allocated memory
-	if(mut != NULL){
-		FREE(mut);
-	}
-}

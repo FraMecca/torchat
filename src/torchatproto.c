@@ -10,11 +10,15 @@
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <stddef.h>// offsetof
+#include <ctype.h> // isdigit
+#include <fcntl.h>
+#include <assert.h>
 #include "include/mem.h" // FREE
 
 #include "include/fd.h"
 #include "include/utils.h"
 #include "lib/torchatproto.h"
+#include "lib/util.h"
 
 #define CONT(ptr, type, member) ((type*)(((char*) ptr) - offsetof(type, member)))
 
@@ -61,9 +65,28 @@ torchatproto_mrecvl(struct msock_vfs *mvfs, struct iolist *first, struct iolist 
     }
 	if(sz > 8192) {errno = EMSGSIZE; return -1;} // 8K is sizemax
 	
-	struct fd_rxbuf fdBuf;
-	fd_initrxbuf (&fdBuf);
-    return fd_recv (self->sock, &fdBuf, first, last, deadline); // fill buffer for each iterator
+	char buf[2000];
+	int rc;
+	while (1) {
+		rc = recv (self->sock, first->iol_base, 2000, 0); 
+
+		if (rc == -1 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        	// non blocking socket, 
+        	// recv can fail because it would have waited for data
+        	// continue iterating, wait for data with fdin
+            if(errno == EPIPE) errno = ECONNRESET;
+            return -1;
+        } else if ((int) rc >= (int) sz) {
+			printf ("ricevuto BUF: %s\n", first->iol_base);
+				break;
+		}
+	 	// fdin used only if recv failed
+	 	int result = fcntl(self->sock, F_SETFL, O_NONBLOCK); assert (result == 0);
+		fdin (self->sock, deadline);
+    	/*int rc = fd_recv (self->sock, &fdBuf, first, last, deadline); // fill buffer for each iterator*/
+    }
+    printf ("Received %d  ", rc);
+    return rc;
 }
 
 int
@@ -128,6 +151,7 @@ torchatproto_detach(int h)
 	int sock = self->sock;
 	/*self->hvfs.close(self->hvfs);*/
 	FREE(self);
+	fdclean (sock);
 	return sock;
 }
 
@@ -200,11 +224,11 @@ fd_recv_dimensionhead (struct msock_vfs *mvfs, int64_t deadline)
 {
 	// this function is used to get the dimension from the first 4 bites of the packet
     struct torchatproto *self = CONT(mvfs, struct torchatproto, mvfs);
-    char buf[4] = {0};
+    char buf[5] = {0}; buf[4] = '\0';
     ssize_t sz = recv(self->sock, buf, 4, 0);
-    if(dill_slow(sz == 0)) {errno = EPIPE; return -1;}
+    if(sz == 0) {errno = EPIPE; return -1;}
     if(sz < 0) {
-        if(dill_slow(errno != EWOULDBLOCK && errno != EAGAIN)) {
+        if(errno != EWOULDBLOCK && errno != EAGAIN) {
             if(errno == EPIPE) errno = ECONNRESET;
             return -1;
         }
@@ -214,7 +238,9 @@ fd_recv_dimensionhead (struct msock_vfs *mvfs, int64_t deadline)
     	// check that buf is not garbage else atoi undefined behaviour
     	if (!isdigit (buf[i])) return -1;
     }
-    return atoi (buf); // success
+    /*return atoi (buf); // success*/
+    printf ("%s\n\n", buf);
+    return strtol (buf, NULL, 10);
    	
     // atoi returns 0 on fail
 }
@@ -226,33 +252,43 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
 	// recv dimension of buffer then the buffer
 	// len is size of buf, num of recv bytes will be obtained by a first recv
     struct msock_vfs *m = hquery(h, msock_type);
+    struct torchatproto *self = CONT(m, struct torchatproto, mvfs);
     if(!m) return -1;
 
 	// receive dimension of the buffer 
     int len = fd_recv_dimensionhead (m, deadline);
+    printf ("LEN = %d\n", len);
+
     if (len <= 0) return -1; // not an integer
     // check if supplied buffer too small
-    if (len > maxLen) {errno = EMSGSIZE; return -1;}
+    if ((size_t) len > maxLen) {errno = EMSGSIZE; return -1;}
 
     // if dimension recvd, proceed to put buffer in iolists
 	// allocate first element
 	size_t defsz = 256;
-	struct iolist *first, *last;
-	if (len > defsz) {
-		first = allocate_iol_struct (defsz);
-		len -= defsz;
-		// allocate remaining elements
-		last = torproto_create_iolist (first, len, defsz);
-	} else {
-		// the whole message fits in one iolist
-		first = allocate_iol_struct (len);
-		last = first;
-	}
+	int rc;
+	while (1) {
+		rc = recv (self->sock, buf, len, 0); 
+		printf ("%s\n", strerror (errno));
 
-    int rsz = m->mrecvl(m, first, last, deadline);
-	
-	put_iol_in_buf (first, buf); // concatenate iolist buffers it in buf
-    return len;
+		if (rc == -1 && errno != EWOULDBLOCK && errno != EAGAIN) {
+        	// non blocking socket, 
+        	// recv can fail because it would have waited for data
+        	// continue iterating, wait for data with fdin
+            if(errno == EPIPE) errno = ECONNRESET;
+            return -1;
+        } else if ((int) rc >= (int) len) {
+				break;
+		}
+		// socket not ready yet
+		// yield control
+		yield ();
+		if (now () > deadline) {
+			printf ("RITARDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo\n");
+		}
+    }
+    printf ("Received %d  ", rc);
+    return rc;
 }
 
 

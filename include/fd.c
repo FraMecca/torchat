@@ -30,6 +30,7 @@
 #include "fd.h"
 #include "iol.h"
 #include "utils.h"
+#include "lib/util.h"
 
 #if defined MSG_NOSIGNAL
 #define FD_NOSIGNAL MSG_NOSIGNAL
@@ -231,6 +232,7 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
         first = first->iol_next;
         if(!first) return 0;
     }
+    GOTHERE;
     /* Copy the current iolist element so that we can modify it without
        changing the original list. */
     struct iolist curr;
@@ -245,6 +247,7 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
         miss += it->iol_len;
         it = it->iol_next;
     }
+    GOTHERE;
     /* If requested amount of data is larger than rx buffer avoid the copy
        and read it directly into user's buffer. */
     if(miss > sizeof(rxbuf->data)) return fd_recv_(s, &curr, last, deadline);
@@ -254,6 +257,7 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
            syscalls. Do the speculative recv() first to avoid extra
            polling. Do fdin() only after recv() fails to get data. */
         ssize_t sz = recv(s, rxbuf->data, sizeof(rxbuf->data), 0);
+        GOTHERE;
         if(dill_slow(sz == 0)) {errno = EPIPE; return -1;}
         if(sz < 0) {
             if(dill_slow(errno != EWOULDBLOCK && errno != EAGAIN)) {
@@ -267,14 +271,15 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
         /* Copy the data from rxbuffer to the iolist. */
         while(1) {
             sz = fd_copy(rxbuf, &curr);
-            if(sz < curr.iol_len) break;
-            if(!curr.iol_next) return 0;
+            if(sz < curr.iol_len) {GOTHERE; break;}
+            if(!curr.iol_next) {GOTHERE; return 0;}
             curr = *curr.iol_next;
         }
         if(curr.iol_base) curr.iol_base += sz;
         curr.iol_len -= sz;
         /* Wait for more data. */
         int rc = fdin(s, deadline);
+        GOTHERE;
         if(dill_slow(rc < 0)) return -1;
     }
 }

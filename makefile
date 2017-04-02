@@ -42,6 +42,16 @@ debug:
 	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   $(DEBUG) $I
 	gcc -L$(LDIR)/build $(ALL) $I   -ljsonhelper -o build/main -lpthread -llogger -ldl -ldill -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF)
 
+callgrind:
+	echo "like make debug but without loguru"
+	mkdir -p build
+	#g++ -c -fPIC src/logger.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o  $(DEBUG) $I
+	g++ -c -fPIC src/logger_dummy.cpp -std=c++11 -lstdc++ -lpthread -ldl -o build/logger.o  $(DEBUG) $I
+	g++ -shared -o build/liblogger.so build/logger.o   $(DEBUG) $I
+	g++ -c -fPIC src/jsonhelper.cpp -std=c++11  -o build/jsonhelper.o $(DEBUG) $I
+	g++ -shared -o build/libjsonhelper.so build/jsonhelper.o   $(DEBUG) $I
+	gcc -L$(LDIR)/build $(ALL) $I   -ljsonhelper -o build/main -lpthread -llogger -ldl -ldill -DDEBUG -Wl,-R$(LDIR)/build $(DEBUG) $(CF)
+
 
 clang:
 	mkdir -p build

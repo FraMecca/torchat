@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <fcntl.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -111,8 +112,9 @@ event_routine (const int sock)
 	// the client opens a new socket every message, and closes the previous
 	// this means that the server must perform only one recv then close thne coroutine
 	/*int64_t deadline = now() + TOR_TIMEOUT; // two minutes deadline*/
-	int64_t deadline = 0;
+	int64_t deadline = now () + 3000;
 	while (parse_connection(sock, &data, &json, deadline)) { 
+		;
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -127,7 +129,7 @@ event_routine (const int sock)
     		case SEND :
         		// mongoose is told that you want to send a message to a peer
         		log_info (json);
-        		relay_msg (sock, data);
+        		relay_msg (sock, data, deadline);
 				free_data_wrapper (data);
 				// data wrapper is free'd in routine 
         		break;
@@ -136,13 +138,13 @@ event_routine (const int sock)
 				free_data_wrapper (data);
         		break;
     		case GET_PEERS :
-        		send_peer_list_to_client (data, sock);
+        		send_peer_list_to_client (data, sock, deadline);
 				free_data_wrapper (data);
         		break;
 			case HOST :
 				// the client required the hostname of the server
 				// send as a formatted json
-				send_hostname_to_client(data, sock, HOSTNAME);
+				send_hostname_to_client(data, sock, HOSTNAME, deadline);
 				free_data_wrapper (data);
 				break;
     		default:
@@ -153,7 +155,10 @@ event_routine (const int sock)
 	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
 /*[>shutdown(sock, SHUT_RDWR);<] TODO: close torchatprotosock*/
+		;
 	printf ("exiting coroutine\n");
+	int rawsock = torchatproto_detach (sock);
+	close (rawsock);
     return;
 }
 
@@ -174,8 +179,8 @@ main(int argc, char **argv)
 
 #ifndef NDEBUG
     signal (SIGSEGV, dumpstack);
-    signal (SIGABRT, dumpstack);
-    signal (SIGINT, dumpstack);
+    /*signal (SIGABRT, dumpstack);*/
+    /*signal (SIGINT, dumpstack);*/
     log_init ("debug.log", "DEBUG");
 #endif
     log_init ("file.log", "INFO");
@@ -186,14 +191,19 @@ main(int argc, char **argv)
 	// initialize struct needed to connect with SOCKS5 TOR
 	initialize_proxy_connection ("localhost", 9250);
 
-
 	int listenSock = bind_and_listen (8000);
+	fcntl(listenSock, F_SETFL, O_NONBLOCK);
     while (!exitFlag) {  // start poll loop
         // stop when the exitFlag is set to false,
     	struct sockaddr_in clientAddr; // structures for TCP sockets
     	socklen_t clilen = 0;
          /*int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);*/
      	int rawsock = fd_accept (listenSock, (struct sockaddr *) &clientAddr, &clilen, 0);   // it makes zero difference to use fd_accept or raw sockets
+     	if (rawsock == -1 && (errno == EWOULDBLOCK || errno != EAGAIN)) {
+     		yield ();
+     		continue;
+     	}
+
      	int	sock = torchatproto_attach (rawsock); // from now on communicate using torchat protocol
 		printf("opening coroutine\n");
         int cr = go(event_routine(sock));
@@ -201,9 +211,9 @@ main(int argc, char **argv)
 
     /*destroy_fileupload_structs ();*/
 	shutdown(listenSock, SHUT_RDWR);
+	close (listenSock);
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
- 	destroy_mut(); // free the mutex allocated in datastruct.c
     if (HOSTNAME != NULL) {
     	FREE (HOSTNAME);
     }

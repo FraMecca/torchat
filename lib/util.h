@@ -3,6 +3,7 @@
 #include <pthread.h>
 
 // This header contains utils common to every .c file
+#define GOTHERE fprintf(stdout, "%s:%s:%d\n", __FILE__, __func__, __LINE__)
 
 void
 exit_error (char *s);
@@ -12,9 +13,6 @@ get_date ();
 
 char *
 get_short_date();
-
-void
-set_thread_detached (pthread_attr_t *attr);
 
 void
 dumpstack ();

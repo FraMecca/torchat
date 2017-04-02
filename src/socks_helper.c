@@ -17,30 +17,6 @@
 static char torError;
 static proxysocketconfig proxy = NULL;
 
-// wrapper for sockets
-// ****************** //
-
-/*bool */
-/*set_socket_timeout (const int sockfd)*/
-/*{*/
-	/*// this function sets the socket timeout*/
-	/*// 120s*/
-		/*struct timeval timeout;      */
-		/*timeout.tv_sec = 120;*/
-		/*timeout.tv_usec = 0;*/
-
-		/*if (setsockopt (sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {*/
-			/*perror("setsockopt failed\n");*/
-			/*return false;*/
-		/*}*/
-
-		/*if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {*/
-			/*perror("setsockopt failed\n");*/
-			/*return false;*/
-		/*}*/
-		/*return true;*/
-/*}*/
-
 
 int
 bind_and_listen (const int portno)
@@ -149,8 +125,9 @@ send_over_tor (const char *domain, const int port, char *buf, int64_t deadline)
 	// wraps functions above, 
 	// assumes that buf is null terminated
 	int rawsock = open_socket_to_domain (domain, port);
-	int sock = torchatproto_attach (rawsock);
+	if (rawsock < 0) return -1;
 
+	int sock = torchatproto_attach (rawsock);
 	if (sock != -1) {
 		return torchatproto_msend (sock, buf, strlen (buf), deadline);
 	}
