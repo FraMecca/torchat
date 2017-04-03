@@ -1,4 +1,6 @@
 #include <stdio.h>
+#include <sys/epoll.h>
+#include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -21,6 +23,7 @@
 #include "include/fd.h" // libdill fd
 #include "lib/torchatproto.h"
 
+#define MAXEVENTS 64
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
 extern void log_info (char *json); // from logger.cpp
@@ -113,8 +116,8 @@ event_routine (const int sock)
 	// this means that the server must perform only one recv then close thne coroutine
 	/*int64_t deadline = now() + TOR_TIMEOUT; // two minutes deadline*/
 	int64_t deadline = now () + 3000;
-	while (parse_connection(sock, &data, &json, deadline)) { 
-		;
+	int rc = parse_connection(sock, &data, &json, deadline);
+	if (rc > 0) { 
     	switch (data->cmd) {
     		case EXIT :
         		exitFlag = true;
@@ -151,14 +154,16 @@ event_routine (const int sock)
 				free_data_wrapper (data);
         		break;
     	}
+	} else if (rc == 0) {
+		// rc == 0
+		// shutdown was issued
+		int rawsock = torchatproto_detach (sock);
+		close (rawsock);
 	}
+
 	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
-/*[>shutdown(sock, SHUT_RDWR);<] TODO: close torchatprotosock*/
-		;
 	printf ("exiting coroutine\n");
-	int rawsock = torchatproto_detach (sock);
-	close (rawsock);
     return;
 }
 
@@ -191,25 +196,103 @@ main(int argc, char **argv)
 	// initialize struct needed to connect with SOCKS5 TOR
 	initialize_proxy_connection ("localhost", 9250);
 
+
+
+
+
+  	int efd;
+  	struct epoll_event event;
+  	struct epoll_event *events;
+  	efd = epoll_create1(0);
+  	assert (efd != -1);
+
 	int listenSock = bind_and_listen (8000);
 	fcntl(listenSock, F_SETFL, O_NONBLOCK);
-    while (!exitFlag) {  // start poll loop
-        // stop when the exitFlag is set to false,
-    	struct sockaddr_in clientAddr; // structures for TCP sockets
-    	socklen_t clilen = 0;
-         /*int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);*/
-     	int rawsock = fd_accept (listenSock, (struct sockaddr *) &clientAddr, &clilen, 0);   // it makes zero difference to use fd_accept or raw sockets
-     	if (rawsock == -1 && (errno == EWOULDBLOCK || errno != EAGAIN)) {
-     		yield ();
-     		continue;
-     	}
 
-     	int	sock = torchatproto_attach (rawsock); // from now on communicate using torchat protocol
-		printf("opening coroutine\n");
-        int cr = go(event_routine(sock));
+  	event.data.fd = listenSock;
+  	event.events = EPOLLIN | EPOLLET;
+  	int rc = epoll_ctl(efd, EPOLL_CTL_ADD, listenSock, &event);
+  	assert (rc != -1);
+
+  /* Buffer where events are returned */
+  	events = calloc(MAXEVENTS, sizeof event);
+
+  	/* The event loop */
+	while (!exitFlag) {  // start poll loop
+    	int n, i;
+    	n = epoll_wait(efd, events, MAXEVENTS, -1);
+    	for (i = 0; i < n; i++) {
+      		if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
+        		/* An error has occured on this fd, or the socket is not
+           		   ready for reading (why were we notified then?) */
+        		fprintf(stderr, "epoll error\n");
+        		close(events[i].data.fd);
+        		continue;
+      		}
+
+      		else if (listenSock == events[i].data.fd) {
+        		/* We have a notification on the listening socket, which
+           		   means one or more incoming connections. */
+        		while (true) {
+        			// accept all connections
+          			struct sockaddr in_addr;
+          			socklen_t in_len;
+          			int infd;
+          			char hbuf[NI_MAXHOST], sbuf[NI_MAXSERV];
+
+          			in_len = sizeof in_addr;
+          			infd = accept(listenSock, &in_addr, &in_len);
+          			if (infd == -1) {
+              			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
+              	  			/* We have processed all incoming
+                 	 		   connections. */
+              	  			break;
+              			} else {
+              	  			perror("accept");
+              	  			break;
+              			}
+          			}
+          			/* Make the incoming socket non-blocking and add it to the
+             		   list of fds to monitor. */
+          			rc = torchatproto_fd_unblock (infd);
+					int	sock = torchatproto_attach (infd); // from now on communicate using torchat protocol
+          			assert (rc != -1);
+
+          			event.data.fd = infd;
+          			event.events = EPOLLIN | EPOLLET;
+          			rc = epoll_ctl(efd, EPOLL_CTL_ADD, infd, &event);
+          			assert (rc != -1);
+        		}
+        		continue;
+      		}
+
+      		else {
+        		/* We have data on the fd waiting to be read. 
+           		   we are running in edge-triggered mode
+           		   and won't get a notification again for the same data. */
+				int cr = go(event_routine(events[i].data.fd));
+          			/* Closing the descriptor will make epoll remove it
+             		   from the set of descriptors which are monitored. */
+                      /*close(events[i].data.fd);*/
+            }
+        }
     }
+        /*// stop when the exitFlag is set to false,*/
+        /*struct sockaddr_in clientAddr; // structures for TCP sockets*/
+        /*socklen_t clilen = 0;*/
+         /*[>int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);<]*/
+         /*int rawsock = fd_accept (listenSock, (struct sockaddr *) &clientAddr, &clilen, 0);   // it makes zero difference to use fd_accept or raw sockets*/
+         /*if (rawsock == -1 && (errno == EWOULDBLOCK || errno != EAGAIN)) {*/
+             /*yield ();*/
+             /*continue;*/
+         /*}*/
 
-    /*destroy_fileupload_structs ();*/
+         /*int	sock = torchatproto_attach (rawsock); // from now on communicate using torchat protocol*/
+		/*printf("opening coroutine\n");*/
+        /*int cr = go(event_routine(sock));*/
+    /*}*/
+	
+
 	shutdown(listenSock, SHUT_RDWR);
 	close (listenSock);
     clear_datastructs (); // free hash table entries

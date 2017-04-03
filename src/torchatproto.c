@@ -95,6 +95,25 @@ torchatproto_hdone(struct hvfs *hvfs, int64_t deadline)
 	return 0;
 }
 
+int
+torchatproto_fd_unblock(int s)
+{
+	// set socket to non blocking
+	// almost equal to libdill:fd.c:fd_unblock
+    /* Switch to non-blocking mode. */
+    int opt = fcntl(s, F_GETFL, 0);
+    if (opt == -1)
+        opt = 0;
+    int rc = fcntl(s, F_SETFL, opt | O_NONBLOCK);
+    assert(rc == 0);
+    /*  Allow re-using the same local address rapidly. */
+    opt = 1;
+    rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof (opt));
+    assert(rc == 0);
+    /* If possible, prevent SIGPIPE signal when writing to the connection
+        already closed by the peer. */
+    return 0;
+}
 int 
 torchatproto_attach (int s)
 {
@@ -110,7 +129,7 @@ torchatproto_attach (int s)
 	self->mvfs.msendl = torchatproto_msendl;
 	self->mvfs.mrecvl = torchatproto_mrecvl;
 	self->sock = s;	
-	fd_unblock (self->sock); // set unblocking recv
+	torchatproto_fd_unblock (self->sock); // set unblocking recv
 	int h = hmake (&self->hvfs);
 	if (h < 0) {err = errno; goto error2;}
  	return h;

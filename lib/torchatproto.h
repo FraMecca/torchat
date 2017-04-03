@@ -14,3 +14,5 @@ int torchatproto_detach(int h);
 int socket_create(int port,int64_t deadline);
 ssize_t torchatproto_mrecv(int h,void *buf,size_t maxLen,int64_t deadline);
 ssize_t torchatproto_msend(int h,void *buf,size_t len,int64_t deadline);
+int
+torchatproto_fd_unblock(int s);
