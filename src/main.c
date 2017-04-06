@@ -104,19 +104,26 @@ read_tor_hostname (void)
 }
 
 coroutine void
-event_routine (const int sock) 
+event_routine (const int rawsock) 
 {
+	int sock = torchatproto_attach (rawsock); // TODO find a way to epoll torprotofd
 	// manage server RECV events
 	struct data_wrapper *data = NULL;
 	char *json = NULL;
-	// sock is between the daemon and the client
-	// torSock is between the daemon and TOR (other peer)
 
 	// the client opens a new socket every message, and closes the previous
 	// this means that the server must perform only one recv then close thne coroutine
 	/*int64_t deadline = now() + TOR_TIMEOUT; // two minutes deadline*/
 	int64_t deadline = now () + 3000;
-	int rc = parse_connection(sock, &data, &json, deadline);
+	/*int rc = parse_connection(sock, &data, &json, deadline);*/
+	int rc;
+	int er = errno;
+	/*do {*/
+		rc = parse_connection(sock, &data, &json, deadline);
+		er = errno;
+		/*printf ("Rc returned %d %s\n", rc, strerror (errno));*/
+	/*} while (rc == -1 && er == EAGAIN);*/
+		
 	if (rc > 0) { 
     	switch (data->cmd) {
     		case EXIT :
@@ -157,9 +164,13 @@ event_routine (const int sock)
 	} else if (rc == 0) {
 		// rc == 0
 		// shutdown was issued
-		int rawsock = torchatproto_detach (sock);
-		close (rawsock);
+		/*int rawsock = torchatproto_detach (sock);*/
+		/*close (sock);*/
+		printf ("RC === 0 ???\n");
 	}
+	
+	int oldrawsock = torchatproto_detach (sock);
+	assert (rawsock == oldrawsock);
 
 	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
@@ -225,8 +236,8 @@ main(int argc, char **argv)
       		if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
         		/* An error has occured on this fd, or the socket is not
            		   ready for reading (why were we notified then?) */
-        		fprintf(stderr, "epoll error\n");
-        		close(events[i].data.fd);
+        		fprintf(stderr, "epoll error\n%s\n", strerror (errno));
+                /*close(events[i].data.fd);*/
         		continue;
       		}
 
@@ -255,7 +266,7 @@ main(int argc, char **argv)
           			/* Make the incoming socket non-blocking and add it to the
              		   list of fds to monitor. */
           			rc = torchatproto_fd_unblock (infd);
-					int	sock = torchatproto_attach (infd); // from now on communicate using torchat protocol
+					/*int	sock = torchatproto_attach (infd); // from now on communicate using torchat protocol*/
           			assert (rc != -1);
 
           			event.data.fd = infd;
@@ -270,6 +281,7 @@ main(int argc, char **argv)
         		/* We have data on the fd waiting to be read. 
            		   we are running in edge-triggered mode
            		   and won't get a notification again for the same data. */
+           		printf ("Vado nell'event routine\n");
 				int cr = go(event_routine(events[i].data.fd));
           			/* Closing the descriptor will make epoll remove it
              		   from the set of descriptors which are monitored. */

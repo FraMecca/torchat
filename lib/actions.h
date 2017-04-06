@@ -3,7 +3,7 @@ char *convert_datastruct_to_char(const struct data_wrapper *data);
 void log_info(char *json);
 void log_err(char *json);
 extern char *HOSTNAME;
-bool parse_connection(const int sock,struct data_wrapper **retData,char **retJson,int64_t deadline);
+int parse_connection(const int sock,struct data_wrapper **retData,char **retJson,int64_t deadline);
 void free_data_wrapper(struct data_wrapper *data);
 void announce_exit(struct data_wrapper *data,int sock);
 void relay_msg(const int clientSock,struct data_wrapper *data,int64_t deadline);

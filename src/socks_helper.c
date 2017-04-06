@@ -43,6 +43,21 @@ bind_and_listen (const int portno)
 
 // ************* //
 
+void logger (int level, const char* message, void* userdata)
+{
+  const char* lvl;
+  if (level > *(int*)userdata)
+    return;
+  switch (level) {
+    case PROXYSOCKET_LOG_ERROR   : lvl = "ERR"; break;
+    case PROXYSOCKET_LOG_WARNING : lvl = "WRN"; break;
+    case PROXYSOCKET_LOG_INFO    : lvl = "INF"; break;
+    case PROXYSOCKET_LOG_DEBUG   : lvl = "DBG"; break;
+    default                      : lvl = "???"; break;
+  }
+  fprintf(stdout, "%s: %s\n", lvl, message);
+}
+
 void
 initialize_proxy_connection (const char *host, const int port)
 {
@@ -50,8 +65,8 @@ initialize_proxy_connection (const char *host, const int port)
 	// initialize proxysocket lib handlers
 	proxysocket_initialize();
 	proxy = proxysocketconfig_create_direct();
-	/*int verbose = PROXYSOCKET_LOG_DEBUG; // can be removed*/
-	/*proxysocketconfig_set_logging(proxy, logger, (int*)&verbose);*/
+	int verbose = PROXYSOCKET_LOG_DEBUG; // can be removed
+	proxysocketconfig_set_logging(proxy, logger, (int*)&verbose);
 	proxysocketconfig_use_proxy_dns(proxy, 1); // use TOR for name resolution
 	proxysocketconfig_add_proxy(proxy, PROXYSOCKET_TYPE_SOCKS5, host, port, NULL, NULL);
 }

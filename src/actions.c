@@ -20,7 +20,7 @@ extern char * HOSTNAME;
 //
 //
 
-bool
+int
 parse_connection (const int sock, struct data_wrapper **retData, char **retJson, int64_t deadline)
 {
 	// this function is used to parse a nc connection received by mongoose
@@ -31,30 +31,31 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
 	// and return false
     struct data_wrapper *data = NULL;
     char *json = NULL; // used to log
-    char inbuf[512] = {0}; 
+    char inbuf[512];
+    memset (inbuf, 0, 512);
 
 	int rc = torchatproto_mrecv (sock, inbuf, 512, deadline);
-    if (rc <= 0) {  // sz = 0 means connection closed, sz = -1 means error
+    if (rc == -1) {  // sz = 0 means connection closed, sz = -1 means error
     	printf ("mrecv returned false\n");
-        return false;
-	}
-	size_t sz = strlen (inbuf);
-    json = CALLOC (sz + 1, sizeof (char));
-    strncpy (json, inbuf, sz * sizeof (char));
-	json[sz] = '\0';
-    data = convert_string_to_datastruct (json); // parse a datastruct from the message received
+	} else {
+		size_t sz = strlen (inbuf);
+    	json = CALLOC (sz + 1, sizeof (char));
+    	strncpy (json, inbuf, sz * sizeof (char));
+		json[sz] = '\0';
+    	data = convert_string_to_datastruct (json); // parse a datastruct from the message received
 
-	// check data and json validity
-    if (data == NULL && json != NULL ){
-        // the json was invalid
-        // and logged to errlog
-        log_err (json);
-        return false;
+		// check data and json validity
+    	if (data == NULL && json != NULL ){
+        	// the json was invalid
+        	// and logged to errlog
+        	log_err (json);
+        	return false;
+    	}
+    	// at this point the inbuf contained valid data, put them in the structures and return
+    	// the bool is used to check wheter they were allocated successfully
+    	*retJson = json; *retData = data;
     }
-    // at this point the inbuf contained valid data, put them in the structures and return
-    // the bool is used to check wheter they were allocated successfully
-    *retJson = json; *retData = data;
-    return true; // returns a struct containing both data_wrapper struct and json char
+    return rc; // returns a struct containing both data_wrapper struct and json char
 }
 
 void
@@ -86,7 +87,7 @@ announce_exit (struct data_wrapper *data, int sock)
 }
 
 
-coroutine static void
+static void
 send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 {
 	// sends the message from the client to tor (other peer)
@@ -129,7 +130,7 @@ void
 relay_msg (const int clientSock, struct data_wrapper *data, int64_t deadline)
 {
 	assert (data != NULL);
-	go(send_routine(clientSock, data, deadline));
+	send_routine(clientSock, data, deadline);
 	return;
 }
 
@@ -192,7 +193,8 @@ send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int
 
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
-	torchatproto_msend (sock, response, strlen (response), deadline);
+	int rc = torchatproto_msend (sock, response, strlen (response), deadline);
+	if (rc > 0) printf ("Ho mandato hostname al client\n");
 	FREE (response);
 }
 

@@ -65,7 +65,6 @@ torchatproto_mrecvl(struct msock_vfs *mvfs, struct iolist *first, struct iolist 
     }
 	if(sz > 8192) {errno = EMSGSIZE; return -1;} // 8K is sizemax
 	
-	char buf[2000];
 	int rc;
 	while (1) {
 		rc = recv (self->sock, first->iol_base, 2000, 0); 
@@ -129,7 +128,7 @@ torchatproto_attach (int s)
 	self->mvfs.msendl = torchatproto_msendl;
 	self->mvfs.mrecvl = torchatproto_mrecvl;
 	self->sock = s;	
-	torchatproto_fd_unblock (self->sock); // set unblocking recv
+	/*torchatproto_fd_unblock (self->sock); // set unblocking recv*/ // should already be set
 	int h = hmake (&self->hvfs);
 	if (h < 0) {err = errno; goto error2;}
  	return h;
@@ -241,6 +240,7 @@ put_iol_in_buf (struct iolist *iol, void *buf)
 static int 
 fd_recv_dimensionhead (struct msock_vfs *mvfs, int64_t deadline)
 {
+	printf ("Voglio prendere dimension\n");
 	// this function is used to get the dimension from the first 4 bites of the packet
     struct torchatproto *self = CONT(mvfs, struct torchatproto, mvfs);
     char buf[5] = {0}; buf[4] = '\0';
@@ -272,7 +272,7 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
 	// len is size of buf, num of recv bytes will be obtained by a first recv
     struct msock_vfs *m = hquery(h, msock_type);
     struct torchatproto *self = CONT(m, struct torchatproto, mvfs);
-    if(!m) return -1;
+        if(!m) { errno = EBADF; return -1; }
 
 	// receive dimension of the buffer 
     int len = fd_recv_dimensionhead (m, deadline);
@@ -288,13 +288,14 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
 	int rc;
 	while (1) {
 		rc = recv (self->sock, buf, len, 0); 
-		printf ("%s\n", strerror (errno));
+		printf ("Buf ricevuto : %d/%d %s\n", rc, len, (char*)buf);
 
 		if (rc == -1 && errno != EWOULDBLOCK && errno != EAGAIN) {
         	// non blocking socket, 
         	// recv can fail because it would have waited for data
         	// continue iterating, wait for data with fdin
             if(errno == EPIPE) errno = ECONNRESET;
+            GOTHERE;
             return -1;
         } else if ((int) rc >= (int) len) {
 				break;
@@ -331,16 +332,13 @@ torchatproto_msend (int h, void *buf, size_t len, int64_t deadline)
     struct msock_vfs *m = hquery(h, msock_type);
     if(!m) return -1;
 
-    // first send dimensions
-    char blen[4] = {'\0'};
-    generate_dimension_head (blen, len);
-    struct iolist tiol = {(void*)blen, 4, NULL, 0};
-    int rc = m->msendl (m, &tiol, &tiol, deadline);
+    // first compute dimensions
+    // send all in a single operation because epoll
+    char tbuf[4 + len];
+    generate_dimension_head (tbuf, len);
+    memcpy (tbuf + 4, buf, len);
 
-    if (rc >= 0) { // if dimension sent
-    	/*then send the buffer*/
-    	struct iolist iol = {(void*)buf, len, NULL, 0};
-    	rc = m->msendl (m, &iol, &iol, deadline);
-    }
+    struct iolist iol = {(void*) tbuf, len + 4, NULL, 0};
+    int rc = m->msendl (m, &iol, &iol, deadline);
     return rc;
 }
