@@ -90,7 +90,9 @@ insert_new_message  (const char *peerId, const char *content, enum command cmd)
 	//
 	// does not check that peer exist
 	struct peer *p = get_peer (peerId);
-	struct message *newMsg = new_message (content, get_short_date (), cmd);
+	char *date = get_short_date ();
+	struct message *newMsg = new_message (content, date, cmd);
+	FREE (date);
 	if(p->msg == NULL){
 		p->msg = newMsg;
 	} else {

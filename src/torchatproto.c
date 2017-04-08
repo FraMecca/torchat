@@ -22,6 +22,8 @@
 
 #define CONT(ptr, type, member) ((type*)(((char*) ptr) - offsetof(type, member)))
 
+// TODO: clean this mess
+
 struct torchatproto {
 	// handler to the virtual function table
 	struct hvfs hvfs;
@@ -76,7 +78,6 @@ torchatproto_mrecvl(struct msock_vfs *mvfs, struct iolist *first, struct iolist 
             if(errno == EPIPE) errno = ECONNRESET;
             return -1;
         } else if ((int) rc >= (int) sz) {
-			printf ("ricevuto BUF: %s\n", first->iol_base);
 				break;
 		}
 	 	// fdin used only if recv failed
@@ -84,7 +85,6 @@ torchatproto_mrecvl(struct msock_vfs *mvfs, struct iolist *first, struct iolist 
 		fdin (self->sock, deadline);
     	/*int rc = fd_recv (self->sock, &fdBuf, first, last, deadline); // fill buffer for each iterator*/
     }
-    printf ("Received %d  ", rc);
     return rc;
 }
 
@@ -240,7 +240,6 @@ put_iol_in_buf (struct iolist *iol, void *buf)
 static int 
 fd_recv_dimensionhead (struct msock_vfs *mvfs, int64_t deadline)
 {
-	printf ("Voglio prendere dimension\n");
 	// this function is used to get the dimension from the first 4 bites of the packet
     struct torchatproto *self = CONT(mvfs, struct torchatproto, mvfs);
     char buf[5] = {0}; buf[4] = '\0';
@@ -257,8 +256,6 @@ fd_recv_dimensionhead (struct msock_vfs *mvfs, int64_t deadline)
     	// check that buf is not garbage else atoi undefined behaviour
     	if (!isdigit (buf[i])) return -1;
     }
-    /*return atoi (buf); // success*/
-    printf ("%s\n\n", buf);
     return strtol (buf, NULL, 10);
    	
     // atoi returns 0 on fail
@@ -276,7 +273,6 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
 
 	// receive dimension of the buffer 
     int len = fd_recv_dimensionhead (m, deadline);
-    printf ("LEN = %d\n", len);
 
     if (len <= 0) return -1; // not an integer
     // check if supplied buffer too small
@@ -287,27 +283,27 @@ torchatproto_mrecv (int h, void *buf, size_t maxLen, int64_t deadline)
 	size_t defsz = 256;
 	int rc;
 	while (1) {
+		// actually,
+		// with epoll, it should exit this loop after only one iteration
+		// TODO remove loop
 		rc = recv (self->sock, buf, len, 0); 
-		printf ("Buf ricevuto : %d/%d %s\n", rc, len, (char*)buf);
 
 		if (rc == -1 && errno != EWOULDBLOCK && errno != EAGAIN) {
         	// non blocking socket, 
         	// recv can fail because it would have waited for data
         	// continue iterating, wait for data with fdin
             if(errno == EPIPE) errno = ECONNRESET;
-            GOTHERE;
             return -1;
         } else if ((int) rc >= (int) len) {
 				break;
 		}
 		// socket not ready yet
 		// yield control
-		yield ();
+		yield (); // read above
 		if (now () > deadline) {
-			printf ("RITARDOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOo\n");
+			assert (false); // should not happen
 		}
     }
-    printf ("Received %d  ", rc);
     return rc;
 }
 

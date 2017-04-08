@@ -39,7 +39,8 @@ get_short_date ()
 }
 
 void 
-dumpstack(int sig) {
+dumpstack(int sig)
+{
 	// use gcore to generate a coredump
 	char sys[160];
 

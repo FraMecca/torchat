@@ -1,7 +1,7 @@
 #include <string.h> // strdup
 #include <sys/types.h> // types and socket
 #include <sys/socket.h>
-#include <sys/select.h> // select is used on crlf send / recv 
+#include <fcntl.h>
 #include <strings.h> // bcopy
 #include <stdbool.h> // bool
 #include <errno.h> // perror
@@ -17,10 +17,53 @@
 static char torError;
 static proxysocketconfig proxy = NULL;
 
+static void
+set_tor_error(const char e)
+{
+       torError = e;
+}
+
+char *
+get_tor_error ()
+{
+        // in case of error the message returned to the client has in the msg field
+        // an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
+       switch (torError) {
+               case 1 :
+                       return STRDUP ("general SOCKS server failure");
+               case 2 :
+                       return STRDUP ("connection not allowed by ruleset");
+               case 3 :
+                       return STRDUP ("Network unreachable");
+               case 4 :
+                       return STRDUP ("Host unreachable");
+               case 5 :
+                       return STRDUP ("Connection refused");
+               case 6 :
+                       return STRDUP ("TTL expired");
+               case 7 :
+                       return STRDUP ("Command not supported");
+               case 8 :
+                       return STRDUP ("Address type not supported");
+               case 9 :
+                       // not in RFC,
+                       // used when handshake fails, so probably TOR has not been started
+                       return STRDUP ("Could not send message. Is TOR running?");
+               case 10 :
+                       return STRDUP("Failed handshake with TOR.");
+               default :
+                       return STRDUP ("TOR couldn't send the message"); // shouldn't go here
+       }
+}
 
 int
-bind_and_listen (const int portno)
+bind_and_listen (const int portno, int n)
 {
+	// this functions simply wraps
+	// bind
+	// listen
+	//
+	// n is the listen parameter
     struct sockaddr_in servAddr;
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) { 
@@ -33,7 +76,8 @@ bind_and_listen (const int portno)
     if (bind(sockfd, (struct sockaddr *) &servAddr, sizeof(servAddr)) < 0) {
         exit_error("ERROR on binding");
     }
-    if (listen(sockfd, 8) != -1) {
+	fcntl(sockfd, F_SETFL, O_NONBLOCK);
+    if (listen(sockfd, n) != -1) {
     	return sockfd;
     } else {
     	// error on listen, check errno
@@ -41,22 +85,20 @@ bind_and_listen (const int portno)
     }
 }
 
-// ************* //
-
-void logger (int level, const char* message, void* userdata)
-{
-  const char* lvl;
-  if (level > *(int*)userdata)
-    return;
-  switch (level) {
-    case PROXYSOCKET_LOG_ERROR   : lvl = "ERR"; break;
-    case PROXYSOCKET_LOG_WARNING : lvl = "WRN"; break;
-    case PROXYSOCKET_LOG_INFO    : lvl = "INF"; break;
-    case PROXYSOCKET_LOG_DEBUG   : lvl = "DBG"; break;
-    default                      : lvl = "???"; break;
-  }
-  fprintf(stdout, "%s: %s\n", lvl, message);
-}
+/*void logger (int level, const char* message, void* userdata)*/
+/*{*/
+  /*const char* lvl;*/
+  /*if (level > *(int*)userdata)*/
+    /*return;*/
+  /*switch (level) {*/
+    /*case PROXYSOCKET_LOG_ERROR   : lvl = "ERR"; break;*/
+    /*case PROXYSOCKET_LOG_WARNING : lvl = "WRN"; break;*/
+    /*case PROXYSOCKET_LOG_INFO    : lvl = "INF"; break;*/
+    /*case PROXYSOCKET_LOG_DEBUG   : lvl = "DBG"; break;*/
+    /*default                      : lvl = "???"; break;*/
+  /*}*/
+  /*fprintf(stdout, "%s: %s\n", lvl, message);*/
+/*}*/
 
 void
 initialize_proxy_connection (const char *host, const int port)
@@ -66,7 +108,7 @@ initialize_proxy_connection (const char *host, const int port)
 	proxysocket_initialize();
 	proxy = proxysocketconfig_create_direct();
 	int verbose = PROXYSOCKET_LOG_DEBUG; // can be removed
-	proxysocketconfig_set_logging(proxy, logger, (int*)&verbose);
+	/*proxysocketconfig_set_logging(proxy, logger, (int*)&verbose);*/
 	proxysocketconfig_use_proxy_dns(proxy, 1); // use TOR for name resolution
 	proxysocketconfig_add_proxy(proxy, PROXYSOCKET_TYPE_SOCKS5, host, port, NULL, NULL);
 }
@@ -84,45 +126,6 @@ destroy_proxy_connection ()
   	proxysocketconfig_free(proxy);
 }
 
-static void
-set_tor_error(const char e)
-{
-	torError = e;
-}
-
-char *
-get_tor_error ()
-{
-	 // in case of error the message returned to the client has in the msg field
-	 // an explanation of the error, see http://www.ietf.org/rfc/rfc1928.txt
-	switch (torError) {
-		case 1 :
-			return STRDUP ("general SOCKS server failure");
-		case 2 :
-			return STRDUP ("connection not allowed by ruleset");
-		case 3 :
-			return STRDUP ("Network unreachable");
-		case 4 :
-			return STRDUP ("Host unreachable");
-		case 5 :
-			return STRDUP ("Connection refused");
-		case 6 : 
-			return STRDUP ("TTL expired");
-		case 7 :
-			return STRDUP ("Command not supported");
-		case 8 :
-			return STRDUP ("Address type not supported");
-		case 9 :
-			// not in RFC,
-			// used when handshake fails, so probably TOR has not been started
-			return STRDUP ("Could not send message. Is TOR running?");
-		case 10 :
-			return STRDUP("Failed handshake with TOR.");
-		default :
-			return STRDUP ("TOR couldn't send the message"); // shouldn't go here
-	}
-}
-
 int
 open_socket_to_domain(const char *domain, const int portno)
 {
@@ -134,18 +137,24 @@ open_socket_to_domain(const char *domain, const int portno)
 
 }
 
-ssize_t
-send_over_tor (const char *domain, const int port, char *buf, int64_t deadline)
+void
+send_over_tor (const char *domain, const int port, char *buf, int64_t deadline, int *ret)
 {
+	// ret is retvalue
 	// wraps functions above, 
 	// assumes that buf is null terminated
 	int rawsock = open_socket_to_domain (domain, port);
 	if (rawsock < 0) return -1;
 
 	int sock = torchatproto_attach (rawsock);
-	if (sock != -1) {
-		return torchatproto_msend (sock, buf, strlen (buf), deadline);
+	int rc;
+	if (sock == -1) {
+		rc = -1; // error opening socket
+	}  else {
+		rc = torchatproto_msend (sock, buf, strlen (buf), deadline);
 	}
-	return -1; // error opening socket
-}
+	*ret = rc;
 
+	torchatproto_detach (sock);
+	terminate_connection_with_domain (rawsock);
+}

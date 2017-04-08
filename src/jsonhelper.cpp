@@ -122,7 +122,10 @@ convert_string_to_datastruct (const char *jsonCh)
 		j = json::parse (st);
 	} catch (const std::invalid_argument&) {
 		return NULL;
+	} catch (const nlohmann::detail::parse_error&) {
+		return NULL;
 	}
+
 	data = (struct data_wrapper *) calloc (1, sizeof (struct data_wrapper));
 	if (data == NULL) {
 		std::cerr << "Failed alloc for data_wrapper " << __FILE__ << ":" << __LINE__ << std::endl;

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
-#include <fcntl.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -24,6 +23,7 @@
 #include "lib/torchatproto.h"
 
 #define MAXEVENTS 64
+#define MAXCONN 16 
 extern struct data_wrapper *convert_string_to_datastruct (const char *jsonCh); // from json.cpp
 extern char * convert_datastruct_to_char (const struct data_wrapper *data); // from json.cpp
 extern void log_info (char *json); // from logger.cpp
@@ -116,13 +116,7 @@ event_routine (const int rawsock)
 	/*int64_t deadline = now() + TOR_TIMEOUT; // two minutes deadline*/
 	int64_t deadline = now () + 3000;
 	/*int rc = parse_connection(sock, &data, &json, deadline);*/
-	int rc;
-	int er = errno;
-	/*do {*/
-		rc = parse_connection(sock, &data, &json, deadline);
-		er = errno;
-		/*printf ("Rc returned %d %s\n", rc, strerror (errno));*/
-	/*} while (rc == -1 && er == EAGAIN);*/
+	int rc = parse_connection(sock, &data, &json, deadline);
 		
 	if (rc > 0) { 
     	switch (data->cmd) {
@@ -162,11 +156,8 @@ event_routine (const int rawsock)
         		break;
     	}
 	} else if (rc == 0) {
-		// rc == 0
-		// shutdown was issued
-		/*int rawsock = torchatproto_detach (sock);*/
-		/*close (sock);*/
-		printf ("RC === 0 ???\n");
+		// invalid message, close connection
+		close (rawsock);
 	}
 	
 	int oldrawsock = torchatproto_detach (sock);
@@ -174,59 +165,28 @@ event_routine (const int rawsock)
 
 	FREE (json);
 	// data should be freed inside the jump table because it can be used in threads
-	printf ("exiting coroutine\n");
     return;
 }
 
-int
-main(int argc, char **argv)
+void event_loop (const int listenSock)
 {
-	if (argc < 2) {
-		fprintf (stdout, "USAGE...\n");
-		exit (EXIT_FAILURE);
-	}
-	int port;
-	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
-        start_daemon();
-    	port = atoi (argv[2]);
-    } else {
-    	port = atoi (argv[1]);
-	}
-
-#ifndef NDEBUG
-    signal (SIGSEGV, dumpstack);
-    /*signal (SIGABRT, dumpstack);*/
-    /*signal (SIGINT, dumpstack);*/
-    log_init ("debug.log", "DEBUG");
-#endif
-    log_init ("file.log", "INFO");
-    log_init ("error.log", "ERROR");
-
-	// initialization of datastructs
-    HOSTNAME = read_tor_hostname ();
-	// initialize struct needed to connect with SOCKS5 TOR
-	initialize_proxy_connection ("localhost", 9250);
-
-
-
-
-
+	// this is the event loop,
+	// uses epoll
+	// closes fds at exit
+	int trackFd[MAXCONN] = {0}, nConn = 0; // used to track all the accepted connection and close them at the end
   	int efd;
-  	struct epoll_event event;
+  	struct epoll_event event = {0};
   	struct epoll_event *events;
   	efd = epoll_create1(0);
   	assert (efd != -1);
-
-	int listenSock = bind_and_listen (8000);
-	fcntl(listenSock, F_SETFL, O_NONBLOCK);
 
   	event.data.fd = listenSock;
   	event.events = EPOLLIN | EPOLLET;
   	int rc = epoll_ctl(efd, EPOLL_CTL_ADD, listenSock, &event);
   	assert (rc != -1);
 
-  /* Buffer where events are returned */
-  	events = calloc(MAXEVENTS, sizeof event);
+  	/* Buffer where events are returned */
+  	events = CALLOC(MAXEVENTS, sizeof event);
 
   	/* The event loop */
 	while (!exitFlag) {  // start poll loop
@@ -236,8 +196,8 @@ main(int argc, char **argv)
       		if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
         		/* An error has occured on this fd, or the socket is not
            		   ready for reading (why were we notified then?) */
-        		fprintf(stderr, "epoll error\n%s\n", strerror (errno));
-                /*close(events[i].data.fd);*/
+                /*fprintf(stderr, "epoll error\n%s\n", strerror (errno));*/
+				close(events[i].data.fd);
         		continue;
       		}
 
@@ -253,6 +213,7 @@ main(int argc, char **argv)
 
           			in_len = sizeof in_addr;
           			infd = accept(listenSock, &in_addr, &in_len);
+          			trackFd[nConn++] = infd; // keep track of accepted connections
           			if (infd == -1) {
               			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
               	  			/* We have processed all incoming
@@ -281,38 +242,72 @@ main(int argc, char **argv)
         		/* We have data on the fd waiting to be read. 
            		   we are running in edge-triggered mode
            		   and won't get a notification again for the same data. */
-           		printf ("Vado nell'event routine\n");
 				int cr = go(event_routine(events[i].data.fd));
-          			/* Closing the descriptor will make epoll remove it
-             		   from the set of descriptors which are monitored. */
-                      /*close(events[i].data.fd);*/
+          		/* Closing the descriptor will make epoll remove it
+             	   from the set of descriptors which are monitored. */
+                /*close(events[i].data.fd);*/
             }
         }
     }
-        /*// stop when the exitFlag is set to false,*/
-        /*struct sockaddr_in clientAddr; // structures for TCP sockets*/
-        /*socklen_t clilen = 0;*/
-         /*[>int sock = accept(listenSock, (struct sockaddr *) &clientAddr, &clilen);<]*/
-         /*int rawsock = fd_accept (listenSock, (struct sockaddr *) &clientAddr, &clilen, 0);   // it makes zero difference to use fd_accept or raw sockets*/
-         /*if (rawsock == -1 && (errno == EWOULDBLOCK || errno != EAGAIN)) {*/
-             /*yield ();*/
-             /*continue;*/
-         /*}*/
 
-         /*int	sock = torchatproto_attach (rawsock); // from now on communicate using torchat protocol*/
-		/*printf("opening coroutine\n");*/
-        /*int cr = go(event_routine(sock));*/
-    /*}*/
-	
+	FREE (events);
+	close (efd);
+	nConn--;
+	while (nConn >= 0) { shutdown (trackFd[nConn], SHUT_RDWR); close (trackFd[nConn--]); }
+
+	return;
+}
+
+void 
+exit_from_signal (int sig) 
+{
+	// issue a shutdown after receiving CTRL C
+	fprintf (stdout, "Interrupt: exiting cleanly.\n");
+	exitFlag = true;
+}
+
+int
+main(int argc, char **argv)
+{
+	if (argc < 2) {
+		fprintf (stdout, "USAGE...\n");
+		exit (EXIT_FAILURE);
+	}
+	int port;
+	if(strcmp(argv[1], "-d") == 0 || strcmp(argv[1], "--daemon") == 0) {
+        start_daemon();
+    	port = atoi (argv[2]);
+    } else {
+    	port = atoi (argv[1]);
+	}
+
+#ifndef NDEBUG
+    signal (SIGSEGV, dumpstack);
+    /*signal (SIGABRT, dumpstack);*/
+    log_init ("debug.log", "DEBUG");
+#endif
+	signal (SIGINT, exit_from_signal);
+    log_init ("file.log", "INFO");
+    log_init ("error.log", "ERROR");
+
+	// initialization of datastructs
+    HOSTNAME = read_tor_hostname ();
+	// initialize struct needed to connect with SOCKS5 TOR
+	initialize_proxy_connection ("localhost", 9250);
+
+	int listenSock = bind_and_listen (8000, MAXCONN);
+
+	// core of the program, go into event loop
+	event_loop (listenSock);
 
 	shutdown(listenSock, SHUT_RDWR);
 	close (listenSock);
+	// closed the listening socket
     clear_datastructs (); // free hash table entries
     log_clear_datastructs (); // free static vars in logger.cpp
-    if (HOSTNAME != NULL) {
-    	FREE (HOSTNAME);
-    }
+    FREE (HOSTNAME);
     // terminate SOCKS5 structs
     destroy_proxy_connection ();
+
     exit (EXIT_SUCCESS);
 }

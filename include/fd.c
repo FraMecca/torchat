@@ -30,7 +30,6 @@
 #include "fd.h"
 #include "iol.h"
 #include "utils.h"
-#include "lib/util.h"
 
 #if defined MSG_NOSIGNAL
 #define FD_NOSIGNAL MSG_NOSIGNAL
@@ -203,6 +202,19 @@ static int fd_recv_(int s, struct iolist *first, struct iolist *last,
     }
 }
 
+/* Skip len bytes. If len is negative skip until error occurs. */
+static int fd_skip(int s, ssize_t len, int64_t deadline) {
+    uint8_t buf[512];
+    while(len) {
+        size_t to_recv = len < 0 || len > sizeof(buf) ? sizeof(buf) : len;
+        struct iolist iol = {buf, to_recv, NULL, 0};
+        int rc = fd_recv_(s, &iol, &iol, deadline);
+        if(dill_slow(rc < 0)) return -1;
+        if(len >= 0) len -= to_recv;
+    }
+    return 0;
+}
+
 /* Copy data from rxbuf to one iolist structure.
    Returns number of bytes copied. */
 static size_t fd_copy(struct fd_rxbuf *rxbuf, struct iolist *iol) {
@@ -224,6 +236,8 @@ static size_t fd_copy(struct fd_rxbuf *rxbuf, struct iolist *iol) {
 
 int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
       struct iolist *last, int64_t deadline) {
+    /* Skip all data until error occurs. */
+    if(dill_slow(!first && !last)) return fd_skip(s, -1, deadline);
     /* Fill in data from the rxbuf. */
     size_t sz;
     while(1) {
@@ -232,7 +246,6 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
         first = first->iol_next;
         if(!first) return 0;
     }
-    GOTHERE;
     /* Copy the current iolist element so that we can modify it without
        changing the original list. */
     struct iolist curr;
@@ -247,17 +260,16 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
         miss += it->iol_len;
         it = it->iol_next;
     }
-    GOTHERE;
     /* If requested amount of data is larger than rx buffer avoid the copy
        and read it directly into user's buffer. */
-    if(miss > sizeof(rxbuf->data)) return fd_recv_(s, &curr, last, deadline);
+    if(miss > sizeof(rxbuf->data))
+        return fd_recv_(s, &curr, curr.iol_next ? last : &curr, deadline);
     /* If small amount of data is requested use rx buffer. */
     while(1) {
         /* Read as much data as possible to the buffer to avoid extra
            syscalls. Do the speculative recv() first to avoid extra
            polling. Do fdin() only after recv() fails to get data. */
         ssize_t sz = recv(s, rxbuf->data, sizeof(rxbuf->data), 0);
-        GOTHERE;
         if(dill_slow(sz == 0)) {errno = EPIPE; return -1;}
         if(sz < 0) {
             if(dill_slow(errno != EWOULDBLOCK && errno != EAGAIN)) {
@@ -271,20 +283,19 @@ int fd_recv(int s, struct fd_rxbuf *rxbuf, struct iolist *first,
         /* Copy the data from rxbuffer to the iolist. */
         while(1) {
             sz = fd_copy(rxbuf, &curr);
-            if(sz < curr.iol_len) {GOTHERE; break;}
-            if(!curr.iol_next) {GOTHERE; return 0;}
+            if(sz < curr.iol_len) break;
+            if(!curr.iol_next) return 0;
             curr = *curr.iol_next;
         }
         if(curr.iol_base) curr.iol_base += sz;
         curr.iol_len -= sz;
         /* Wait for more data. */
         int rc = fdin(s, deadline);
-        GOTHERE;
         if(dill_slow(rc < 0)) return -1;
     }
 }
 
-int fd_close(int s) {
+void fd_close(int s) {
     fdclean(s);
     /* Discard any pending outbound data. If SO_LINGER option cannot
        be set, never mind and continue anyway. */
@@ -292,6 +303,9 @@ int fd_close(int s) {
     lng.l_onoff=1;
     lng.l_linger=0;
     setsockopt(s, SOL_SOCKET, SO_LINGER, (void*)&lng, sizeof(lng));
-    return close(s);
+    /* We are not checking the error here. close() has inconsistent behaviour
+       and leaking a file descriptor is better than crashing the entire
+       program. */
+    close(s);
 }
 

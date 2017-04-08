@@ -32,6 +32,9 @@ function dill_clone () {
 
 # clone and build libdill
 dill_clone
+
+# copy necessary libs to include
+cp libdill/{fd.*,utils.*,iol.*} ./include/
 cd $MAIN
 # build torchat with target
 make $TG

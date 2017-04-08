@@ -35,26 +35,25 @@ parse_connection (const int sock, struct data_wrapper **retData, char **retJson,
     memset (inbuf, 0, 512);
 
 	int rc = torchatproto_mrecv (sock, inbuf, 512, deadline);
-    if (rc == -1) {  // sz = 0 means connection closed, sz = -1 means error
-    	printf ("mrecv returned false\n");
-	} else {
-		size_t sz = strlen (inbuf);
-    	json = CALLOC (sz + 1, sizeof (char));
-    	strncpy (json, inbuf, sz * sizeof (char));
-		json[sz] = '\0';
-    	data = convert_string_to_datastruct (json); // parse a datastruct from the message received
+    if (rc == -1) return -1;  // sz = 0 means connection closed, sz = -1 means error
 
-		// check data and json validity
-    	if (data == NULL && json != NULL ){
-        	// the json was invalid
-        	// and logged to errlog
-        	log_err (json);
-        	return false;
-    	}
-    	// at this point the inbuf contained valid data, put them in the structures and return
-    	// the bool is used to check wheter they were allocated successfully
-    	*retJson = json; *retData = data;
+	size_t sz = strlen (inbuf);
+    json = CALLOC (sz + 1, sizeof (char));
+    strncpy (json, inbuf, sz * sizeof (char));
+	json[sz] = '\0';
+    data = convert_string_to_datastruct (json); // parse a datastruct from the message received
+
+	// check data and json validity
+    if (data == NULL && json != NULL ){
+        // the json was invalid
+        // and logged to errlog
+        log_err (json);
+        // connection was opened but the message was invalid, return 0
+        return 0;
     }
+    // at this point the inbuf contained valid data, put them in the structures and return
+    // the bool is used to check wheter they were allocated successfully
+    *retJson = json; *retData = data;
     return rc; // returns a struct containing both data_wrapper struct and json char
 }
 
@@ -100,7 +99,8 @@ send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
-	int ret = send_over_tor (id, data->portno, msg, deadline);
+	int ret = 0;
+	send_over_tor (id, data->portno, msg, deadline, &ret);
 
 	if (ret >= 0) {
 		data->cmd = END;
@@ -194,7 +194,6 @@ send_hostname_to_client(struct data_wrapper *data, int sock, char *hostname, int
 	char *response = convert_datastruct_to_char (data);
 	// if iface is not null the client is waiting for response
 	int rc = torchatproto_msend (sock, response, strlen (response), deadline);
-	if (rc > 0) printf ("Ho mandato hostname al client\n");
 	FREE (response);
 }
 

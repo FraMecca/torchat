@@ -4,6 +4,6 @@ void destroy_proxy_connection();
 char *get_tor_error();
 bool set_socket_timeout (const int sockfd);
 int open_socket_to_domain(const char *domain,const int portno);
-ssize_t send_over_tor(const char *domain,const int port,char *buf, int64_t deadline);
+ssize_t send_over_tor(const char *domain,const int port,char *buf, int64_t deadline, int *ret);
 int
-bind_and_listen (const int portno);
+bind_and_listen (const int portno, int max);
