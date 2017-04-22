@@ -213,7 +213,7 @@ void event_loop (const int listenSock)
 
           			in_len = sizeof in_addr;
           			infd = accept(listenSock, &in_addr, &in_len);
-          			trackFd[nConn++] = infd; // keep track of accepted connections
+                      /*trackFd[nConn++] = infd; // keep track of accepted connections*/
           			if (infd == -1) {
               			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
               	  			/* We have processed all incoming

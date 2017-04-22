@@ -99,8 +99,7 @@ send_routine(const int clientSock, struct data_wrapper *data, int64_t deadline)
 	strcpy (data->id, HOSTNAME);
 
 	char *msg = convert_datastruct_to_char (data);
-	int ret = 0;
-	send_over_tor (id, data->portno, msg, deadline, &ret);
+	int ret = send_over_tor (id, data->portno, msg, deadline);
 
 	if (ret >= 0) {
 		data->cmd = END;

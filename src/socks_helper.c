@@ -13,6 +13,8 @@
 #include <unistd.h> // close
 #include "include/proxysocket.h"
 #include "lib/torchatproto.h"
+#define _GNU_SOURCE // needed for pthread_tryjoin_np
+#include <pthread.h>
 
 static char torError;
 static proxysocketconfig proxy = NULL;
@@ -129,21 +131,50 @@ destroy_proxy_connection ()
 int
 open_socket_to_domain(const char *domain, const int portno)
 {
+       // connect to an .onion domain
+       // return socket
+       // connect
+       // it is used on a thread because it is blocking
+       char* errmsg;
+       return proxysocket_connect(proxy, domain, portno, &errmsg);
+}
+
+
+struct domainData {
+	char *domain;
+	int portno;
+};
+
+static void *
+open_socket_to_domain_thread (void *domainDataVoid)
+{
 	// connect to an .onion domain
 	// return socket
 	// connect
+	// it is used on a thread because it is blocking
   	char* errmsg;
-	return proxysocket_connect(proxy, domain, portno, &errmsg);
-
+  	struct domainData *domainData = (struct domainData *) domainDataVoid;
+  	char *domain = domainData->domain;
+  	int portno = domainData->portno;
+	int sock = proxysocket_connect(proxy, domain, portno, &errmsg);
+	pthread_exit ((void *) sock); // return socket as exit value for thread, collect with join
 }
 
-void
-send_over_tor (const char *domain, const int port, char *buf, int64_t deadline, int *ret)
+int
+send_over_tor (const char *domain, const int port, char *buf, int64_t deadline)
 {
 	// ret is retvalue
 	// wraps functions above, 
 	// assumes that buf is null terminated
-	int rawsock = open_socket_to_domain (domain, port);
+	struct domainData *domainData = MALLOC (sizeof (struct domainData)); domainData->portno = port; domainData->domain = domain;
+	pthread_t th;
+	pthread_create (&th, NULL, open_socket_to_domain_thread, (void *) domainData);
+	int rawsock;
+	while (true) {
+		if (pthread_tryjoin_np (th, &rawsock) == 0) break;
+		yield ();
+	}
+
 	if (rawsock < 0) return -1;
 
 	int sock = torchatproto_attach (rawsock);
@@ -153,8 +184,8 @@ send_over_tor (const char *domain, const int port, char *buf, int64_t deadline, 
 	}  else {
 		rc = torchatproto_msend (sock, buf, strlen (buf), deadline);
 	}
-	*ret = rc;
 
 	torchatproto_detach (sock);
 	terminate_connection_with_domain (rawsock);
+	return rc;
 }

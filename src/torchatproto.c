@@ -331,10 +331,12 @@ torchatproto_msend (int h, void *buf, size_t len, int64_t deadline)
     // first compute dimensions
     // send all in a single operation because epoll
     char tbuf[4 + len];
-    generate_dimension_head (tbuf, len);
-    memcpy (tbuf + 4, buf, len);
+	generate_dimension_head (tbuf, len);
+	memcpy (tbuf + 4, buf, len);
 
-    struct iolist iol = {(void*) tbuf, len + 4, NULL, 0};
+	// maximum size = 2000
+    /*struct iolist iol = {(void*) tbuf, len + 4, NULL, 0};*/
+	struct iolist iol = {(void*) tbuf, len + 4, NULL, 0};
     int rc = m->msendl (m, &iol, &iol, deadline);
     return rc;
 }
