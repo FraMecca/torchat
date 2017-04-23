@@ -192,10 +192,11 @@ void event_loop (const int listenSock)
   	/* The event loop */
 	while (!exitFlag) {  // start poll loop
     	int n, i;
-    	n = epoll_wait(efd, events, MAXEVENTS, -1);
+		// timeout to 120 sec
+    	n = epoll_wait(efd, events, MAXEVENTS, 120000);
     	yield ();
     	for (i = 0; i < n; i++) {
-      		if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
+      		if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (events[i].events & EPOLLRDHUP) || (!(events[i].events & EPOLLIN))) {
         		/* An error has occured on this fd, or the socket is not
            		   ready for reading (why were we notified then?) */
                 /*fprintf(stderr, "epoll error\n%s\n", strerror (errno));*/
@@ -248,9 +249,7 @@ void event_loop (const int listenSock)
            		   we are running in edge-triggered mode
            		   and won't get a notification again for the same data. */
 				int cr = go(event_routine(events[i].data.fd));
-          		/* Closing the descriptor will make epoll remove it
-             	   from the set of descriptors which are monitored. */
-                /*close(events[i].data.fd);*/
+				/*fd is closed in event_routine*/
             }
         }
     }
