@@ -155,7 +155,8 @@ event_routine (const int rawsock)
 				free_data_wrapper (data);
         		break;
     	}
-	} else if (rc == 0) {
+	} else {
+		// rc <= 0
 		// invalid message, close connection
 		close (rawsock);
 	}
