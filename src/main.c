@@ -173,7 +173,8 @@ void event_loop (const int listenSock)
 	// this is the event loop,
 	// uses epoll
 	// closes fds at exit
-	int trackFd[MAXCONN] = {0}, nConn = 0; // used to track all the accepted connection and close them at the end
+	int nConn = 0;
+	bool trackFd[MAXCONN] = {false}; // used to track all the accepted connection and close them at the end
   	int efd;
   	struct epoll_event event = {0};
   	struct epoll_event *events;
@@ -192,12 +193,15 @@ void event_loop (const int listenSock)
 	while (!exitFlag) {  // start poll loop
     	int n, i;
     	n = epoll_wait(efd, events, MAXEVENTS, -1);
+    	yield ();
     	for (i = 0; i < n; i++) {
       		if ((events[i].events & EPOLLERR) || (events[i].events & EPOLLHUP) || (!(events[i].events & EPOLLIN))) {
         		/* An error has occured on this fd, or the socket is not
            		   ready for reading (why were we notified then?) */
                 /*fprintf(stderr, "epoll error\n%s\n", strerror (errno));*/
 				close(events[i].data.fd);
+				trackFd[events[i].data.fd] = false;
+				nConn--;
         		continue;
       		}
 
@@ -213,7 +217,8 @@ void event_loop (const int listenSock)
 
           			in_len = sizeof in_addr;
           			infd = accept(listenSock, &in_addr, &in_len);
-                      /*trackFd[nConn++] = infd; // keep track of accepted connections*/
+					trackFd[infd] = true; // keep track of accepted connections
+					nConn++;
           			if (infd == -1) {
               			if ((errno == EAGAIN) || (errno == EWOULDBLOCK)) {
               	  			/* We have processed all incoming
@@ -295,7 +300,7 @@ main(int argc, char **argv)
 	// initialize struct needed to connect with SOCKS5 TOR
 	initialize_proxy_connection ("localhost", 9250);
 
-	int listenSock = bind_and_listen (8000, MAXCONN);
+	int listenSock = bind_and_listen (8000, 10);
 
 	// core of the program, go into event loop
 	event_loop (listenSock);

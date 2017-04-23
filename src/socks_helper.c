@@ -18,6 +18,7 @@
 
 static char torError;
 static proxysocketconfig proxy = NULL;
+extern bool exitFlag;
 
 static void
 set_tor_error(const char e)
@@ -120,6 +121,7 @@ terminate_connection_with_domain (const int sock)
 {
 	// disconnect from a domain
     proxysocket_disconnect(proxy, sock);
+    close (sock);
 }
 
 void 

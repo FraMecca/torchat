@@ -30,13 +30,25 @@ function dill_clone () {
 	make
 }
 
+function update_libs () {
+	cd $MAIN
+	wget https://raw.githubusercontent.com/emilk/loguru/master/loguru.hpp -O include/loguru.hpp
+	wget https://raw.githubusercontent.com/nlohmann/json/develop/src/json.hpp -O include/json.hpp
+	wget https://raw.githubusercontent.com/brechtsanders/proxysocket/master/src/proxysocket.c -O include/proxysocket.c
+	wget https://raw.githubusercontent.com/brechtsanders/proxysocket/master/src/proxysocket.h -O include/proxysocket.h
+}
+
 # clone and build libdill
 dill_clone
 
 # copy necessary libs to include
-cp libdill/{fd.*,utils.*,iol.*} ./include/
 cd $MAIN
+cp libdill/{fd.*,utils.*,iol.*} ./include/
+# now update single header libs in include directory
+update_libs
+
 # build torchat with target
+cd $MAIN
 make $TG
 # set permissions on tor directory
 chmod -R 700 $MAIN/tor
