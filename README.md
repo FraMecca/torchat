@@ -11,6 +11,8 @@
 	- [Daemon](#Daemon)
 	- [Client](#Client)
 	- [JSON](#JSON)
+	- [Protocol](#Protocol)
+	- [Coroutines](#Coroutines)
 - [Disclaimer](#Disclaimer)
 - [Todo](#Todo)
 
@@ -183,7 +185,7 @@ Commands are:
 
 The `date` field is used only when the daemon communicates with the server. It must not be used when sending message between different hosts.
 
-#### TORchat protocol
+#### Protocol
 
 TORchat uses raw tcp packets for communication. They are prefixed with a char lenght[4] that specifies the dimension of the message that is being sent. 
 The daemon rejects every message that hasn't got a char[4] message size specifier padded from left(e.g.: 0084{...content of json...}).
