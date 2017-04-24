@@ -16,7 +16,7 @@
 
 A simple chat client for the TOR network.
 Inspired by [TorChat](https://github.com/prof7bit/TorChat).
-It is written in C with bindings for C++ libraries.
+It is written in C and C++.
 
 
 ## Status
@@ -52,7 +52,7 @@ Then
 
 ` cd torchat `
 
-` make `
+` bash install.sh `
 
 Now start tor with the provided torrc
 
@@ -70,16 +70,12 @@ Your peer id is:
 
 ` cat tor/hostname `
 
-Now start the python client
-
-` python3 src/client2.py 8000 `
-
-It will ask you for a peer id to communicate with.
+As a client, you can use [this](https://github.com/GallaFrancesco/Torchat_Client).
 
 
 ## Design
 
-TORchat is not a protocol and uses standard JSON messages for communication.
+TORchat uses standard JSON messages for communication plus a size indentifier.
 
 TORchat is divided into a daemon and a client completely independent of each other.
 The daemon continuosly runs and gathers messages from other peers and stores them in a volatile hash table (and logs, if configured accordingly).
@@ -115,11 +111,11 @@ With the daemon mode option, it detaches from the shell and continues its execut
 The daemon aims to be as  small as possible. <!--It has no external dependency and is written in less that 1000 loc.--> 
 Currently it supports only Linux and aims to do so.
 
-The daemon uses [mongoose](https://github.com/cesanta/mongoose) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs, [json](https://github.com/nlohmann/json) for communication and [libdill](http://libdill.org) to manage concurrencies.
+The daemon uses a combination of epoll plus [libdill](https://github.com/sustrik/libdill) to manage events, TOR as a socks5 proxy, [loguru](https://github.com/emilk/loguru) to mantain logs, [json](https://github.com/nlohmann/json) for communication and [proxysocket](https://github.com/brechtsanders/proxysocket) to initialize the socks5 proxy connection.
 
 The core of the daemon is written in C with bindings to embedded libraries in C++.
 
-Until the exit procedure is called, the daemon waits for messages from peers or clients (mg_mgr_poll) and acts accordingly to the JSON received.
+Until the exit procedure is called, the daemon waits for messages from peers or clients (event_poll) and acts accordingly to the JSON received.
 
 An [hash table](https://troydhanson.github.io/uthash/)is mantained and used to store all the unread messages from the peers. As soon as a client connects, the read messages are removed from the hash table.
 
@@ -178,23 +174,29 @@ Commands are:
 * RECV : a peer ("id" field) has contacted the daemon and sent him a message. Store it in the hash table until it is read;
 * UPDATE : the client is polling for unread messages from a peer ("id" field);
 * GET_PEERS : the client asks the daemon for the id of the peers that wrote one or more messages;
-* HISTORY : the client is asking the daemon for the previous n ("msg" field) lines of conversation with a peer ("id" field);
+* HISTORY : the client is asking the daemon for the previous n ("msg" field) lines of conversation with a peer ("id" field); // to be implemented
 * HOST : the client is asking the daemon for the current hostname, that is, its current onion address;
 * END : the daemon notifies that the previous command has succeded and that communication can end;
 * EXIT : starts exit procedure (clean datastructs and exit cleanly).
-* ERROR : in case TOR can't send the message or there is a sock failure, it reports the error;
-* FILE... : there are 4 enum values relative to the file upload process, which are exchanged between the servers and the client requesting an upload.
+* ERR : in case TOR can't send the message or there is a sock failure, it reports the error;
+* FILE... : there are 4 enum values relative to the file upload process, which are exchanged between the servers and the client requesting an upload.  // to be implemented
 
 The `date` field is used only when the daemon communicates with the server. It must not be used when sending message between different hosts.
+
+#### TORchat protocol
+
+TORchat uses raw tcp packets for communication. They are prefixed with a char lenght[4] that specifies the dimension of the message that is being sent. 
+The daemon rejects every message that hasn't got a char[4] message size specifier padded from left(e.g.: 0084{...content of json...}).
+
+#### Coroutines
+
+TORchat by design uses structured concurrency because there isn't a real need for thread parallelism.
+When epoll detects action in a socket, the main event loop launches a coroutine that yields only when waiting for TOR to successfully open a connection with the endpoint (the other peer's daemon in this case).
+
+Given that sometimes the connection to the endpoint may take up to two minutes, a real thread is spawned in order to estabilish the connection.
 
 ## Disclaimer
 
 Please note that TORchat is produced *independently* from the Tor® anonymity software, I am not related with or sponsored by torproject.org. TORchat is making use of the Tor® client software but TorChat itself is a completely separate project developed by totally different people, so if you instead want to buy the developers of Tor® from torproject.org a beer (they deserve it even more than me and without their great Tor software my little program would not have been possible) then please consider doing so at the following address:
 
 * https://www.torproject.org/donate/donate.html.en
-
-### Todo
-
-* group chats
-* parse log files
-* improve file upload 
