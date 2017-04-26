@@ -192,4 +192,3 @@ clear_datastructs ()
 		delete_peer (ptr);
 	}
 }
-

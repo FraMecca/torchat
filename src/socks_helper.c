@@ -13,7 +13,6 @@
 #include <unistd.h> // close
 #include "include/proxysocket.h"
 #include "lib/torchatproto.h"
-#define _GNU_SOURCE // needed for pthread_tryjoin_np
 #include <pthread.h>
 
 static char torError;
@@ -159,6 +158,7 @@ open_socket_to_domain_thread (void *domainDataVoid)
   	char *domain = domainData->domain;
   	int portno = domainData->portno;
 	int sock = proxysocket_connect(proxy, domain, portno, &errmsg);
+	FREE(domainData); domainData = NULL;
 	pthread_exit ((void *) sock); // return socket as exit value for thread, collect with join
 }
 
@@ -173,9 +173,12 @@ send_over_tor (const char *domain, const int port, char *buf, int64_t deadline)
 	pthread_create (&th, NULL, open_socket_to_domain_thread, (void *) domainData);
 	int rawsock;
 	while (true) {
-		if (pthread_tryjoin_np (th, &rawsock) == 0) break;
+		/*if (pthread_tryjoin_np (th, &rawsock) == 0) break;*/
+		// if the variable has been freed the thread exited
+		if (domainData == NULL) break;
 		yield ();
 	}
+	pthread_join(th, &rawsock);
 
 	if (rawsock < 0) return -1;
 

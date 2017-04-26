@@ -300,7 +300,7 @@ main(int argc, char **argv)
 	// initialize struct needed to connect with SOCKS5 TOR
 	initialize_proxy_connection ("localhost", 9250);
 
-	int listenSock = bind_and_listen (8000, 10);
+	int listenSock = bind_and_listen (8000, MAXCONNECTIONS);
 
 	// core of the program, go into event loop
 	event_loop (listenSock);
