@@ -18,7 +18,8 @@ add_library(logger SHARED src/logger.cpp)
 target_compile_features(logger PRIVATE cxx_range_for)
 
 # set the executables to be built
-add_executable(torchat src/main.c src/socks_helper.c src/util.c src/datastruct.c src/actions.c src/torchatproto.c include/mem.c include/ut_assert.c include/except.c include/base64.c include/proxysocket.c include/fd.c include/iol.c include/utils.c)
+add_executable(torchat src/main.c src/socks_helper.c src/util.c
+	src/datastruct.c src/settings.c src/actions.c src/torchatproto.c include/mem.c include/ut_assert.c include/except.c include/base64.c include/proxysocket.c include/fd.c include/iol.c include/utils.c)
 
 # equivalent to -l[lib] in gcc, links the libraries previously built
 target_link_libraries(torchat dill pthread dl jsonhelper logger)

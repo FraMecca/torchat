@@ -1,37 +1,24 @@
-/*#include "lib/settings.h"*/
 #include <stdio.h>
-#include <string.h>
+#include <stddef.h>
+#include "include/mem.h"
+#include "lib/settings.h"
 
-
-#define MAXCONNECTIONS 0
-#define MAXEVENTS 1
-
-struct settings_t {
-	int maxconnections;
-	int maxevents;
-	long int epollTimeout;
-	char *host;
-	int torPort;
-	int daemonPort;
-	char *logInfo;
-	char *logDebug;
-	char *logError;
-	size_t sockBufSize;
-	char *interface;
-};
 
 static struct settings_t settings;
 
-int*
+void * 
 get_setting(int p)
 {
-	return (&settings.maxconnections+p);
+	void *ptr = ((char *) &settings + p);
+	return ptr;
 }
 
-int
-main(void){
-	settings.maxconnections = 1;
-	settings.maxevents = 2;
-	printf("%d %d\n", *get_setting(MAXCONNECTIONS), *get_setting(MAXEVENTS));
-	return 0;
+void
+destroy_settings ()
+{
+	FREE (settings.host);
+	FREE (settings.logInfo);
+	FREE (settings.logDebug);
+	FREE (settings.logError);
+	FREE (settings.interface);
 }
