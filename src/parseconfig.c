@@ -5,11 +5,12 @@
  * standalone compile with:
  * gcc parse_config.c ../include/mem.c ../include/except.c ../include/ut_assert.c  -o pc -Wall -g
  */
-#include <stdio.h>
 #include <string.h>
-#include <stdlib.h> // exit
 #include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <errno.h>
+#include <assert.h>
 #include "../include/mem.h"
 
 // the character that will identify comments
@@ -90,12 +91,16 @@ valid_opt(char *opt)
 }
 
 int
-main(void)
+parse_config (char *filename, char ***returnOpts)
 {
-	FILE *configFile = fopen("../torchat.conf", "r");
+	assert (*returnOpts == NULL);
+	// return -1 on error
+	// check errno
+	FILE *configFile = fopen(filename, "r");
 	if (!configFile){
-		fprintf(stderr, "Unable to open config file.\n");
-		exit(1);
+		/*fprintf(stderr, "Unable to open config file.\n");*/
+		// errno set by fopen
+		return -1;
 	}
 
 	char *lineBuf = NULL, optBuf[SIZEBUF] = {0}, valBuf[SIZEBUF] = {0};
@@ -123,12 +128,12 @@ main(void)
 			sscanf(lineBuf, "%s %s", optBuf, valBuf);	
 			// remove quotes
 			if(!valid_opt(optBuf)){
-				fprintf(stderr,"Invalid option in config file: %s\nValid format is:\noption: value\n", optBuf);
+				/*fprintf(stderr,"Invalid option in config file: %s\nValid format is:\noption: value\n", optBuf);*/
 				destroy_mat(opt, nOpt);
 				destroy_mat(val, nOpt);
 				fclose(configFile);
-				exit(1);
-				// TODO return error
+				errno = EINVAL;
+				return -1;
 			}
 			strip((char*)optBuf, SEPARATOR);
 			// add format to option field (--option)
@@ -152,8 +157,11 @@ main(void)
 	}
 	destroy_mat(opt, N_OPTS);
 	destroy_mat(val, N_OPTS);
-	destroy_mat(retOpts, size);
 	fclose(configFile);
-	return 0;
+
+	assert (nOpt == N_OPTS); // did we parse all the options?
+
+	*returnOpts = retOpts; // now the callee has the options
+	return nOpt; // number of options read // should be always 11
 }
 

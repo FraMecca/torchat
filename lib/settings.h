@@ -15,13 +15,16 @@ struct settings_t {
 	char *interface; // servAddr.sin_addr.s_addr = INADDR_ANY; 
 };
 
-#define MAXCONNECTIONS offsetof (struct settings_t, maxconnections)
-#define MAXEVENTS offsetof (struct settings_t, maxevents)
-#define EPOLLTIMEOUT offsetof (struct settings_t, epollTimeout)
-#define HOST offsetof (struct settings_t, host)
-#define TORPORT offsetof (struct settings_t, torPort)
-#define DAEMONPORT offsetof (struct settings_t, daemonPort)
-#define LOGINFO offsetof (struct settings_t, logInfo)
-#define LOGDEBUG offsetof (struct settings_t, logDebug)
-#define LOGERROR offsetof (struct settings_t, logError)
-#define INADDR offsetof (struct settings_t, interface) // servAddr.sin_addr.s_addr = INADDR_ANY; 
+void * 
+get_setting(int p);
+
+#define MAXCONNECTIONS get_setting (offsetof (struct settings_t, maxconnections))
+#define MAXEVENTS get_setting (offsetof (struct settings_t, maxevents))
+#define EPOLLTIMEOUT get_setting (offsetof (struct settings_t, epollTimeout))
+#define HOST get_setting (offsetof (struct settings_t, host))
+#define TORPORT get_setting (offsetof (struct settings_t, torPort))
+#define DAEMONPORT get_setting (offsetof (struct settings_t, daemonPort))
+#define LOGINFO get_setting (offsetof (struct settings_t, logInfo))
+#define LOGDEBUG get_setting (offsetof (struct settings_t, logDebug))
+#define LOGERROR get_setting (offsetof (struct settings_t, logError))
+#define INADDR get_setting (offsetof (struct settings_t, interface)) // servAddr.sin_addr.s_addr = INADDR_ANY; 

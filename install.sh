@@ -36,6 +36,8 @@ function update_libs () {
 	wget https://raw.githubusercontent.com/nlohmann/json/develop/src/json.hpp -O include/json.hpp
 	wget https://raw.githubusercontent.com/brechtsanders/proxysocket/master/src/proxysocket.c -O include/proxysocket.c
 	wget https://raw.githubusercontent.com/brechtsanders/proxysocket/master/src/proxysocket.h -O include/proxysocket.h
+	wget https://raw.githubusercontent.com/FraMecca/libargparse/master/src/argparse.c -O include/argparse.c
+	wget https://raw.githubusercontent.com/FraMecca/libargparse/master/src/argparse.h -O include/argparse.h
 }
 
 # clone and build libdill
