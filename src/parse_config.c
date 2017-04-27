@@ -123,7 +123,7 @@ main(void)
 	fill_opts_vector(retOpts, size, opt, val, 0);
 	int i;
 	for (i=0; i<size-1; i=i+2){
-		printf("%s = %s\n", retOpts[i], retOpts[i+1]);
+		printf("%s %s\n", retOpts[i], retOpts[i+1]);
 	}
 	destroy_mat(opt, N_OPTS);
 	destroy_mat(val, N_OPTS);
