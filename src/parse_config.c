@@ -9,12 +9,15 @@
 #include <string.h>
 #include <stdlib.h> // exit
 #include <stdbool.h>
+#include <errno.h>
 #include "../include/mem.h"
 
 // the character that will identify comments
 // and the number of options in the config file
 #define COMMENT_CHAR '#'
+#define SEPARATOR ':'
 #define N_OPTS 11
+#define SIZEBUF 256 
 
 static void
 strip(char *line, char del)
@@ -35,7 +38,9 @@ strip(char *line, char del)
 static void
 format_option(char *opt)
 {
-	char tmp[100] = {0};
+	// format option is needed since the argparse library we use is built to read command line options
+	// therefore, each option needs to be prefixed with "--"
+	char tmp[SIZEBUF] = {0};
 	strncpy(tmp, "--", 2);
 	strncat(tmp, opt, strlen(opt));
 	strncpy(opt, tmp, strlen(tmp));
@@ -93,24 +98,26 @@ main(void)
 		exit(1);
 	}
 
-	char lineBuf[512], optBuf[100] = {0}, valBuf[100] = {0};
+	char *lineBuf = NULL, optBuf[SIZEBUF] = {0}, valBuf[SIZEBUF] = {0};
 	char **retOpts;
 	// opt is used to store the formatted values of option
 	// val is for the values
 	char **opt = MALLOC(N_OPTS*sizeof(char*));
 	char **val = MALLOC(N_OPTS*sizeof(char*));
 	int nOpt = 0;
-	int size;
+	size_t size = 0;
 
 	// iterate on the file until fgets returns NULL (EOF)
-	while(fgets(lineBuf, 512, configFile) != NULL){
+	while(getline(&lineBuf, &size , configFile) >= 0){
 
 		// strip comments from the line	
 		strip((char*)lineBuf, COMMENT_CHAR);
 
 		// this check ignores lines which are fully commented
 		// (they do not contain an option)
-		if (lineBuf[0] != '\0' && lineBuf[0] != '\n'){
+		/*if(lineBuf[0] != '\0' && lineBuf[0] != '\n'){*/
+		size_t sl = strlen(lineBuf);
+		if(sl <= 2*SIZEBUF-2 && sl > 1){
 			// scan the stripped string for options
 			// copy them into placeholder arrays
 			sscanf(lineBuf, "%s %s", optBuf, valBuf);	
@@ -121,18 +128,21 @@ main(void)
 				destroy_mat(val, nOpt);
 				fclose(configFile);
 				exit(1);
+				// TODO return error
 			}
-			strip((char*)optBuf, ':');
+			strip((char*)optBuf, SEPARATOR);
 			// add format to option field (--option)
 			format_option((char*)optBuf);
 			opt[nOpt] = STRDUP(optBuf);
 			val[nOpt] = STRDUP(valBuf);
 			// to avoid character mess
-			memset(optBuf, 0, strlen(optBuf));
+			memset(optBuf, 0, SIZEBUF);
 			nOpt++;
+			FREE(lineBuf);
+			size = 0;
 		}
 	}
-
+	FREE(lineBuf);
 	size = 2*nOpt + 1;
 	retOpts = create_opts_vector(size);
 	fill_opts_vector(retOpts, size, opt, val, 0);
