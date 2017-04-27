@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h> // exit
+#include <stdbool.h>
 #include "../include/mem.h"
 
 // the character that will identify comments
@@ -24,7 +25,6 @@ strip(char *line, char del)
 	if (!line){
 		return;
 	}
-
 	for(i=0; i<strlen(line); i++){
 		if(line[i] == del){
 			line[i] = '\0';
@@ -76,6 +76,14 @@ destroy_mat(char **mat, int n)
 	FREE(mat);
 }
 
+static bool
+valid_opt(char *opt)
+{
+	int l = strlen(opt);
+	if(opt[l-1] == ':') return true;
+	return false;
+}
+
 int
 main(void)
 {
@@ -107,6 +115,13 @@ main(void)
 			// copy them into placeholder arrays
 			sscanf(lineBuf, "%s %s", optBuf, valBuf);	
 			// remove quotes
+			if(!valid_opt(optBuf)){
+				fprintf(stderr,"Invalid option in config file: %s\nValid format is:\noption: value\n", optBuf);
+				destroy_mat(opt, nOpt);
+				destroy_mat(val, nOpt);
+				fclose(configFile);
+				exit(1);
+			}
 			strip((char*)optBuf, ':');
 			// add format to option field (--option)
 			format_option((char*)optBuf);
@@ -127,8 +142,8 @@ main(void)
 	}
 	destroy_mat(opt, N_OPTS);
 	destroy_mat(val, N_OPTS);
-	fclose(configFile);
 	destroy_mat(retOpts, size);
+	fclose(configFile);
 	return 0;
 }
 
