@@ -21,7 +21,7 @@ get_setting(int p);
 #define MAXCONNECTIONS get_setting (offsetof (struct settings_t, maxconnections))
 #define MAXEVENTS get_setting (offsetof (struct settings_t, maxevents))
 #define EPOLLTIMEOUT get_setting (offsetof (struct settings_t, epollTimeout))
-#define HOST get_setting (offsetof (struct settings_t, host))
+#define HOSTADDR get_setting (offsetof (struct settings_t, host))
 #define TORPORT get_setting (offsetof (struct settings_t, torPort))
 #define DAEMONPORT get_setting (offsetof (struct settings_t, daemonPort))
 #define LOGINFO get_setting (offsetof (struct settings_t, logInfo))
