@@ -20,6 +20,11 @@ A simple chat client for the TOR network.
 Inspired by [TorChat](https://github.com/prof7bit/TorChat).
 It is written in C and C++.
 
+## Warning
+
+We are currently redesigning the torchat protocol from the bottom up. This should be considered a working but not final version.
+
+More on docs branch.
 
 ## Status
 
