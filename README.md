@@ -94,13 +94,15 @@ For a list of possible commands, check the [Development section](#Development)
 
 <!--TORchat has no external dependencies and just requires a C++11 compatible compiler.-->
 TORchat requires a C++11 compatible compiler.
-To build the standar version (without debug logging), simply run:
+To build the standard version (including debug and logging because it is still not a stable) , simply run:
+
+` cmake . `
 
 ` make `
 
-To build the debug version, with improved logging and coredump for crashes, run:
+<!--To build the debug version, with improved logging and coredump for crashes, run:-->
 
-` make debug `
+<!--` make debug `-->
 
 ## Usage
 
