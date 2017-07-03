@@ -1,5 +1,8 @@
-main()  : entry point of execution
-    start_daemon() : execute as daemon
+main() 
+    fprintf()
+    exit()
+    strcmp()
+    start_daemon()
         fork()
         exit()
         setsid()
@@ -11,13 +14,17 @@ main()  : entry point of execution
         free()
         sysconf()
         close()
-    dumpstack()  : used to dump the stacktrace and save a coredump in case of abort
+    atoi()
+    signal()
+    dumpstack() 
         sprintf()
         getpid()
         system()
         exit()
-    log_init() : initialize loggers
-    read_tor_hostname()  : reade the hostname from the tor folder, maybe should be passed by argument
+    log_init()
+    exit_from_signal() 
+        fprintf()
+    read_tor_hostname() 
         fopen()
         exit_error() 
             perror()
@@ -25,12 +32,12 @@ main()  : entry point of execution
         fscanf()
         fclose()
         STRDUP()
-    initialize_proxy_connection()   
+    initialize_proxy_connection() 
         proxysocket_initialize()
         proxysocketconfig_create_direct()
         proxysocketconfig_use_proxy_dns()
         proxysocketconfig_add_proxy()
-    bind_and_listen()  : bind the daemon to a port
+    bind_and_listen() 
         socket()
         exit_error() 
             perror()
@@ -40,7 +47,7 @@ main()  : entry point of execution
         bind()
         fcntl()
         listen()
-    event_loop()  : start the epoll loop to monitor activity on the sockets
+    event_loop() 
         epoll_create1()
         assert()
         epoll_ctl()
@@ -50,13 +57,13 @@ main()  : entry point of execution
         close()
         accept()
         perror()
-        torchatproto_fd_unblock()  : set the socket as unblocking
+        torchatproto_fd_unblock() 
             fcntl()
             assert()
             setsockopt()
-        go() : entry point of every coroutine
-        event_routine()  : parses the command sent by the client and execute actions based on that
-            torchatproto_attach()
+        go()
+        event_routine() 
+            torchatproto_attach() 
                 MALLOC()
                 torchatproto_hquery() 
                 close()
@@ -74,23 +81,25 @@ main()  : entry point of execution
                     fdin()
                 hmake()
                 FREE()
-            now() : get cpu time in millisec
-            parse_connection()  : check for the validity of the stream that arrived on the socket
+            now()
+            parse_connection() 
                 memset()
                 torchatproto_mrecv() 
                     hquery()
                     CONT()
-                    fd_recv_dimensionhead() : translate a char[4] into int, was used for framing, to be removed
+                    fd_recv_dimensionhead() 
                         CONT()
                         recv()
                         isdigit()
                         strtol()
                     recv()
-                    yield() : pass control of execution
+                    yield()
+                    now()
+                    assert()
                 strlen()
                 CALLOC()
                 strncpy()
-                convert_string_to_datastruct() : parse the json that arrived into a char*
+                convert_string_to_datastruct()
                 log_err()
             log_info()
             free_data_wrapper() 
