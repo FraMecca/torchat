@@ -19,7 +19,7 @@ Abstract
    enables the near-real-time exchange of structured yet extensible data
    between any two or more network entities on the TOR network.
    This document defines
-   XMPP's core protocol methods: setup and teardown of JSON streams,
+   TMX's core protocol methods: setup and teardown of JSON streams,
    channel encryption, authentication, error handling, and communication
    primitives for messaging, network availability ("presence"), and
    request-response interactions.
@@ -201,7 +201,7 @@ Abstract
 
 2.5.  Distributed Network of Clients and Servers
 
-   In practice, JMX consists of a network of clients and servers that
+   In practice, TMX consists of a network of clients and servers that
    inter-communicate (however, communication between any two given
    deployed servers is strictly discretionary and a matter of domain whitelists
    implemented independently). 
@@ -209,7 +209,7 @@ Abstract
    associated with the server running the .onion domain over the TOR network
     might be able to exchange messages and files, and other structured data with the user
    romeo.onion associated with the server running the .onion domain over the TOR network.
-   As a result, end-to-end communication in JMX is logically peer-to-
+   As a result, end-to-end communication in TMX is logically peer-to-
    peer but physically server-to-server, as
    illustrated in the following diagram.
 
@@ -238,23 +238,23 @@ Abstract
       negotiated streams.
 
    Depending on the application, the secondary responsibilities of an
-   JMX server can include:
+   TMX server can include:
 
    o  Storing data that is used by users (e.g., contact lists for
-      users of JMX-based instant messaging); 
+      users of TMX-based instant messaging); 
       In this case, the relevant jmu is handled directly by the server itself 
       on behalf of the client and is not routed to a remote node.
 
-   o  Hosting add-on services that also use JMX as the basis for
+   o  Hosting add-on services that also use TMX as the basis for
       communication.
 
 3.  TCP Binding
 
 3.1.  Scope
 
-   As JMX is defined in this specification, an initiating entity
+   As TMX is defined in this specification, an initiating entity
    (client or server) MUST open a Transmission Control Protocol [TCP]
-   connection to the receiving entity (server) before it negotiates XML
+   connection to the receiving entity (server) before it negotiates jmu 
    streams with the receiving entity.  The parties then maintain that
    TCP connection for as long as the streams are in use.  The rules
    specified in the following sections apply to the TCP binding.
@@ -271,10 +271,10 @@ Abstract
 
 3.4.  Reliability
 
-   The use of long-lived TCP connections in JMX implies that the
+   The use of long-lived TCP connections in TMX implies that the
    sending of jmu over a TCP stream can be unreliable, since the
    parties to a long-lived TCP connection might not discover a
-   connectivity disruption in a timely manner.  At the JMX application
+   connectivity disruption in a timely manner.  At the TMX application
    layer, long connectivity disruptions can result in undelivered jmu's.
 
 4. JSON message units
@@ -282,7 +282,7 @@ Abstract
 4.1.  JMU fundamental
 
    JMU is at the basis of rapid, asynchronous exchange of payloads over 
-   the JMX protocol. Terms are defined as follows.
+   the TMX protocol. Terms are defined as follows.
 
    Definition of JSON Message Unit:
 	  A JSON Message Unit is a JSON structured stream sent between any
@@ -346,7 +346,7 @@ Abstract
    |                    | }                  |
    +--------------------+--------------------+
 
-   The remainder of this section defines the following aspects of XML
+   The remainder of this section defines the following aspects of TMX
    streams (along with related topics):
 
    o  How to open a stream (Section 4.2)
@@ -355,15 +355,15 @@ Abstract
 
    o  How to close a stream (Section 4.4)
 
-   o  The directionality of XML streams (Section 4.5)
+   o  The directionality of jmu streams (Section 4.5)
 
    o  How to handle peers that are silent (Section 4.6)
 
-   o  The XML attributes of a stream (Section 4.7)
+   o  The jmu attributes of a stream (Section 4.7)
 
-   o  The XML namespaces of a stream (Section 4.8)
+   o  The jmu namespaces of a stream (Section 4.8)
 
-   o  Error handling related to XML streams (Section 4.9)
+   o  Error handling related to jmu streams (Section 4.9)
 
 4.2.  Opening a Stream
 
@@ -372,7 +372,7 @@ Abstract
    jmu header (the "initial jmu") to the receiving entity.
 
    I: {
-       'JMX version':1'
+       'TMX version':1'
        'open':'message''
        'from':'juliet.onion' 
       }
@@ -436,7 +436,7 @@ Abstract
 
 4.6.  Handling of Silent Peers
 
-   When an entity that is a party to a stream has not received any JMX
+   When an entity that is a party to a stream has not received any TMX
    traffic from its stream peer for some period of time, the peer might
    appear to be silent.  There are several reasons why this might
    happen:
@@ -446,7 +446,7 @@ Abstract
    	   2.  One of the jmu's that has been sent is broken despite the fact that
        the underlying TCP connection is alive.
 
-   3.  The peer is idle and simply has not sent any JMX traffic over
+   3.  The peer is idle and simply has not sent any TMX traffic over
        its TCP stream to the entity.
 
    These three conditions are best handled separately, as described in
@@ -465,7 +465,7 @@ Abstract
 4.6.2.  Broken Stream
 
    Even if the underlying TCP connection is alive, the peer might never
-   respond to JMX traffic that the entity sends, whether normal jmu's
+   respond to TMX traffic that the entity sends, whether normal jmu's
    or specialized stream-checking traffic such as the application-level
    pings. In this case, it is appropriate for the entity to close a broken stream 
    with an error jmu containing the 'connection-timeout' error.
@@ -491,17 +491,17 @@ Abstract
 
    The attributes of a jmu are defined in the following sections.
 
-4.7.1.  from
+4.7.1. from
 
    The 'from' attribute specifies the .onion domain associated with the
    identity of the entity opening the stream.
    It corresponds with the identity of the user sending the message.
 
-4.7.2 id
+4.7.2. id
    
    Is it needed ?
 
-4.7.5.  version
+4.7.5. version
 
    The inclusion of the version attribute set to a value of at least
    "1.0" signals support for the stream-related protocols defined in
@@ -554,7 +554,7 @@ Abstract
    | from     | JID of initiator         | JID of receiver         |
    | id       | ignored                  | stream identifier       |
    | xml:lang | default language         | default language        |
-   | version  | XMPP 1.0+ supported      | XMPP 1.0+ supported     |
+   | version  | TMX 1.0+ supported      | TMX 1.0+ supported     |
    +----------+--------------------------+-------------------------+
 
 4.9.  Stream Errors
@@ -579,7 +579,7 @@ Abstract
 +-------------------------------------+
 |        Possible errors              |
 +-------------------------------------+
-| Bad Format						  |
+| bad-format						  |
 | conflict                            |
 | connection-timeout                  |
 | host-unknown                        |
