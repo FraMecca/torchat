@@ -1,0 +1,3 @@
+[submodule "include/argparse"]
+	path = include/argparse
+	url = https://github.com/FraMecca/libargparse
