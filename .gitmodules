@@ -1,3 +1,6 @@
 [submodule "include/argparse"]
 	path = include/argparse
 	url = https://github.com/FraMecca/libargparse
+[submodule "include/libConfuse"]
+	path = include/libConfuse
+	url = https://github.com/martinh/libconfuse
