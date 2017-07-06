@@ -45,6 +45,7 @@ fd_write (int fd, char *buf, size_t len)
 int
 fd_read (int fd)
 {
+	// TODO, inizia ad usarla, sposta buf nel prototipo
 	char buf[64] = {0};
 	int rc = read (fd, buf, 64);
 	if (rc == -1) perror ("read");
@@ -111,6 +112,8 @@ void
 connect_to_tor (const char *host, const int port)
 {
 	// initialize proxysocket lib handlers
+	// used to open a connection to the tor daemon
+	// in order to have connections through socks5
 	proxysocket_initialize();
 	proxy = proxysocketconfig_create_direct();
 	/*int verbose = PROXYSOCKET_LOG_DEBUG; // can be removed*/
