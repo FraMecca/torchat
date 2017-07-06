@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 void
-exit_error (char *st)
+exit_error (const char *st)
 {
 	fprintf (stderr, "%s\n", st);
 	exit (EXIT_FAILURE);
