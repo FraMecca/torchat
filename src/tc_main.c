@@ -4,7 +4,7 @@
 #include <signal.h>
 #include "include/argparse/src/argparse.h"
 #include "include/except.h"
-#include "lib/mem.h"
+#include "lib/tc_mem.h"
 #include "lib/tc_event.h"
 #include "lib/tc_sockets.h"
 #include "lib/tc_util.h"

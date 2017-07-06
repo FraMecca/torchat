@@ -11,8 +11,9 @@
 #include <string.h>
 #include <stdio.h>
 
-#include "lib/mem.h"
+#include "lib/tc_mem.h"
 #include "lib/tc_sockets.h"
+#include "lib/tc_util.h"
 
 
 static bool exitFlag = false;
@@ -20,6 +21,8 @@ static bool exitFlag = false;
 void
 stop_loop (int signum)
 {
+	signal (SIGALRM, exit_on_stall);
+	alarm (10);
 	exitFlag = true;
 }
 

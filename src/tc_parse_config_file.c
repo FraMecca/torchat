@@ -11,7 +11,7 @@ extern Except_T ConfigFileNotFound;
 extern Except_T ConfigFileParseError;
 
 void
-parse_config_file (const char *filename, long int *port, long int *torPort)
+parse_config_file (const char *filename, int *port, int *torPort)
 {
 	/* Although the macro used to specify an integer option is called
 	 * CFG_SIMPLE_INT(), it actually expects a long int. On a 64 bit system
@@ -22,12 +22,13 @@ parse_config_file (const char *filename, long int *port, long int *torPort)
 	 * cfg_getint(), this is not a problem as the data types are implicitly
 	 * cast.
 	 */
+	long int _port = 0, _torPort = 0;
 	cfg_opt_t opts[] = {
 		/*CFG_SIMPLE_BOOL("verbose", &verbose),*/
 		/*CFG_SIMPLE_STR("user", &username),*/
 		/*CFG_SIMPLE_FLOAT("delay", &delay),*/
-		CFG_SIMPLE_INT("port", port), // read comment above
-		CFG_SIMPLE_INT("torport", torPort),
+		CFG_SIMPLE_INT("port", &_port), // read comment above
+		CFG_SIMPLE_INT("torport", &_torPort),
 		CFG_END()
 	};
 	cfg_t *cfg;
@@ -37,6 +38,8 @@ parse_config_file (const char *filename, long int *port, long int *torPort)
 
 	if (error == CFG_SUCCESS) {
 		// no error parsing the config file
+		*torPort = _torPort;
+		*port = _port;
 		return;
 	} else if (error == CFG_FILE_ERROR) {
 		RAISE (ConfigFileNotFound);
