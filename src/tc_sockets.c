@@ -13,8 +13,14 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "include/proxysocket/src/proxysocket.h"
 #include "lib/tc_util.h"
 
+static proxysocketconfig proxy = NULL;
+
+/****************************************************************/
+/*                 SOCKET RELATED FUNCTIONS                     */
+/****************************************************************/
 int
 fd_unblock (int fd)
 {
@@ -77,4 +83,44 @@ bind_and_listen (const int portno, int n)
     	// error on listen, check errno
     	return -1;
     }
+}
+
+/****************************************************************/
+/*                 TOR RELATED FUNCTIONS                        */
+/****************************************************************/
+/*void*/
+/*disconnect (const int sock)*/
+/*{*/
+	/*// disconnect from a domain*/
+	/*proxysocket_disconnect(proxy, sock);*/
+	/*close (sock);*/
+/*}*/
+
+/*int*/
+/*open_socket_to_domain(const char *domain, const int portno)*/
+/*{*/
+	/*// connect to an .onion domain*/
+	/*// return socket*/
+	/*// connect*/
+	/*// BLOCKING*/
+	/*char* errmsg;*/
+	/*return proxysocket_connect(proxy, domain, portno, &errmsg);*/
+/*}*/
+
+void
+connect_to_tor (const char *host, const int port)
+{
+	// initialize proxysocket lib handlers
+	proxysocket_initialize();
+	proxy = proxysocketconfig_create_direct();
+	/*int verbose = PROXYSOCKET_LOG_DEBUG; // can be removed*/
+	/*proxysocketconfig_set_logging(proxy, logger, (int*)&verbose);*/
+	proxysocketconfig_use_proxy_dns(proxy, 1); // use TOR for name resolution
+	proxysocketconfig_add_proxy(proxy, PROXYSOCKET_TYPE_SOCKS5, host, port, NULL, NULL);
+}
+
+void
+destroy_proxy_connection ()
+{
+	proxysocketconfig_free(proxy);
 }
