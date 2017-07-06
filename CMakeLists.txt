@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 project(torchat)
 
 # basic settings: c flags, basepath (the repo main directory) is included
-set(CMAKE_C_FLAGS "-Wall -lm -Wno-unused-parameter")
+set(CMAKE_C_FLAGS "-Wall -Wno-unused-parameter")
 set(BASEPATH "${CMAKE_SOURCE_DIR}")
 include_directories("${BASEPATH}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -23,11 +23,12 @@ set_property(TARGET confuse PROPERTY IMPORTED_LOCATION
 # set the executables to be built
 file(GLOB SrcFiles "src/*.c")
 add_executable(torchat ${SrcFiles} include/argparse/src/argparse.c
-	include/except.c)
+	include/except.c include/proxysocket/src/proxysocket.c)
 
 
 # equivalent to -l[lib] in gcc, links the libraries previously built
 target_link_libraries(torchat confuse) 
+target_link_libraries(torchat m) 
 
 # set extra debug flags for debug target 
 IF (${CMAKE_BUILD_TYPE} MATCHES "Debug")

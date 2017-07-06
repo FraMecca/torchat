@@ -497,9 +497,10 @@ Abstract
    identity of the entity opening the stream.
    It corresponds with the identity of the user sending the message.
 
-4.7.2. id
+4.7.2. features
    
-   Is it needed ?
+   The 'features' attribute specifies the features requested/available on a node.
+   See Section 4.10.
 
 4.7.5. version
 
@@ -547,19 +548,18 @@ Abstract
    The following table summarizes the attributes of the jmu
    element.
 
-   +----------+--------------------------+-------------------------+
-   |          | initiating to receiving  | receiving to initiating |
-   +----------+--------------------------+-------------------------+
-   | to       | JID of receiver          | JID of initiator        |
-   | from     | JID of initiator         | JID of receiver         |
-   | id       | ignored                  | stream identifier       |
-   | xml:lang | default language         | default language        |
-   | version  | TMX 1.0+ supported      | TMX 1.0+ supported     |
-   +----------+--------------------------+-------------------------+
+   +-----------+--------------------------+-------------------------+
+   |           | initiating to receiving  | receiving to initiating |
+   +-----------+--------------------------+-------------------------+
+   | to        | JID of receiver          | JID of initiator        |
+   | from      | JID of initiator         | JID of receiver         |
+   | version   | TMX 1.0+ supported       | TMX 1.0+ supported      |
+   | features  | request features         | list of features        |
+   +-----------+--------------------------+-------------------------+
 
 4.9.  Stream Errors
 
-   The root stream element MAY contain an <error/> child element that is
+   The root stream element MAY contain an "error' attribute that is
    qualified by the stream namespace.  The error child SHALL be sent by
    a compliant entity if it perceives that a stream-level error has
    occurred.
@@ -595,4 +595,73 @@ Abstract
 | unsupported-encoding                |
 | unsupported-message-type            |
 | unsupported-version                 |
+| unsupported-feature                 |
 +----------+---------------------------
+
+4.10     Features 
+   
+   A jmu may contain a 'features' attribute.
+   "features" supported by a node acts as an extension to the protocol.
+   A feature is just a simple key-value inside the JSON stream of the jmu
+   and is interpreted by the node implementing the feature independently.
+
+4.10.1  Request a feature
+
+   A node requesting a feature to another node in order to initiate
+   an exchange sends a jmu containing the attribute 'feature' with the
+   feature requested as a value.
+   
+   I: {
+       'TMX version':1',
+       'features':'auth',
+       'from':'juliet.onion' 
+      }
+
+   The receiving entity then replies by sending a jmu of its
+   own to the initiating node with the supported feature.
+
+   R: {
+      'version':1,
+	  'features':'auth',
+	  'from':'romeo.onion'
+      }
+	
+   Or the receiving entity then replies by sending a jmu of its
+   own to the initiating node with the unsupported feature.
+
+   R: {
+      'version':1,
+	  'features':'',
+	  'from':'romeo.onion'
+      }
+
+   Or a node may request the list of features of another node.
+
+   I: {
+       'TMX version':1',
+       'features':'',
+       'from':'juliet.onion' 
+      }
+
+   The receiving entity then replies by sending a jmu of its
+   own to the initiating node with the supported feature.
+
+   R: {
+      'version':1,
+	  'features':'auth,presence',
+	  'from':'romeo.onion'
+      }
+
+4.10.2 Summary of possible key-value combinations
+
+   +-----------+--------------------------+---------------------------------- +
+   |           | initiating to receiving  | receiving to initiating           |
+   +-----------+--------------------------+-----------------------------------+
+   | request   | name of the feature      | * empty value if not supported    |
+   | specific  | as a value in the json   | * name of the feature as value if |
+   | feature   |                          |  supported                        |
+   +-----------+--------------------------+-----------------------------------+
+   | request   | empty string as value    | reply with comma divided          |
+   | list of   | of requesty key in json  | features inside as value of key   |
+   | features  | request features         |                                   |
+   +-----------+--------------------------+-----------------------------------+

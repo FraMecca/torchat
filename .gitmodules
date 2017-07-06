@@ -4,3 +4,6 @@
 [submodule "include/libConfuse"]
 	path = include/libConfuse
 	url = https://github.com/martinh/libconfuse
+[submodule "include/proxysocket"]
+	path = include/proxysocket
+	url = https://github.com/brechtsanders/proxysocket
