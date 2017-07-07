@@ -15,6 +15,7 @@
 #include <stdio.h>
 #include "include/proxysocket/src/proxysocket.h"
 #include "lib/tc_util.h"
+#include "lib/tc_streams.h"
 
 static proxysocketconfig proxy = NULL;
 
@@ -32,28 +33,6 @@ fd_unblock (int fd)
     if (-1 == (flags = fcntl(fd, F_GETFL, 0)))
         flags = 0;
     return fcntl(fd, F_SETFL, flags | O_NONBLOCK);
-}
-
-int
-fd_write (int fd, char *buf, size_t len)
-{
-	int rc = write (fd, buf, len);
-	if (rc <= 0) perror ("write");
-	return rc;
-}
-
-int
-fd_read (int fd)
-{
-	// TODO, inizia ad usarla, sposta buf nel prototipo
-	char buf[64] = {0};
-	int rc = read (fd, buf, 64);
-	if (rc == -1) perror ("read");
-	if (rc != 0) {
-		buf[64] = '\0';
-		fprintf (stdout, "%d: %s\n", fd, buf);
-	}
-	return rc;
 }
 
 int

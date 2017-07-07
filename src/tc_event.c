@@ -94,7 +94,7 @@ void event_loop (const int listenSock)
            		   we are running in edge-triggered mode
            		   and won't get a notification again for the same data. */
            		int infd = events[i].data.fd;
-      			int cr = fd_read (infd);
+      			int cr = printf ("READ\n");//fd_read (infd);
       			if (!cr) close (infd); //else fd_write (infd, buf, strlen(buf));
             }
         }
