@@ -8,6 +8,7 @@
 #include "lib/tc_event.h"
 #include "lib/tc_sockets.h"
 #include "lib/tc_util.h"
+#include "lib/tc_handle.h"
 #include "lib/tc_conffile.h"
 
 #ifdef NDEBUG
@@ -72,6 +73,7 @@ main (int argc, char **argv)
 	event_loop (listenSock);
 
 	destroy_proxy_connection ();
+	tc_destroy_handlers ();
 	
 	return 0;
 }

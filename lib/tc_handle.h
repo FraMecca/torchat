@@ -2,9 +2,9 @@
 
 enum type { FILE_T, MESSAGE_T };
 struct vfsTable_t {
-	int (* tc_proto_send) (struct vfsTable_t * , char * , size_t );
-	int (* tc_proto_recv) (struct vfsTable_t * , char * ); 
-	int (* tc_proto_close) (struct vfsTable_t *); 
+	int (* tc_proto_send)  (int, unsigned char * , size_t );
+	int (* tc_proto_recv)  (int, unsigned char * ); 
+	int (* tc_proto_close) (int); 
 	int fd;
 	enum type tc_type;
 	void *tc_data;
@@ -14,3 +14,5 @@ struct vfsTable_t {
 void insert_handle (struct vfsTable_t *t);
 void remove_handle (struct vfsTable_t *t);
 struct vfsTable_t * get_handle (int k);
+struct vfsTable_t * tc_query (int k);
+void tc_destroy_handlers ();

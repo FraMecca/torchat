@@ -15,7 +15,6 @@
 #include <stdio.h>
 #include "include/proxysocket/src/proxysocket.h"
 #include "lib/tc_util.h"
-#include "lib/tc_streams.h"
 
 static proxysocketconfig proxy = NULL;
 

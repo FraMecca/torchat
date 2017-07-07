@@ -11,10 +11,11 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "lib/tc_handle.h"
 #include "lib/tc_mem.h"
 #include "lib/tc_sockets.h"
+#include "lib/tc_messages.h"
 #include "lib/tc_util.h"
-
 
 static bool exitFlag = false;
 
@@ -24,6 +25,35 @@ stop_loop (int signum)
 	signal (SIGALRM, exit_on_stall);
 	alarm (10);
 	exitFlag = true;
+}
+
+static int
+tc_dispatch (int fd)
+{
+	// first check if fd present in one of our handlers
+	// if not, determine type of stream and attach vtfs
+	// then read content
+	// and start routine based on content of jmu
+	
+	// TODO: make a generic attach function and further abstraction to initialize or check vfs
+	  
+	/*struct vfsTable_t *t = get_handle (fd);	*/
+	/*int nfd;*/
+	/*if (t == NULL) { */
+		/*// should determine type*/
+		/*[>tc_determine_type (<]*/
+		/*nfd = tc_message_attach (fd);*/
+		/*[>assert (nfd != -1);<]*/
+	/*}*/
+	
+	// does not work if no tc_message_attach,
+	// correct in the morning
+	unsigned char buf[MSIZEMAX] = {0};
+	int rc = tc_mrecv (fd, buf);
+	if (rc == 0) tc_mclose (fd);
+	else { fprintf (stdout, "%s\n", buf); tc_msend (fd, (unsigned char *)"wuuuuuuut", 9); }
+
+	return 1;
 }
 
 void event_loop (const int listenSock)
@@ -94,8 +124,9 @@ void event_loop (const int listenSock)
            		   we are running in edge-triggered mode
            		   and won't get a notification again for the same data. */
            		int infd = events[i].data.fd;
-      			int cr = printf ("READ\n");//fd_read (infd);
-      			if (!cr) close (infd); //else fd_write (infd, buf, strlen(buf));
+           		// now let torchat proto handle the fd
+      			int cr = tc_dispatch (infd); 
+      			assert (cr != -1);
             }
         }
     }

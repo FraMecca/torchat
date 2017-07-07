@@ -31,7 +31,8 @@ static inline void
 autoptr_cleanup_generic_gfree (void *p)
 {
   void **pp = (void**)p;
-  free (*pp);
+  if (p != NULL) free (*pp); 
+  // TODO: use FREE, MALLOC
 }
 
 static inline void
