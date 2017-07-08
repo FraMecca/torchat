@@ -37,14 +37,15 @@ tc_dispatch (int fd)
 	
 	// TODO: make a generic attach function and further abstraction to initialize or check vfs
 	  
-	/*struct vfsTable_t *t = get_handle (fd);	*/
-	/*int nfd;*/
-	/*if (t == NULL) { */
-		/*// should determine type*/
+	struct vfsTable_t *t = get_handle (fd);	
+	int nfd;
+	if (t == NULL) { 
+		// should determine type
 		/*[>tc_determine_type (<]*/
-		/*nfd = tc_message_attach (fd);*/
+		nfd = tc_message_attach (fd);
 		/*[>assert (nfd != -1);<]*/
-	/*}*/
+		fprintf (stderr, "TODO: generalize attch fn\n");
+	}
 	
 	// does not work if no tc_message_attach,
 	// correct in the morning
