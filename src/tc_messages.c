@@ -41,15 +41,13 @@ tc_msend (int fd, unsigned char *buf, size_t len)
 {
 	// implement send for torchat message json units
 	struct vfsTable_t *t = tc_query (fd);
-	char buf2[4 + len];
+	char buf2[2 + len];
 	// size at begin of the message
 	buf2[0] = len & 0xFF;
 	buf2[1] = len >> 8;
-	buf2[2] = len >> 16;
-	buf2[3] = len >> 24;
-	memcpy (buf2 + 4, buf, len);
+	memcpy (buf2 + 2, buf, len);
 
-	int rc = write (t->fd, buf2, len + 4);
+	int rc = write (t->fd, buf2, len + 2);
 	return rc;
 }
 
@@ -58,11 +56,11 @@ tc_mrecv (int fd, unsigned char *buf)
 {
 	// implement recv for torchat message json units
 	struct vfsTable_t *t = tc_query (fd);
-	char tbuf[2];
-	int rc = read (t->fd, tbuf, 4);
+	/*char tbuf[2];*/
+	uint16_t size;
+	int rc = read (t->fd, &size, sizeof (uint16_t));
 	if (rc <= 0) return rc;
 	// now convert size that is noted at begin of the message 
-	uint32_t size = (tbuf[0] - '0') | (tbuf[1] - '0') << 8 | (tbuf[2] - '0') << 16 | (tbuf[3] - '0') << 24 ;
 	// and use it to read correctly
 	if (size > MSIZEMAX) { errno = EMSGSIZE; return -1; } 
 	rc = read (t->fd, buf, size);

@@ -1,4 +1,4 @@
-#define MSIZEMAX  16 * 16 * 16 * 16
+#define MSIZEMAX  (16 * 16 * 16 * 16) * 2 / 3
 
 int tc_mrecv  (int fd, unsigned char *buf);
 int tc_mclose (int fd);
