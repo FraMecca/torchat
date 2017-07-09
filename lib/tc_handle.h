@@ -11,8 +11,7 @@ struct vfsTable_t {
 	UT_hash_handle hh;
 };
 
-void insert_handle (struct vfsTable_t *t);
-void remove_handle (struct vfsTable_t *t);
-struct vfsTable_t * get_handle (int k);
+void tc_insert_handle (struct vfsTable_t *t);
+void tc_remove_handle (struct vfsTable_t *t);
 struct vfsTable_t * tc_query (int k);
 void tc_destroy_handlers ();

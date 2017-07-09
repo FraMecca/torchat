@@ -9,15 +9,14 @@
 
 static struct vfsTable_t *head = NULL; // use an hash table
 
-// TODO: tc_ prefix and new names
 void
-insert_handle (struct vfsTable_t *t)
+tc_insert_handle (struct vfsTable_t *t)
 {
 	HASH_ADD_INT (head, fd, t);
 }
 
 void
-remove_handle (struct vfsTable_t *t)
+tc_remove_handle (struct vfsTable_t *t)
 {
 	HASH_DEL (head, t);
 }
@@ -33,8 +32,9 @@ get_handle (int k)
 struct vfsTable_t *
 tc_query (int k)
 {
+	// query the hash table for a structure
+	// if null it is allocated by the dispatcher 
 	struct vfsTable_t *t = get_handle (k);
-	assert (t != NULL);
 	return t;
 }
 

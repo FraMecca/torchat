@@ -30,9 +30,9 @@ tc_message_attach (int fd)
 	t->tc_proto_recv = tc_mrecv;
 	t->tc_data = NULL;
 	t->fd = fd;
-    
+   
     int ret = t->fd;
-    insert_handle (t);
+    tc_insert_handle (t);
 	return ret;
 }
 
