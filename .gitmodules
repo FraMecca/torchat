@@ -10,3 +10,6 @@
 [submodule "include/uthash"]
 	path = include/uthash
 	url = https://github.com/troydhanson/uthash
+[submodule "include/json"]
+	path = include/json
+	url = https://github.com/DaveGamble/cJSON

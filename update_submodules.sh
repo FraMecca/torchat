@@ -10,4 +10,5 @@ cd ../uthash
 git pull origin master
 cd ../libConfuse
 git pull origin master
-
+cd ../json
+git pull origin master

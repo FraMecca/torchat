@@ -37,7 +37,7 @@ tc_message_attach (int fd)
 }
 
 int
-tc_msend (int fd, unsigned char *buf, size_t len)
+tc_msend (int fd, char *buf, size_t len)
 {
 	// implement send for torchat message json units
 	struct vfsTable_t *t = tc_query (fd);
@@ -64,6 +64,7 @@ tc_mrecv (int fd, unsigned char *buf)
 	// and use it to read correctly
 	if (size > MSIZEMAX) { errno = EMSGSIZE; return -1; } 
 	rc = read (t->fd, buf, size);
+	assert (rc == -1 || size == rc);
 	return rc;
 }
 
