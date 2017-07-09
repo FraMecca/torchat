@@ -33,9 +33,8 @@ struct vfsTable_t *
 tc_query (int k)
 {
 	// query the hash table for a structure
-	// if null?
+	// if null it is allocated by the dispatcher 
 	struct vfsTable_t *t = get_handle (k);
-	assert (t != NULL);
 	return t;
 }
 

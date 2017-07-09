@@ -16,6 +16,10 @@
 #include "lib/tc_sockets.h"
 #include "lib/tc_messages.h"
 #include "lib/tc_util.h"
+#include "lib/tc_event.h"
+ 
+#define TC_TYPE_MESSAGE 'm'
+#define TC_TYPE_FILE	'f'
 
 static bool exitFlag = false;
 
@@ -28,31 +32,69 @@ stop_loop (int signum)
 }
 
 static int
+tc_attach (int fd)
+{
+	// determine type of message received
+	// and attach to the correct handler
+	//
+	// read the first message (the opening one)
+	// in which the type is specified
+	// we use tc_message_attach
+	// because we are sure that the first json is a message
+	unsigned char buf[MSIZEMAX] = {0}; 
+	int tfd = tc_message_attach(fd);
+	int rc = tc_mrecv(fd, buf);
+	// TODO determine if the fd must be closed here
+	/*if (rc == 0) tc_mclose(fd);*/
+
+	// check type here
+	// TODO implement type checking, now is just a char
+	// to determine type, read and parse the json
+	// one of the tokens is "open": "type"
+	char type = TC_TYPE_MESSAGE;
+	int nfd;
+
+	if (type == TC_TYPE_MESSAGE){
+		nfd = tc_message_attach(tfd);
+	} else if (type == TC_TYPE_FILE) {
+		// TODO implement file handle functions
+		/*nfd = tc_file_attach(tfd);*/
+	} else {
+		// TODO notify error properly
+		fprintf(stderr, "Invalid file type: %c\n", type);
+		return -1;
+	}
+	return nfd;
+}
+
+static int
 tc_dispatch (int fd)
 {
 	// first check if fd present in one of our handlers
 	// if not, determine type of stream and attach vtfs
 	// then read content
 	// and start routine based on content of jmu
-	
+
 	// TODO: make a generic attach function and further abstraction to initialize or check vfs
-	  
-	struct vfsTable_t *t = get_handle (fd);	
+
+	struct vfsTable_t *t = tc_query (fd);	
 	int nfd;
 	if (t == NULL) { 
 		// should determine type
 		/*[>tc_determine_type (<]*/
-		nfd = tc_message_attach (fd);
-		/*[>assert (nfd != -1);<]*/
-		fprintf (stderr, "TODO: generalize attch fn\n");
-	}
-	
+		/*nfd = tc_message_attach (fd);*/
+		/*[>[>assert (nfd != -1);<]<]*/
+		/*fprintf (stderr, "TODO: generalize attch fn\n");*/
+		nfd = tc_attach(fd);
+
+	} else { nfd = fd; }
+
 	// does not work if no tc_message_attach,
 	// correct in the morning
 	unsigned char buf[MSIZEMAX] = {0};
-	int rc = tc_mrecv (fd, buf);
-	if (rc == 0) tc_mclose (fd);
-	else { fprintf (stdout, "%s\n", buf); tc_msend (fd, (unsigned char *)"wuuuuuuut", 9); }
+	int rc = tc_mrecv (nfd, buf);
+	if (rc == 0) tc_mclose (nfd);
+	else { fprintf (stdout, "%s\n", buf); tc_msend (nfd, (unsigned char *)"wuuuuuuut", 9); }
 
 	return 1;
 }
