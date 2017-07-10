@@ -2,9 +2,9 @@
 
 enum type { FILE_T, MESSAGE_T };
 struct vfsTable_t {
-	int (* tc_proto_send)  (int, unsigned char * , size_t );
-	int (* tc_proto_recv)  (int, unsigned char * ); 
-	int (* tc_proto_close) (int); 
+	int (* send)  (int, void *, size_t );
+	int (* recv)  (int); 
+	int (* close) (int); 
 	int fd;
 	enum type tc_type;
 	void *tc_data;

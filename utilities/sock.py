@@ -15,10 +15,14 @@ def torchat_recv (sock):
     print (sizeToRead, end = ':')
     print (s.recv (sizeToRead))
 
+s  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect (('localhost', int (sys.argv[1])))
+s.settimeout(1)
 while True:
-    s  = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect (('localhost', int (sys.argv[1])))
     # input ()
     sleep (0.1)
     torchat_send (s, sys.argv[2], int (sys.argv[3]))
-    torchat_recv (s)
+    try:
+        torchat_recv (s)
+    except socket.timeout:
+        print ('timeout of socket ', s)

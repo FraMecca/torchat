@@ -71,7 +71,8 @@ main (int argc, char **argv)
 	signal (SIGINT, stop_loop);
 	autoclosesocket int listenSock = bind_and_listen (port, MAXCONN);
 	event_loop (listenSock);
-
+	
+	tc_messages_destroy ();
 	destroy_proxy_connection ();
 	tc_destroy_handlers ();
 	

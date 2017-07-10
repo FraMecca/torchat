@@ -23,7 +23,8 @@ set_property(TARGET confuse PROPERTY IMPORTED_LOCATION
 # set the executables to be built
 file(GLOB SrcFiles "src/*.c")
 add_executable(torchat ${SrcFiles} include/argparse/src/argparse.c
-	include/except.c include/proxysocket/src/proxysocket.c)
+	include/except.c include/proxysocket/src/proxysocket.c
+	include/json/cJSON.c)
 
 
 # equivalent to -l[lib] in gcc, links the libraries previously built

@@ -31,6 +31,24 @@ stop_loop (int signum)
 	exitFlag = true;
 }
 
+int
+tc_read_open_jmu (int fd, unsigned char *buf)
+{
+	// read the first jmu that is sent
+	// when another node wants to start a communication
+	// read the jmu 
+	// in order to understand the type
+	uint16_t size;
+	int rc = read (fd, &size, sizeof (uint16_t));
+	if (rc <= 0) return rc;
+	// now convert size that is noted at begin of the message 
+	// and use it to read correctly
+	if (size > MSIZEMAX) { errno = EMSGSIZE; return -1; } 
+	rc = read (fd, buf, size);
+	assert (rc == -1 || size == rc);
+	return rc;
+}
+
 static int
 tc_attach (int fd)
 {
@@ -39,11 +57,9 @@ tc_attach (int fd)
 	//
 	// read the first message (the opening one)
 	// in which the type is specified
-	// we use tc_message_attach
-	// because we are sure that the first json is a message
 	unsigned char buf[MSIZEMAX] = {0}; 
-	int tfd = tc_message_attach(fd);
-	int rc = tc_mrecv(fd, buf);
+	/*int tfd = tc_message_attach(fd);*/
+	int rc = tc_read_open_jmu (fd, buf);
 	// TODO determine if the fd must be closed here
 	/*if (rc == 0) tc_mclose(fd);*/
 
@@ -55,16 +71,23 @@ tc_attach (int fd)
 	int nfd;
 
 	if (type == TC_TYPE_MESSAGE){
-		nfd = tc_message_attach(tfd);
+		nfd = tc_message_attach(fd); // also sends an ack to sender
 	} else if (type == TC_TYPE_FILE) {
 		// TODO implement file handle functions
-		/*nfd = tc_file_attach(tfd);*/
+		/*nfd = tc_file_attach(fd);*/
 	} else {
 		// TODO notify error properly
 		fprintf(stderr, "Invalid file type: %c\n", type);
 		return -1;
 	}
 	return nfd;
+}
+
+static int
+tc_send_ack (struct vfsTable_t *t)
+{
+	int rc = t->send (t->fd, (unsigned char*) "{\"version\":\"1\", \"ack\":True, \"from\":\"demo\"}", 42);
+	return rc;
 }
 
 static int
@@ -75,26 +98,21 @@ tc_dispatch (int fd)
 	// then read content
 	// and start routine based on content of jmu
 
-	// TODO: make a generic attach function and further abstraction to initialize or check vfs
-
 	struct vfsTable_t *t = tc_query (fd);	
 	int nfd;
 	if (t == NULL) { 
 		// should determine type
-		/*[>tc_determine_type (<]*/
-		/*nfd = tc_message_attach (fd);*/
-		/*[>[>assert (nfd != -1);<]<]*/
-		/*fprintf (stderr, "TODO: generalize attch fn\n");*/
 		nfd = tc_attach(fd);
-
-	} else { nfd = fd; }
-
-	// does not work if no tc_message_attach,
-	// correct in the morning
-	unsigned char buf[MSIZEMAX] = {0};
-	int rc = tc_mrecv (nfd, buf);
-	if (rc == 0) tc_mclose (nfd);
-	else { fprintf (stdout, "%s\n", buf); tc_msend (nfd, (unsigned char *)"wuuuuuuut", 9); }
+		t = tc_query (fd);	
+		if (nfd == -1) return -1;
+		// now send ack
+		tc_send_ack (t);
+	} else {
+		// this is NOT an opening jmu, handle it
+		int rc = t->recv (t->fd);
+		assert (rc != -1); // TODO check errno
+		if (rc == 0) t->close (t->fd);
+	}
 
 	return 1;
 }
