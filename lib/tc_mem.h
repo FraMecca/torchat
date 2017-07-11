@@ -24,6 +24,7 @@ myfree (struct manychar **ptr)
  *
  */
 
+#pragma once
 #include <stdlib.h>
 #include <unistd.h>
 

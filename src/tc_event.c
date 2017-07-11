@@ -18,9 +18,6 @@
 #include "lib/tc_util.h"
 #include "lib/tc_event.h"
  
-#define TC_TYPE_MESSAGE 'm'
-#define TC_TYPE_FILE	'f'
-
 static bool exitFlag = false;
 
 void
@@ -70,10 +67,13 @@ tc_attach (int fd)
 	char type = TC_TYPE_MESSAGE;
 	int nfd;
 
-	if (type == TC_TYPE_MESSAGE){
+	if (type == MESSAGE_T){
 		nfd = tc_message_attach(fd); // also sends an ack to sender
-	} else if (type == TC_TYPE_FILE) {
+	} else if (type == FILE_T) {
 		// TODO implement file handle functions
+		/*nfd = tc_file_attach(fd);*/
+	} else if (type == CLIENT_T) {
+		tc_client_attach (fd);
 		/*nfd = tc_file_attach(fd);*/
 	} else {
 		// TODO notify error properly
@@ -86,7 +86,10 @@ tc_attach (int fd)
 static int
 tc_send_ack (struct vfsTable_t *t)
 {
-	int rc = t->send (t->fd, (unsigned char*) "{\"version\":\"1\", \"ack\":True, \"from\":\"demo\"}", 42);
+	char buf[] = "{\"version\":\"1\", \"ack\":true, \"from\":\"demo\"}";
+	customfree (destroy_json) JSON *j = json_parse (buf);
+	assert (j != NULL);
+	int rc = t->send (t->fd, j);
 	return rc;
 }
 

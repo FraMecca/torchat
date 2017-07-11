@@ -1,8 +1,10 @@
-#include "../include/uthash/src/uthash.h"
+#pragma once
+#include "include/uthash/src/uthash.h"
+#include "lib/tc_json.h"
 
-enum type { FILE_T, MESSAGE_T };
+enum type { FILE_T, MESSAGE_T , CLIENT_T};
 struct vfsTable_t {
-	int (* send)  (int, void *, size_t );
+	int (* send)  (int, JSON *);
 	int (* recv)  (int); 
 	int (* close) (int); 
 	int fd;

@@ -10,6 +10,7 @@
 #include "lib/tc_util.h"
 #include "lib/tc_handle.h"
 #include "lib/tc_conffile.h"
+#include "lib/tc_messages.h"
 
 #ifdef NDEBUG
 	#define CONFIG_FILE "GET_HOME" // TODO: how to get home path?

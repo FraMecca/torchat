@@ -9,26 +9,16 @@
 #include <assert.h>
 #include <errno.h>
 
-#include "include/json/cJSON.h"
 #include "lib/tc_handle.h"
 #include "lib/tc_mem.h"
 #include "lib/tc_sockets.h"
 #include "lib/tc_util.h"
 #include "lib/tc_messages.h"
-
-#define JSON cJSON
-#define parse(json) cJSON_Parse(json)
-
-static inline void
-destroy_json (cJSON **j)
-{
-	cJSON_Delete(*j);
-}
+#include "lib/tc_json.h"
 
 /* MESSAGE TYPES
  * all the functions to handle messages in torchatproto
  */
-static void * get (cJSON *json, char *k);
 
 /************* QUEUE *************/
 
@@ -111,15 +101,32 @@ static struct tc_message_t *
 tc_message_build (JSON *j)
 {
 	struct tc_message_t *m = malloc (sizeof (struct tc_message_t));
-	m->id = strdup((char *) get (j, "from"));
-	m->message = strdup((char *) get (j, "message"));
+	m->id = strdup((char *) json_get (j, "from"));
+	m->message = strdup((char *) json_get (j, "message"));
 	return m;
 } 
 
-int
-tc_msend (int fd, void *buf, size_t len)
+static bool
+check_json_validity (JSON *j)
 {
+	if (json_get (j, "from") == NULL || json_get (j, "message") == NULL || 
+			json_get (j, "port") > 0) || json_length(j) != 3){
+		return false;
+	}
+	return true;
+}
+
+int
+tc_msend (int fd, JSON *j)
+{
+	// check json
+	if (!check_json_validity(j)){
+		errno = EOPNOTSUPP;
+		return -1;
+	}
 	// implement send for torchat message json units
+	autofree char *buf = json_dump (j);
+	size_t len = strlen (buf);
 	struct vfsTable_t *t = tc_query (fd);
 	char buf2[2 + len];
 	// size at begin of the message
@@ -147,7 +154,7 @@ tc_mrecv (int fd)
 	// null terminated for the parse json function
 	buf[size] = '\0';
 	// parse the buffer, return a datastruct
-	customfree(destroy_json) JSON *j = parse(buf);
+	customfree(destroy_json) JSON *j = json_parse(buf);
 	if (j == NULL) {
 		// wrong json format
 		errno = EPROTOTYPE;
@@ -169,34 +176,3 @@ tc_mclose (int fd)
 	// no check for error
 	return 0;
 }
-
-/************  JSON  ************/
-
-static void *
-get (cJSON *json, char *k)
-{
-	/*cJSON *j = cJSON_CreateObject ();*/
-	/*cJSON_AddStringToObject (j, "msg", "msgV");*/
-	/*cJSON_AddNumberToObject (j, "num", 1);*/
-	cJSON *j = json->child;
-	// no json pointers
-	while (j && (strcmp (j->string, k) != 0)) j = j->next;
-	if (!j) return NULL;
-
-	switch (j->type) {
-		// no nested json
-		case cJSON_String:
-			return j->valuestring;
-        case cJSON_False:
-        case cJSON_True:
-        case cJSON_Number:
-        	return (void *) &j->valueint;
-        /*case cJSON_NULL:*/
-        /*case cJSON_Raw:*/
-        /*case cJSON_Array:*/
-        /*case cJSON_Object:*/
-        default:
-        	return NULL;
-    }
-}
-

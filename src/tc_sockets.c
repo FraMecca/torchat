@@ -35,6 +35,21 @@ fd_unblock (int fd)
 }
 
 int
+fd_connect (char *address, int port)
+{
+    int sock;
+    struct sockaddr_in server;
+    sock = socket(AF_INET , SOCK_STREAM , 0);
+    assert (sock != -1);
+    server.sin_addr.s_addr = inet_addr(addr);
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+ 
+    connect(sock , (struct sockaddr *)&server , sizeof(server));
+    return sock;
+}
+
+int
 bind_and_listen (const int portno, int n)
 {
 	// this functions simply wraps
