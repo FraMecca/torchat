@@ -4,6 +4,7 @@
 #include <strings.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <stdbool.h>
 #include <time.h>
@@ -41,7 +42,7 @@ fd_connect (char *address, int port)
     struct sockaddr_in server;
     sock = socket(AF_INET , SOCK_STREAM , 0);
     assert (sock != -1);
-    server.sin_addr.s_addr = inet_addr(addr);
+    server.sin_addr.s_addr = inet_addr(address);
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
  

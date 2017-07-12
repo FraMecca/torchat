@@ -15,6 +15,7 @@
 #include "lib/tc_mem.h"
 #include "lib/tc_sockets.h"
 #include "lib/tc_messages.h"
+#include "lib/tc_client.h"
 #include "lib/tc_util.h"
 #include "lib/tc_event.h"
  
@@ -29,7 +30,7 @@ stop_loop (int signum)
 }
 
 int
-tc_read_open_jmu (int fd, unsigned char *buf)
+tc_read_open_jmu (int fd, char *buf)
 {
 	// read the first jmu that is sent
 	// when another node wants to start a communication
@@ -46,6 +47,18 @@ tc_read_open_jmu (int fd, unsigned char *buf)
 	return rc;
 }
 
+static enum type
+get_type (char *buf)
+{
+	// TODO of course, improve
+	customfree (destroy_json) JSON *j = json_parse (buf);
+	if (j == NULL) return -1;
+	if (json_get (j, "auth") != NULL && json_get (j, "to") != NULL) {
+		return CLIENT_T;
+	} else {
+		return MESSAGE_T;
+	}
+}
 static int
 tc_attach (int fd)
 {
@@ -54,7 +67,7 @@ tc_attach (int fd)
 	//
 	// read the first message (the opening one)
 	// in which the type is specified
-	unsigned char buf[MSIZEMAX] = {0}; 
+	char buf[MSIZEMAX] = {0}; 
 	/*int tfd = tc_message_attach(fd);*/
 	int rc = tc_read_open_jmu (fd, buf);
 	// TODO determine if the fd must be closed here
@@ -64,7 +77,7 @@ tc_attach (int fd)
 	// TODO implement type checking, now is just a char
 	// to determine type, read and parse the json
 	// one of the tokens is "open": "type"
-	char type = TC_TYPE_MESSAGE;
+	enum type type = get_type (buf);
 	int nfd;
 
 	if (type == MESSAGE_T){

@@ -110,7 +110,7 @@ static bool
 check_json_validity (JSON *j)
 {
 	if (json_get (j, "from") == NULL || json_get (j, "message") == NULL || 
-			json_get (j, "port") > 0) || json_length(j) != 3){
+			json_get (j, "port") == NULL || json_length(j) != 3){
 		return false;
 	}
 	return true;

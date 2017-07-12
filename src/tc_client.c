@@ -13,7 +13,11 @@
 #include "lib/tc_client.h"
 #include "lib/tc_json.h"
 
-struct peersTable_t;
+struct peersTable_t {
+	struct vfsTable_t *t;
+	char *id;
+	UT_hash_handle hh;
+};
 void peer_insert_handle (struct peersTable_t *p);
 void peer_remove_handle (struct peersTable_t *p);
 struct peersTable_t *peer_query (char *k);
@@ -67,11 +71,12 @@ tc_csend (int fd, JSON *j)
 }
 
 static JSON *
-create_message_jmu (JSON *src, int port)
+create_message_jmu (JSON *src, int port, char* msg)
 {
 	JSON *dst = JSON_new ();
 	JSON_add_int (dst, "port", port);
 	JSON_add_str (dst, "from", "DEMO");
+	JSON_add_str (dst, "message", msg);
 
 	return dst;
 }
@@ -103,12 +108,14 @@ tc_crecv (int fd)
 	// act on command TODO
 	// should switch on commands
 	char *id = (char *) json_get (j, "to");
+	char *msg = (char *) json_get (j, "message");
 	int port = *(int *)json_get (j, "port");
-	JSON *nj = create_message_jmu (j, port);
+	JSON *nj = create_message_jmu (j, port, msg);
 	struct peersTable_t *p = peer_query (id);
 	if (p == NULL) {
 		int nfd = fd_connect (id, port);
 		peer_insert_handle (create_peerTable (id, nfd));
+		assert (p);
 		p = peer_query (id);
 	}
 	p->t->send (p->t->fd, nj); 
@@ -129,11 +136,11 @@ tc_cclose (int fd)
 }
 
 /************* HASH TABLE *************/
-// map id -> vtfs_table
-struct peersTable_t {
-	struct vtfs_table_t *t;
-	char *id;
-};
+// map id -> vfs_table
+/*struct peersTable_t {*/
+	/*struct vfs_table_t *t;*/
+	/*char *id;*/
+/*};*/
 
 struct peersTable_t *
 create_peerTable (char *id, int sock)
@@ -141,7 +148,8 @@ create_peerTable (char *id, int sock)
 	struct peersTable_t *p = malloc (sizeof (struct peersTable_t));
 	p->id = strdup (id);
 	// TODO: not only for tc_messages 
-	struct vtfs_table_t *t =  tc_attach (sock);
+	int nfd = tc_message_attach (sock);
+	struct vfsTable_t *t =  tc_query (nfd);
 	p->t =  t;
 	return p;
 }
@@ -151,7 +159,7 @@ static struct peersTable_t *head = NULL; // use an hash table
 void
 peer_insert_handle (struct peersTable_t *p)
 {
-	HASH_ADD_STR (head, id, t);
+	HASH_ADD_STR (head, id, p);
 }
 
 void
@@ -164,7 +172,7 @@ struct peersTable_t *
 peer_query (char *k)
 {
 	struct peersTable_t *p;
-	HASH_FIND_INT (head, &k, p);
+	HASH_FIND_STR (head, k, p);
 	return p; // null if not exist
 }
 
