@@ -113,7 +113,7 @@ tc_crecv (int fd)
 	JSON *nj = create_message_jmu (j, port, msg);
 	struct peersTable_t *p = peer_query (id);
 	if (p == NULL) {
-		int nfd = fd_connect (id, port);
+		int nfd = fd_connect (id, port); // TODO error check
 		peer_insert_handle (create_peerTable (id, nfd));
 		assert (p);
 		p = peer_query (id);

@@ -101,7 +101,11 @@ static struct tc_message_t *
 tc_message_build (JSON *j)
 {
 	struct tc_message_t *m = malloc (sizeof (struct tc_message_t));
-	m->id = strdup((char *) json_get (j, "from"));
+	// THIS IS WRONG
+	// 'from' is the current id of the server, NOT given by the client
+	// 'to' is the id of the peer to which the message must be sent
+	/*m->id = strdup((char *) json_get (j, "from"));*/
+	m->id = strdup("this server"); // TODO get local ID from tor
 	m->message = strdup((char *) json_get (j, "message"));
 	return m;
 } 
