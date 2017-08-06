@@ -1,4 +1,3 @@
-from server import AbstractSession
 import json
 import websockets
 import asyncio
@@ -28,7 +27,7 @@ class AbstractSession:
     def errorState(self):
         return self.errorState
 
-    async def waitForAnotherJMU (self. websocket):
+    async def waitForAnotherJMU (self, websocket):
         buf = await self.websocket.recv()
         try:
             self.currentJSON = json.loads(buf)
@@ -55,7 +54,7 @@ class MessageSession(AbstractSession):
             self.currentJSON = j
             return True
 
-    def waitForAnotherJMU(self, websocket):
+    async def waitForAnotherJMU(self, websocket):
         super().waitForAnotherJMU(websocket)
         self.storeMessage()
 
@@ -64,7 +63,7 @@ class MessageSession(AbstractSession):
         j = json.dumps(d)
         self.websocket.send(j) 
 
-    def self.storeMessage(self):
+    def storeMessage(self):
         global queue
         queue.append(self.formatMsg())
 
@@ -94,7 +93,7 @@ class ClientSession(AbstractSession):
         j = self.currentJSON
         cmd = j['cmd']
         if cmd == 'getmsg':
-            global queue:
+            global queue
             sendBack = queue.pop(0)
         elif cmd == 'send':
             # TODO: not only message sessions
