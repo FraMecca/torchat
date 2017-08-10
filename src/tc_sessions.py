@@ -6,62 +6,79 @@ queue = list()
 idDict = dict()
 
 class AbstractSession:
+
+    @staticmethod
+    def is_openJSON_acceptable(jsonBuf):
+        # may throw also exceptions from json module
+        d = json.loads(jsonBuf)
+        if type(d) is not dict or len(d) != 2 or 'open' not in d or 'from' not in d:
+            raise ValueError("Not a valid JSON")
+        return d
+
     def __init__(self, json, websocket):
-        self.currentJSON = ""
-        self.type = json['type']
+        self.currentJSON = None
+        self.type = json['open']
         self.websocket = websocket
-        self.toclose = False
-        self.errorState = ''
-        self.acceptable = True
+        self._toClose = False
+        self._errorState = ''
+        self._acceptable = True
         self.nodeId = json['from']
         # store in idDict the new opened connection
         global idDict
         idDict[self.nodeId] = self
 
     def isAcceptable (self):
-        raise NotImplementedError()
+        return self._acceptable
 
     def toClose (self):
-        return self.toclose
+        return self._toClose
 
-    def errorState(self):
-        return self.errorState
+    def getErrorState(self):
+        return self._errorState
 
-    async def waitForAnotherJMU (self, websocket):
+    async def waitForAnotherJMU (self):
         buf = await self.websocket.recv()
         try:
             self.currentJSON = json.loads(buf)
-            if d is not dict():
+            if type(self.currentJSON) is not dict:
                 raise ValueError("json is not a dictionary")
+            if 'close' in self.currentJSON:
+                self._toClose = True
         except ValueError as e:
-            self.acceptable = False
-            self.toclose = True
-            self.errorState = 'not valid JSON'
+            self._acceptable = False
+            self._toClose = True
+            self._errorState = 'not valid JSON'
 
     def shutdown (self):
         raise NotImplementedError
 
+    async def sendError(self):
+        await self.websocket.send(self._errorState)
+
 
 class MessageSession(AbstractSession):
 
-    def isAcceptables(self):
-        j = self.currentJSON
-        if j is not dict() or 'msg' not in j or len(j) != 1:
-            self.errorState = 'not a message json'
-            return False
-        else:
-            # json is acceptable and contains only 'msg' field
-            self.currentJSON = j
-            return True
+    def __init__(self, json, websocket):
+        super().__init__(json, websocket)
+        if self.type != 'message':
+            raise TypeError(self.type + ' is not supported as Message Session')
 
-    async def waitForAnotherJMU(self, websocket):
-        super().waitForAnotherJMU(websocket)
+    async def waitForAnotherJMU(self):
+        await super().waitForAnotherJMU()
+        j = self.currentJSON
+        if type(j) is not dict or 'msg' not in j or len(j) != 1:
+            if 'close' not in j:
+                # it is not a close jmu nor a message jmu
+                # there was an error from the other node
+                self._errorState = 'not a message json'
+                self._acceptable = False
+            return # do not store msg
         self.storeMessage()
 
-    def send(self, msg):
+    async def send(self, msg):
         d = {'msg': msg}
         j = json.dumps(d)
-        self.websocket.send(j) 
+        await self.websocket.send(j)
 
     def storeMessage(self):
         global queue
@@ -75,7 +92,7 @@ class MessageSession(AbstractSession):
 
 class ClientSession(AbstractSession):
 
-    def isAcceptables(self):
+    def isAcceptable(self):
         # j = self.currentJSON
         # if j is not dict() or 'msg' not in j or len(j) != 1:
             # self.errorState = 'not a message json'
@@ -85,8 +102,8 @@ class ClientSession(AbstractSession):
             # self.currentJSON = j
             return True
 
-    def waitForAnotherJMU(self, websocket):
-        super().waitForAnotherJMU(websocket)
+    async def waitForAnotherJMU(self):
+        await super().waitForAnotherJMU()
         self.executeAction()
 
     def executeAction(self):
