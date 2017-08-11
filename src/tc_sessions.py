@@ -85,7 +85,7 @@ class MessageSession(AbstractSession):
         queue.append(self.formatMsg())
 
     def formatMsg(self):
-        return {self.nodeId: self.currentJSON['msg']}
+        return (self.nodeId, self.currentJSON['msg'])
 
     def shutdown(self):
         self.websocket.close
@@ -111,7 +111,14 @@ class ClientSession(AbstractSession):
         cmd = j['cmd']
         if cmd == 'getmsg':
             global queue
-            sendBack = queue.pop(0)
+            if len(queue) == 0: 
+                #TODO: correct way to inform queue is empty 
+                j = json.dumps(dict())
+            else:
+                sendBack = queue.pop(0)
+                j = json.dumps({'id' : sendBack[0], 'msg' : sendBack[1]})
+            self.websocket.send(j)
+
         elif cmd == 'send':
             # TODO: not only message sessions
             global idDict
@@ -122,6 +129,9 @@ class ClientSession(AbstractSession):
             session = idDict[j['to']]
             session.send(j['msg'])
 
+    def getLastMessageFromDaemon(self):
+        j = json.dumps({'cmd': 'getmsg'})
+        return await self.websocket.recv()
 
     def formatMsg(self):
         return {self.nodeId: self.currentJSON['msg']}
