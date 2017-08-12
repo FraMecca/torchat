@@ -18,6 +18,8 @@ class TestCls(unittest.TestCase):
                 self.json = json.dumps(j)
             self.closed = False
             self.sent = []
+            self.url = ''
+
         async def recv(self):
             if type(self.json) is str:
                 return self.json
@@ -36,6 +38,9 @@ class TestCls(unittest.TestCase):
         def close(self):
             pass
 
+        async def connect(url):
+            self.url = url
+
     def run_coro(self, coro, *args, **kwargs):
         res = self.loop.run_until_complete(coro(*args, **kwargs))
         return res
@@ -44,6 +49,7 @@ class TestCls(unittest.TestCase):
         self.loop = asyncio.get_event_loop()
         server.socketDict = {}
         sessions.idDict = {}
+        sessions.queue = []
 
     def tearDown(self):
         # self.loop.close()
@@ -106,3 +112,30 @@ class TestCls(unittest.TestCase):
         self.assertEqual(session.toClose(), False)
         self.assertNotEqual(session.getErrorState(), '') # invalid state
         self.assertEqual(len(f.json), 1) # received all elements
+
+    def test_Client_getLastMessageFromDaemon(self):
+        f = self.FakeWebsocket({})
+        session = sessions.ClientSession(json={'open': 'client', 'extension': 'client', 'from': 'test'}, socket=f)
+        self.run_coro(session.getLastMessageFromDaemon)
+        self.assertEqual(f.sent[0], json.dumps({'cmd': 'getmsg'}))
+
+    def test_Client_executeAction_getmsg(self):
+        f = self.FakeWebsocket({})
+        session = sessions.ClientSession({'open': 'client', 'extension': 'client', 'from': 'test'}, f)
+        session.currentJSON = {'cmd': 'getmsg'}
+        sessions.queue.append(('test', 'test msg'))
+        self.run_coro(session.executeAction)
+        self.assertEqual(f.sent, [json.dumps({"id": "test", "msg": "test msg"})])
+
+    def test_Client_executeAction_send(self):
+        f = self.FakeWebsocket({})
+        session = sessions.ClientSession(type='client', id='test.onion', currentJSON= {'cmd': 'send', 'to': 'localhost', 'port': 8686})
+        async def fun(websocket, path):
+            print (await websocket.recv())
+
+        logic = websockets.serve(fun, 'localhost', 8686)
+        self.loop.run_until_complete(logic)
+        self.loop.run_until_complete(session.executeAction())
+
+        self.run_coro(session.executeAction)
+        print (f.url)

@@ -1,9 +1,9 @@
 import json
 import websockets
-import asyncio
 
 queue = list()
 idDict = dict()
+
 
 class AbstractSession:
 
@@ -17,28 +17,35 @@ class AbstractSession:
             raise ValueError("Not a valid JSON")
         return d
 
-    def __init__(self, json, websocket):
-        self.currentJSON = None
-        self.type = json['open']
-        self.websocket = websocket
+    def __init__(self, socket=None, json=None, id=None, type=None, currentJSON=None):
+        self.currentJSON = currentJSON
+        self.websocket = socket
         self._toClose = False
         self._errorState = ''
         self._acceptable = True
-        self.nodeId = json['from']
+
+        if json != None:
+            self.nodeId, self.type = json['from'], json['open']
+        else:
+            self.nodeId, self.type = id, type
         # store in idDict the new opened connection
         global idDict
         idDict[self.nodeId] = self
 
-    def isAcceptable (self):
+        if self.websocket is None:
+            print ("Initializing session without a websocket. Are you sure?")
+            # should not happen
+
+    def isAcceptable(self):
         return self._acceptable
 
-    def toClose (self):
+    def toClose(self):
         return self._toClose
 
     def getErrorState(self):
         return self._errorState
 
-    async def waitForAnotherJMU (self):
+    async def waitForAnotherJMU(self):
         buf = await self.websocket.recv()
         try:
             self.currentJSON = json.loads(buf)
@@ -50,11 +57,11 @@ class AbstractSession:
             self._acceptable = False
             self._errorState = 'not valid JSON'
 
-    async def sendOpenJMU():
-        j = {'open':self.type, 'from':self.id}
+    async def sendOpenJMU(self):
+        j = {'open': self.type, 'from': self.id}
         await self.websocket.send(json.dumps(j))
 
-    def shutdown (self):
+    def shutdown(self):
         raise NotImplementedError
 
     async def sendError(self):
@@ -63,8 +70,8 @@ class AbstractSession:
 
 class MessageSession(AbstractSession):
 
-    def __init__(self, json, websocket):
-        super().__init__(json, websocket)
+    def __init__(self, **kw):
+        super().__init__(**kw)
         if self.type != 'message':
             raise TypeError(self.type + ' is not supported as Message Session')
 
@@ -77,7 +84,7 @@ class MessageSession(AbstractSession):
                 # there was an error from the other node
                 self._errorState = 'not a message json'
                 self._acceptable = False
-            return # do not store msg
+            return  # do not store msg
         self.storeMessage()
 
     async def send(self, msg):
@@ -90,10 +97,11 @@ class MessageSession(AbstractSession):
         queue.append(self.formatMsg())
 
     def formatMsg(self):
-        return {self.nodeId: self.currentJSON['msg']}
+        return (self.nodeId, self.currentJSON['msg'])
 
     def shutdown(self):
         self.websocket.close()
+
 
 class ClientSession(AbstractSession):
 
@@ -116,18 +124,29 @@ class ClientSession(AbstractSession):
         cmd = j['cmd']
         if cmd == 'getmsg':
             global queue
-            if (len) queue
-            sendBack = queue.pop(0)
+            if len(queue) == 0:
+                # TODO: correct way to inform queue is empty 
+                j = json.dumps(dict())
+            else:
+                sendBack = queue.pop(0)
+                j = json.dumps({'id': sendBack[0], 'msg': sendBack[1]})
+            await self.websocket.send(j)
+
         elif cmd == 'send':
             # TODO: not only message sessions
             global idDict
             if j['to'] not in idDict:
-                d = {'from': j['to'], 'type': 'msg'}
-                session = MessageSession(json.dumps(d), websocket)
+                # TODO: open socket externally using TOR, wait for PR
+                url = ''.join(['ws://', j['to'], ':', str(j['port'])])
+                websocket = await websockets.connect(url)
+                session = MessageSession(id=j['to'], socket=websocket, type='msg')
 
             session = idDict[j['to']]
             await session.send(j['msg'])
 
+    async def getLastMessageFromDaemon(self):
+        j = json.dumps({'cmd': 'getmsg'})
+        return await self.websocket.send(j)
 
     def formatMsg(self):
         return {self.nodeId: self.currentJSON['msg']}

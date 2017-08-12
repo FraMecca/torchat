@@ -26,12 +26,12 @@ async def open_session (websocket):
             websocket.close()
             return None, None
         elif request == 'client' and j['open'] == 'client':
-            return ClientSession(j, websocket), None
+            return ClientSession(json=j, socket=websocket), None
         else:
             return None, 'invalid'
 
     elif j['open'] == 'message':
-        return MessageSession(j, websocket), None
+        return MessageSession(json=j, socket=websocket), None
     elif j['open'] == 'file':
         raise NotImplementedError()
 
