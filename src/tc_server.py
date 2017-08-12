@@ -12,17 +12,26 @@ def get_hostname ():
     raise NotImplementedError("TOR Hostname")
 
 async def open_session (websocket):
-    buf = await websocket.recv()
     # if json not valid,explicit exception and connection closed
     try:
-        j = AbstractSession.is_openJSON_acceptable(buf)
+        j = await AbstractSession.isOpenJSONAcceptable(websocket)
     except ValueError:
         # json in websocket.recv is invalid
-        return None
-    if j['open'] == 'message':
-        return MessageSession(j, websocket)
-    elif j['open'] == 'client':
-        return ClientSession(j, websocket)
+        return None, 'invalid'
+    if 'extension' in j:
+        request = j['extension']
+        if request == 'list':
+            # other node requested our supported features
+            await websocket.send(json.dumps({'supported':'client'}))
+            websocket.close()
+            return None, None
+        elif request == 'client' and j['open'] == 'client':
+            return ClientSession(j, websocket), None
+        else:
+            return None, 'invalid'
+
+    elif j['open'] == 'message':
+        return MessageSession(j, websocket), None
     elif j['open'] == 'file':
         raise NotImplementedError()
 
@@ -32,27 +41,28 @@ async def get_session(websocket):
     # open a new session and store it in socketDict
     global socketDict
     if websocket in socketDict:
+        print ("WHAT")
         return socketDict[websocket]
     else:
         # the websocket was not opened by the local daemon
-        session = await open_session(websocket)
+        session, error = await open_session(websocket)
         if session is not None:
             socketDict[websocket] = session
-        return session
+        return session, error
 
-async def send_error_and_close(websocket):
+async def send_error_and_close(websocket, error):
     # TODO: follow protocol for errors
     # maybe analise jsonBuf for type of error
     # or maybe just use some ErrorSession
-    await websocket.send(json.dumps({'error':'generic'}))
+    await websocket.send(json.dumps({'error':error}))
     websocket.close()
 
 async def communication_with_node(websocket, path):
-    session = await get_session(websocket)
+    session, error = await get_session(websocket)
     if session is None:
-        # got an invalid json, do not start a communication with the other node
-        print ("DAI ERRORE INDIETRO")
-        await send_error_and_close(websocket)
+        if error is not None:
+            # got an invalid json, do not start a communication with the other node
+            await send_error_and_close(websocket, error)
         return
     # now loop until errors or connection closed
     while session.isAcceptable() and not session.toClose():

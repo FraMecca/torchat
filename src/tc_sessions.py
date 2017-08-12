@@ -8,10 +8,12 @@ idDict = dict()
 class AbstractSession:
 
     @staticmethod
-    def is_openJSON_acceptable(jsonBuf):
+    async def isOpenJSONAcceptable(websocket):
+        jsonBuf = await websocket.recv()
         # may throw also exceptions from json module
         d = json.loads(jsonBuf)
-        if type(d) is not dict or len(d) != 2 or 'open' not in d or 'from' not in d:
+        if type(d) is not dict or 'open' not in d or 'from' not in d \
+           or (len(d) != 2 and 'extension' not in d) or ('extension' in d and len(d) != 3):
             raise ValueError("Not a valid JSON")
         return d
 
@@ -46,8 +48,11 @@ class AbstractSession:
                 self._toClose = True
         except ValueError as e:
             self._acceptable = False
-            self._toClose = True
             self._errorState = 'not valid JSON'
+
+    async def sendOpenJMU():
+        j = {'open':self.type, 'from':self.id}
+        await self.websocket.send(json.dumps(j))
 
     def shutdown (self):
         raise NotImplementedError
@@ -88,7 +93,7 @@ class MessageSession(AbstractSession):
         return {self.nodeId: self.currentJSON['msg']}
 
     def shutdown(self):
-        self.websocket.close
+        self.websocket.close()
 
 class ClientSession(AbstractSession):
 
@@ -127,4 +132,4 @@ class ClientSession(AbstractSession):
         return {self.nodeId: self.currentJSON['msg']}
 
     def shutdown(self):
-        self.websocket.close
+        self.websocket.close()

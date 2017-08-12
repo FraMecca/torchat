@@ -9,6 +9,33 @@ import os
 
 class TestCls(unittest.TestCase):
 
+    class FakeWebsocket:
+
+        def __init__(self, j):
+            if type(j) is list:
+                self.json = [json.dumps(jj) for jj in j]
+            elif type(j) is dict:
+                self.json = json.dumps(j)
+            self.closed = False
+            self.sent = []
+        async def recv(self):
+            if type(self.json) is str:
+                return self.json
+            # else it is a list
+            if len(self.json) == 0:
+                # can't send more,
+                # sleep
+                while True:
+                    await asyncio.sleep(2)
+            ret = self.json.pop(0)
+            return ret
+
+        async def send(self, buf):
+            self.sent.append(buf)
+
+        def close(self):
+            pass
+
     def run_coro(self, coro, *args, **kwargs):
         res = self.loop.run_until_complete(coro(*args, **kwargs))
         return res
@@ -22,20 +49,18 @@ class TestCls(unittest.TestCase):
         # self.loop.close()
         pass
 
-    def test_open_session(self):
-        class FakeWebsocket:
-            def __init__(self, j):
-                self.json = json.dumps(j)
-            async def recv(self):
-                return self.json
-
-        session = self.run_coro(server.open_session, FakeWebsocket({'open':'client', 'from':'test.onion'}))
+    def test_open_session_ClientSession(self):
+        session, _ = self.run_coro(server.open_session, self.FakeWebsocket({'open':'client', 'from':'test.onion', 'extension':'client'}))
         self.assertIs(type(session), sessions.ClientSession)
         self.assertEqual(len(server.socketDict), 0)
-        session = self.run_coro(server.open_session, FakeWebsocket({'open':'message', 'from':'test.onion'}))
+
+    def test_open_session_messageSession(self):
+        session, _ = self.run_coro(server.open_session, self.FakeWebsocket({'open':'message', 'from':'test.onion'}))
         self.assertIs(type(session), sessions.MessageSession)
         self.assertEqual(len(server.socketDict), 0)
-        session = self.run_coro(server.open_session, FakeWebsocket({'open':'message', 'from':'test.onion', 'other':'test'}))
+
+    def test_open_invalid_session(self):
+        session, _ = self.run_coro(server.open_session, self.FakeWebsocket({'open':'message', 'from':'test.onion', 'other':'test'}))
         self.assertIs(session, None)
         self.assertEqual(len(server.socketDict), 0)
 
@@ -44,40 +69,40 @@ class TestCls(unittest.TestCase):
         # a valid MessageSession JSON
         # an invalid JSON
         # and check that in socketDict there are the right number of websockets
-        class FakeWebsocket:
-            def __init__(self, j):
-                self.json = json.dumps(j)
-            async def recv(self):
-                return self.json
-
-        session = self.run_coro(server.get_session, FakeWebsocket({'open':'client', 'from':'test.onion'}))
+        session, _ = self.run_coro(server.get_session, self.FakeWebsocket({'open':'client', 'from':'test.onion', 'extension':'client'}))
         self.assertIs(type(session), sessions.ClientSession)
         self.assertEqual(len(server.socketDict), 1)
-        session = self.run_coro(server.get_session, FakeWebsocket({'open':'message', 'from':'test.onion'}))
+        session, _ = self.run_coro(server.get_session, self.FakeWebsocket({'open':'message', 'from':'test.onion'}))
         self.assertIs(type(session), sessions.MessageSession)
         self.assertEqual(len(server.socketDict), 2)
-        session = self.run_coro(server.get_session, FakeWebsocket({'open':'message', 'from':'test.onion', 'other':'t'}))
+
+    def test_get_session_invalid_session(self):
+        session, _  = self.run_coro(server.get_session, self.FakeWebsocket({'open':'message', 'from':'test.onion', 'other':'t'}))
         self.assertIs(session, None)
-        self.assertEqual(len(server.socketDict), 2)
+        self.assertEqual(len(server.socketDict), 0)
 
     def test_communication_with_node_MessageSession(self):
 
-        class FakeWebsocket:
-            def __init__(self, j1, j2, j3):
-                self.json = [json.dumps(j1), json.dumps(j2), json.dumps(j3)]
-                self.closed = False
-                self.sent = []
-            async def recv(self):
-                ret = self.json.pop(0)
-                return ret
-
-            def close(self):
-                pass
-
-        f = FakeWebsocket({'open':'message','from':'test'},
+        f = self.FakeWebsocket([{'open':'message','from':'test'},
                           {'msg':'msg1'},
-                          {'close':''})
+                          {'close':''}])
         session = self.run_coro(server.communication_with_node, f, None)
         self.assertEqual(session.toClose(), True)
         self.assertEqual(session.getErrorState(), '') # no invalid state
         self.assertEqual(f.json, []) # received all elements
+
+    def test_communication_with_node_MessageSession_invalidopening(self):
+        # now test an invalid opening
+        f = self.FakeWebsocket([{'open':'message','from':'test', 'other':'t'}])
+        session  = self.run_coro(server.communication_with_node, f, None)
+        self.assertEqual(session, None)
+
+    def test_communication_with_node_MessageSession_invalidmsg(self):
+        # now test an invalid msg
+        f = self.FakeWebsocket([{'open':'message','from':'test'},
+                          {'message':'msg1'},
+                          {'close':''}])
+        session = self.run_coro(server.communication_with_node, f, None)
+        self.assertEqual(session.toClose(), False)
+        self.assertNotEqual(session.getErrorState(), '') # invalid state
+        self.assertEqual(len(f.json), 1) # received all elements
