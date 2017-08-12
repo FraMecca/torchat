@@ -111,11 +111,12 @@ class ClientSession(AbstractSession):
         await super().waitForAnotherJMU()
         self.executeAction()
 
-    def executeAction(self):
+    async def executeAction(self):
         j = self.currentJSON
         cmd = j['cmd']
         if cmd == 'getmsg':
             global queue
+            if (len) queue
             sendBack = queue.pop(0)
         elif cmd == 'send':
             # TODO: not only message sessions
@@ -125,7 +126,7 @@ class ClientSession(AbstractSession):
                 session = MessageSession(json.dumps(d), websocket)
 
             session = idDict[j['to']]
-            session.send(j['msg'])
+            await session.send(j['msg'])
 
 
     def formatMsg(self):
