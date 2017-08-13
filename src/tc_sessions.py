@@ -139,7 +139,7 @@ class ClientSession(AbstractSession):
                 # TODO: open socket externally using TOR, wait for PR
                 url = ''.join(['ws://', j['to'], ':', str(j['port'])])
                 websocket = await websockets.connect(url)
-                session = MessageSession(id=j['to'], socket=websocket, type='msg')
+                session = MessageSession(id=j['to'], socket=websocket, type='message')
 
             session = idDict[j['to']]
             await session.send(j['msg'])

@@ -50,9 +50,14 @@ class TestCls(unittest.TestCase):
         server.socketDict = {}
         sessions.idDict = {}
         sessions.queue = []
+        self.asyncResult = None
+        self.loopIsClosed = False
 
     def tearDown(self):
-        # self.loop.close()
+        if len(self.loop._scheduled):
+            # there are still tasks running, wait for loop to be closed inside a coro
+            # ugly
+            self.loop.stop()
         pass
 
     def test_open_session_ClientSession(self):
@@ -121,21 +126,25 @@ class TestCls(unittest.TestCase):
 
     def test_Client_executeAction_getmsg(self):
         f = self.FakeWebsocket({})
-        session = sessions.ClientSession({'open': 'client', 'extension': 'client', 'from': 'test'}, f)
+        session = sessions.ClientSession(json={'open': 'client', 'extension': 'client', 'from': 'test'}, socket=f)
         session.currentJSON = {'cmd': 'getmsg'}
         sessions.queue.append(('test', 'test msg'))
         self.run_coro(session.executeAction)
         self.assertEqual(f.sent, [json.dumps({"id": "test", "msg": "test msg"})])
 
     def test_Client_executeAction_send(self):
-        f = self.FakeWebsocket({})
-        session = sessions.ClientSession(type='client', id='test.onion', currentJSON= {'cmd': 'send', 'to': 'localhost', 'port': 8686})
         async def fun(websocket, path):
-            print (await websocket.recv())
+            recv = await websocket.recv()
+            self.asyncResult = recv
+            self.loop.stop()
+
+        self.loopIsClosed = True
+        f = self.FakeWebsocket({})
+        session = sessions.ClientSession(json={'open': 'client', 'extension': 'client', 'from': 'testClient'}, socket=f)
+        session.currentJSON = {'cmd': 'send', 'to': 'localhost', 'port': 8686, 'msg': 'test msg'}
 
         logic = websockets.serve(fun, 'localhost', 8686)
         self.loop.run_until_complete(logic)
         self.loop.run_until_complete(session.executeAction())
-
-        self.run_coro(session.executeAction)
-        print (f.url)
+        self.loop.run_forever()
+        self.assertEqual(self.asyncResult, json.dumps({"msg": "test msg"}))
