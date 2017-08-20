@@ -164,9 +164,10 @@ class ClientSession(AbstractSession):
 
     async def sendMessageToPeer(self, msg, id, port):
         # hijacking executeAction
-        j = json.dumps({'cmd': 'send', 'port': port, 'to': id, 'msg': msg})
-        await self.executeAction(j) 
-
+        j = {'cmd': 'send', 'port': port, 'to': id, 'msg': msg}
+        self.currentJSON = j
+        await self.executeAction() 
+        
     def formatMsg(self):
         return {self.nodeId: self.currentJSON['msg']}
 
