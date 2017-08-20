@@ -67,6 +67,7 @@ async def communication_with_node(websocket, path):
     # now loop until errors or connection closed
     while session.isAcceptable() and not session.toClose():
         await session.waitForAnotherJMU() # TODO await?
+        print (session.currentJSON)
     # check if the session has to be closed for an error
     if session.getErrorState():
         await session.sendError()

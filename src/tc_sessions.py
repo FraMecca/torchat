@@ -70,6 +70,10 @@ class AbstractSession:
 
 class MessageSession(AbstractSession):
 
+    @staticmethod
+    def defaultOpening():
+        return json.dumps({'open': 'message', 'from': 'TODO'}) #TODO get id at run time 
+
     def __init__(self, **kw):
         super().__init__(**kw)
         if self.type != 'message':
@@ -105,6 +109,13 @@ class MessageSession(AbstractSession):
 
 class ClientSession(AbstractSession):
 
+    @staticmethod
+    async def connectToDaemon(host, port):
+        url = ''.join(['ws://', host, ':', str(port)])
+        sock = await websockets.connect(url)
+        await sock.send(json.dumps({'open' : 'client', 'from' : 'gladeclient', 'extension' : 'client'}))
+        return ClientSession(socket=sock)
+
     def isAcceptable(self):
         # j = self.currentJSON
         # if j is not dict() or 'msg' not in j or len(j) != 1:
@@ -117,7 +128,7 @@ class ClientSession(AbstractSession):
 
     async def waitForAnotherJMU(self):
         await super().waitForAnotherJMU()
-        self.executeAction()
+        await self.executeAction()
 
     async def executeAction(self):
         j = self.currentJSON
@@ -139,14 +150,22 @@ class ClientSession(AbstractSession):
                 # TODO: open socket externally using TOR, wait for PR
                 url = ''.join(['ws://', j['to'], ':', str(j['port'])])
                 websocket = await websockets.connect(url)
+                await websocket.send(MessageSession.defaultOpening)
                 session = MessageSession(id=j['to'], socket=websocket, type='message')
 
             session = idDict[j['to']]
             await session.send(j['msg'])
+        print (j)
 
     async def getLastMessageFromDaemon(self):
         j = json.dumps({'cmd': 'getmsg'})
-        return await self.websocket.send(j)
+        await self.websocket.send(j)
+        return await self.websocket.recv()
+
+    async def sendMessageToPeer(self, msg, id, port):
+        # hijacking executeAction
+        j = json.dumps({'cmd': 'send', 'port': port, 'to': id, 'msg': msg})
+        await self.executeAction(j) 
 
     def formatMsg(self):
         return {self.nodeId: self.currentJSON['msg']}
